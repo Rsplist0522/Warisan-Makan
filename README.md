@@ -11,7 +11,7 @@ A web-based Progressive Web Application (PWA) built with **Laravel** to preserve
 
 | Name | Role | Module Assigned |
 |---|---|---|
-| Chang Hui Yee | Development Lead | Food Passport & Achievement Module |
+| Chang Hui Yee | Development Lead | Blind Box Recommendation Module |
 | Chua Yee Teng | Testing & Documentation Lead | Food Passport & Achievement Module |
 | Edmund Teh Wei Han | Project Manager | Heritage Shop Tracking Module |
 | Mok Chun Bing | Requirements Lead | Community Contribution & Vendor Submission Module |

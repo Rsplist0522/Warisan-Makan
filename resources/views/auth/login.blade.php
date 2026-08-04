@@ -26,10 +26,6 @@
                         Warisan Makan
                     </h2>
 
-                    <p class="text-muted">
-                        Login to continue
-                    </p>
-
 
                     <a href="{{ url('/auth/google') }}" 
                        class="btn btn-danger w-100">

@@ -20,3 +20,7 @@ Route::get('/auth/google/callback', [AuthController::class, 'callback']);
 Route::get('/', function () {
     return redirect('/login');
 });
+
+Route::get('/home', function () {
+    return "<h1>Home</h1>";
+});

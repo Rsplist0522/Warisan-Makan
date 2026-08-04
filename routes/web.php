@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\HeritageShopController;
 
 
 // Login page
@@ -16,7 +17,10 @@ Route::get('/auth/google', [AuthController::class, 'redirect']);
 Route::get('/auth/google/callback', [AuthController::class, 'callback']);
 
 
-// Optional: make homepage go to login
+// Temporary development shortcut: skip login while the heritage module is being tested.
+// Remove this block and the heritage route once authentication is ready.
+Route::get('/heritage-shops', [HeritageShopController::class, 'index'])->name('heritage-shops.index');
+
 Route::get('/', function () {
-    return redirect('/login');
+    return redirect('/heritage-shops');
 });

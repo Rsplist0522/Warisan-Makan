@@ -1,22 +1,13 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\CommunityContributionController;
 use App\Http\Controllers\AuthController;
+use Illuminate\Support\Facades\Route;
 
+Route::get('/', [CommunityContributionController::class, 'index'])->name('home');
+Route::post('/community-contributions/heritage-shop', [CommunityContributionController::class, 'store'])->name('community-contribution.store');
 
-// Login page
-Route::get('/login', function () {
-    return view('auth.login');
-});
+Route::redirect('/login', '/')->name('login');
 
-
-// Google Login
-Route::get('/auth/google', [AuthController::class, 'redirect']);
-
+Route::get('/auth/google', [AuthController::class, 'redirect'])->name('auth.google');
 Route::get('/auth/google/callback', [AuthController::class, 'callback']);
-
-
-// Optional: make homepage go to login
-Route::get('/', function () {
-    return redirect('/login');
-});

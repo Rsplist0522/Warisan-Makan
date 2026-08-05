@@ -18,7 +18,7 @@ Route::get('/auth/google/callback', [AuthController::class, 'callback']);
 
 // Optional: make homepage go to login
 Route::get('/', function () {
-    return redirect('/foodtrails');
+    return redirect('/login');
 });
 
 // Food trails page

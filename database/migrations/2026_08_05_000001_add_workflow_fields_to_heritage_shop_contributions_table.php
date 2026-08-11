@@ -14,12 +14,14 @@ return new class extends Migration
             $table->text('admin_feedback')->nullable()->after('review_started_at');
             $table->timestamp('resubmitted_at')->nullable()->after('admin_feedback');
             $table->timestamp('withdrawn_at')->nullable()->after('resubmitted_at');
+            $table->index(['status', 'submitted_at']);
         });
     }
 
     public function down(): void
     {
         Schema::table('heritage_shop_contributions', function (Blueprint $table) {
+            $table->dropIndex(['status', 'submitted_at']);
             $table->dropConstrainedForeignId('reviewed_by_user_id');
             $table->dropColumn([
                 'review_started_at',

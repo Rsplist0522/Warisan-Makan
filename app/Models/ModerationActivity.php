@@ -16,15 +16,7 @@ class ModerationActivity extends Model
         'from_status',
         'to_status',
         'comment',
-        'metadata',
     ];
-
-    protected function casts(): array
-    {
-        return [
-            'metadata' => 'array',
-        ];
-    }
 
     public function contribution()
     {

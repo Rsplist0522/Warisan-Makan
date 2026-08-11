@@ -7,29 +7,13 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Throwable;
 
 class CommunityContributionController extends Controller
 {
-    private const TEXT_FIELDS = [
-        'contribution_title',
-        'shop_name',
-        'primary_food_category',
-        'founder_name',
-        'founder_background',
-        'current_owner_name',
-        'current_owner_details',
-        'heritage_story',
-        'contact_number',
-        'address',
-        'city',
-        'state',
-        'postal_code',
-    ];
-
     public function index(): View
     {
         return view('community-contribution', ['contribution' => null]);
@@ -37,49 +21,46 @@ class CommunityContributionController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        [$data, $submissionAction] = $this->validatedPayload($request);
-        [$mediaPaths, , $newMediaPaths] = $this->prepareMedia($request);
-        $data['supporting_media'] = $mediaPaths ?: null;
+        $validated = $this->validateContribution($request);
+        $newMedia = $this->storeNewMedia($request);
 
         try {
-            $contribution = DB::transaction(function () use ($data, $request, $submissionAction) {
+            $contribution = DB::transaction(function () use ($request, $validated, $newMedia) {
+                $action = $validated['submission_action'];
                 $contribution = HeritageShopContribution::create([
-                    ...$data,
+                    ...$this->contributionData($request, $validated),
                     'user_id' => $request->user()->id,
-                    'status' => $submissionAction === 'draft'
+                    'supporting_media' => $newMedia ?: null,
+                    'status' => $action === 'draft'
                         ? HeritageShopContribution::STATUS_DRAFT
                         : HeritageShopContribution::STATUS_PENDING_REVIEW,
-                    'submitted_at' => $submissionAction === 'submit' ? now() : null,
+                    'submitted_at' => $action === 'submit' ? now() : null,
                 ]);
 
                 $contribution->recordVersion(
                     $request->user(),
-                    $submissionAction === 'draft' ? 'draft_created' : 'submitted'
+                    $action === 'draft' ? 'draft_created' : 'submitted'
                 );
 
                 return $contribution;
             });
-        } catch (\Throwable $exception) {
-            Storage::disk('public')->delete($newMediaPaths);
-
+        } catch (Throwable $exception) {
+            Storage::disk('public')->delete($newMedia);
             throw $exception;
         }
 
-        if ($submissionAction === 'draft') {
-            return redirect()
-                ->route('community-contribution.drafts')
+        if ($validated['submission_action'] === 'draft') {
+            return redirect()->route('community-contribution.drafts')
                 ->with('status', 'Heritage shop draft saved successfully.');
         }
 
-        return redirect()
-            ->route('community-contribution.contributions.show', $contribution)
+        return redirect()->route('community-contribution.contributions.show', $contribution)
             ->with('status', 'Heritage shop information submitted for review.');
     }
 
     public function drafts(Request $request): View
     {
-        $drafts = $request->user()
-            ->heritageShopContributions()
+        $drafts = $request->user()->heritageShopContributions()
             ->where('status', HeritageShopContribution::STATUS_DRAFT)
             ->latest('updated_at')
             ->paginate(10);
@@ -98,104 +79,137 @@ class CommunityContributionController extends Controller
     {
         abort_unless($contribution->canBeEditedBy($request->user()), 403);
 
-        [$data, $submissionAction] = $this->validatedPayload($request);
-        [$mediaPaths, $removedMediaPaths, $newMediaPaths] = $this->prepareMedia(
-            $request,
-            $contribution->supporting_media ?? []
-        );
-        $data['supporting_media'] = $mediaPaths ?: null;
+        $validated = $this->validateContribution($request);
+        $existingMedia = $contribution->supporting_media ?? [];
+        $requestedRemovals = array_values(array_intersect(
+            $existingMedia,
+            $request->input('remove_media', [])
+        ));
+        $retainedMedia = array_values(array_diff($existingMedia, $requestedRemovals));
+        $newFiles = $request->file('supporting_media', []);
+
+        if (count($retainedMedia) + count($newFiles) > 6) {
+            throw ValidationException::withMessages([
+                'supporting_media' => 'A contribution may contain no more than 6 media files.',
+            ]);
+        }
+
+        $newMedia = $this->storeNewMedia($request);
+        $oldStatus = $contribution->status;
 
         try {
-            $contribution = DB::transaction(function () use ($contribution, $data, $request, $submissionAction) {
-                $lockedContribution = HeritageShopContribution::query()
-                    ->lockForUpdate()
-                    ->findOrFail($contribution->id);
+            DB::transaction(function () use (
+                $request,
+                $validated,
+                $contribution,
+                $retainedMedia,
+                $newMedia,
+                $oldStatus
+            ): void {
+                $action = $validated['submission_action'];
+                $isSubmitting = $action === 'submit';
 
-                abort_unless($lockedContribution->canBeEditedBy($request->user()), 403);
+                $contribution->fill([
+                    ...$this->contributionData($request, $validated),
+                    'supporting_media' => [...$retainedMedia, ...$newMedia] ?: null,
+                    'status' => $isSubmitting
+                        ? HeritageShopContribution::STATUS_PENDING_REVIEW
+                        : $oldStatus,
+                    'submitted_at' => $isSubmitting
+                        ? ($contribution->submitted_at ?? now())
+                        : $contribution->submitted_at,
+                    'resubmitted_at' => $isSubmitting && $oldStatus === HeritageShopContribution::STATUS_REVISION_REQUIRED
+                        ? now()
+                        : $contribution->resubmitted_at,
+                    'reviewed_by_user_id' => $isSubmitting ? null : $contribution->reviewed_by_user_id,
+                    'review_started_at' => $isSubmitting ? null : $contribution->review_started_at,
+                    'withdrawn_at' => null,
+                ])->save();
 
-                $wasRevision = $lockedContribution->status === HeritageShopContribution::STATUS_REVISION_REQUIRED;
-
-                if ($submissionAction === 'submit') {
-                    $data['status'] = HeritageShopContribution::STATUS_PENDING_REVIEW;
-                    $data['submitted_at'] = $lockedContribution->submitted_at ?? now();
-                    $data['resubmitted_at'] = $wasRevision ? now() : $lockedContribution->resubmitted_at;
-                    $data['reviewed_by_user_id'] = null;
-                    $data['review_started_at'] = null;
-                }
-
-                $lockedContribution->update($data);
-                $lockedContribution->recordVersion(
+                $contribution->recordVersion(
                     $request->user(),
-                    $submissionAction === 'submit'
-                        ? ($wasRevision ? 'resubmitted' : 'submitted')
-                        : 'draft_updated'
+                    $isSubmitting
+                        ? ($oldStatus === HeritageShopContribution::STATUS_REVISION_REQUIRED ? 'resubmitted' : 'submitted')
+                        : ($oldStatus === HeritageShopContribution::STATUS_REVISION_REQUIRED ? 'revision_updated' : 'draft_updated')
                 );
-
-                return $lockedContribution;
             });
-        } catch (\Throwable $exception) {
-            Storage::disk('public')->delete($newMediaPaths);
-
+        } catch (Throwable $exception) {
+            Storage::disk('public')->delete($newMedia);
             throw $exception;
         }
 
-        Storage::disk('public')->delete($removedMediaPaths);
+        Storage::disk('public')->delete($requestedRemovals);
 
-        if ($submissionAction === 'draft' && $contribution->status === HeritageShopContribution::STATUS_DRAFT) {
-            return redirect()
-                ->route('community-contribution.drafts')
+        if ($validated['submission_action'] === 'draft') {
+            if ($oldStatus === HeritageShopContribution::STATUS_REVISION_REQUIRED) {
+                return redirect()->route('community-contribution.contributions.show', $contribution)
+                    ->with('status', 'Revision changes saved. Resubmit when they are ready.');
+            }
+
+            return redirect()->route('community-contribution.drafts')
                 ->with('status', 'Draft updated successfully.');
         }
 
-        return redirect()
-            ->route('community-contribution.contributions.show', $contribution)
-            ->with('status', $submissionAction === 'submit'
-                ? 'Contribution submitted for review.'
-                : 'Revision saved successfully.');
-    }
-
-    public function submitDraft(Request $request, HeritageShopContribution $contribution): RedirectResponse
-    {
-        $this->authorizeOwnedDraft($request, $contribution);
-
-        $validator = Validator::make($contribution->toArray(), $this->contentRules('submit'));
-
-        if ($validator->fails()) {
-            return redirect()
-                ->route('community-contribution.edit', $contribution)
-                ->withErrors($validator);
-        }
-
-        DB::transaction(function () use ($request, $contribution) {
-            $lockedContribution = HeritageShopContribution::query()
-                ->lockForUpdate()
-                ->findOrFail($contribution->id);
-
-            $this->authorizeOwnedDraft($request, $lockedContribution);
-
-            $lockedContribution->update([
-                'status' => HeritageShopContribution::STATUS_PENDING_REVIEW,
-                'submitted_at' => now(),
-            ]);
-            $lockedContribution->recordVersion($request->user(), 'submitted');
-        });
-
-        return redirect()
-            ->route('community-contribution.contributions.show', $contribution)
-            ->with('status', 'Contribution submitted for review.');
+        return redirect()->route('community-contribution.contributions.show', $contribution)
+            ->with('status', $oldStatus === HeritageShopContribution::STATUS_REVISION_REQUIRED
+                ? 'Revised contribution resubmitted successfully.'
+                : 'Draft submitted for review.');
     }
 
     public function destroyDraft(Request $request, HeritageShopContribution $contribution): RedirectResponse
     {
-        $this->authorizeOwnedDraft($request, $contribution);
+        abort_unless(
+            $contribution->user_id === $request->user()->id
+            && $contribution->status === HeritageShopContribution::STATUS_DRAFT,
+            403
+        );
 
-        $mediaPaths = $contribution->supporting_media ?? [];
+        $media = $contribution->supporting_media ?? [];
         $contribution->delete();
-        Storage::disk('public')->delete($mediaPaths);
+        Storage::disk('public')->delete($media);
 
-        return redirect()
-            ->route('community-contribution.drafts')
+        return redirect()->route('community-contribution.drafts')
             ->with('status', 'Draft deleted successfully.');
+    }
+
+    public function submitDraft(Request $request, HeritageShopContribution $contribution): RedirectResponse
+    {
+        abort_unless(
+            $contribution->user_id === $request->user()->id
+            && $contribution->status === HeritageShopContribution::STATUS_DRAFT,
+            403
+        );
+
+        $missing = collect([
+            'contribution_title',
+            'shop_name',
+            'primary_food_category',
+            'establishment_year',
+            'founder_name',
+            'founder_background',
+            'current_owner_name',
+            'heritage_story',
+            'address',
+        ])->filter(fn (string $field) => blank($contribution->{$field}));
+
+        if ($missing->isNotEmpty()) {
+            return redirect()->route('community-contribution.edit', $contribution)
+                ->withErrors([
+                    'submission' => 'Complete all required fields before submitting this draft.',
+                ]);
+        }
+
+        DB::transaction(function () use ($request, $contribution): void {
+            $contribution->forceFill([
+                'status' => HeritageShopContribution::STATUS_PENDING_REVIEW,
+                'submitted_at' => now(),
+                'withdrawn_at' => null,
+            ])->save();
+            $contribution->recordVersion($request->user(), 'submitted');
+        });
+
+        return redirect()->route('community-contribution.contributions.show', $contribution)
+            ->with('status', 'Draft submitted for review.');
     }
 
     public function contributions(Request $request): View
@@ -207,77 +221,62 @@ class CommunityContributionController extends Controller
             HeritageShopContribution::STATUS_APPROVED,
             HeritageShopContribution::STATUS_REJECTED,
             HeritageShopContribution::STATUS_WITHDRAWN,
-            HeritageShopContribution::STATUS_DELETED,
         ];
 
-        $query = $request->user()
-            ->heritageShopContributions()
-            ->where('status', '!=', HeritageShopContribution::STATUS_DRAFT);
+        $query = $request->user()->heritageShopContributions()
+            ->whereIn('status', $allowedStatuses)
+            ->latest('updated_at');
+
+        if ($request->filled('status') && in_array($request->string('status')->toString(), $allowedStatuses, true)) {
+            $query->where('status', $request->string('status')->toString());
+        }
 
         if ($request->filled('search')) {
-            $search = trim((string) $request->input('search'));
-            $query->where(function ($builder) use ($search) {
-                $builder->where('contribution_title', 'like', "%{$search}%")
-                    ->orWhere('shop_name', 'like', "%{$search}%");
-            });
+            $search = '%'.$request->string('search')->trim()->toString().'%';
+            $query->where(fn ($builder) => $builder
+                ->where('contribution_title', 'like', $search)
+                ->orWhere('shop_name', 'like', $search));
         }
 
-        if (in_array($request->input('status'), $allowedStatuses, true)) {
-            $query->where('status', $request->input('status'));
-        }
-
-        $contributions = $query->latest('updated_at')->paginate(10)->withQueryString();
+        $contributions = $query->paginate(10)->withQueryString();
         $notifications = $request->user()->notifications()->latest()->limit(5)->get();
 
         return view('community-contributions.index', compact(
-            'allowedStatuses',
             'contributions',
-            'notifications'
+            'notifications',
+            'allowedStatuses'
         ));
     }
 
     public function show(Request $request, HeritageShopContribution $contribution): View
     {
-        abort_unless((int) $contribution->user_id === (int) $request->user()->id, 403);
+        abort_unless($contribution->user_id === $request->user()->id, 403);
 
         $contribution->load(['versions.user', 'moderationActivities.actor']);
-
-        $request->user()
-            ->unreadNotifications()
-            ->get()
-            ->filter(fn ($notification) => (int) ($notification->data['contribution_id'] ?? 0) === $contribution->id)
-            ->each->markAsRead();
+        $request->user()->unreadNotifications()
+            ->where('data->contribution_id', $contribution->id)
+            ->update(['read_at' => now()]);
 
         return view('community-contributions.show', compact('contribution'));
     }
 
     public function withdraw(Request $request, HeritageShopContribution $contribution): RedirectResponse
     {
-        abort_unless((int) $contribution->user_id === (int) $request->user()->id, 403);
+        abort_unless($contribution->user_id === $request->user()->id, 403);
 
         if (! $contribution->canBeWithdrawnBy($request->user())) {
-            return redirect()
-                ->route('community-contribution.contributions.show', $contribution)
-                ->withErrors(['withdraw' => 'This contribution can no longer be withdrawn because review has started.']);
+            return back()->withErrors([
+                'withdraw' => 'This contribution can no longer be withdrawn because review has started or its status has changed.',
+            ]);
         }
 
-        DB::transaction(function () use ($request, $contribution) {
-            $lockedContribution = HeritageShopContribution::query()
-                ->lockForUpdate()
-                ->findOrFail($contribution->id);
-
-            if (! $lockedContribution->canBeWithdrawnBy($request->user())) {
-                throw ValidationException::withMessages([
-                    'withdraw' => 'This contribution can no longer be withdrawn because review has started.',
-                ]);
-            }
-
-            $fromStatus = $lockedContribution->status;
-            $lockedContribution->update([
+        DB::transaction(function () use ($request, $contribution): void {
+            $fromStatus = $contribution->status;
+            $contribution->forceFill([
                 'status' => HeritageShopContribution::STATUS_WITHDRAWN,
                 'withdrawn_at' => now(),
-            ]);
-            $lockedContribution->moderationActivities()->create([
+            ])->save();
+            $contribution->moderationActivities()->create([
                 'actor_user_id' => $request->user()->id,
                 'action' => 'withdrawn_by_user',
                 'from_status' => $fromStatus,
@@ -285,135 +284,109 @@ class CommunityContributionController extends Controller
             ]);
         });
 
-        return redirect()
-            ->route('community-contribution.contributions.show', $contribution)
+        return redirect()->route('community-contribution.contributions.show', $contribution)
             ->with('status', 'Contribution withdrawn successfully.');
     }
 
-    private function validatedPayload(Request $request): array
+    private function validateContribution(Request $request): array
     {
-        $submissionAction = (string) $request->input('submission_action');
         $validated = $request->validate([
             'submission_action' => ['required', Rule::in(['draft', 'submit'])],
-            ...$this->contentRules($submissionAction),
-            'supporting_media' => ['nullable', 'array', 'max:6'],
-            'supporting_media.*' => ['file', 'mimes:jpg,jpeg,png,webp,mp4,mov,avi', 'max:20480'],
-            'remove_media' => ['nullable', 'array', 'max:6'],
-            'remove_media.*' => ['string', 'max:2048'],
-        ]);
-
-        unset(
-            $validated['submission_action'],
-            $validated['supporting_media'],
-            $validated['remove_media']
-        );
-
-        foreach (self::TEXT_FIELDS as $field) {
-            $validated[$field] = $this->normalizeText($validated[$field] ?? null);
-        }
-
-        if (isset($validated['establishment_year'])) {
-            $validated['establishment_year'] = (int) $validated['establishment_year'];
-        }
-
-        foreach (['latitude', 'longitude'] as $coordinate) {
-            if (isset($validated[$coordinate])) {
-                $validated[$coordinate] = (float) $validated[$coordinate];
-            }
-        }
-
-        $validated['operating_hours'] = collect($validated['operating_hours'] ?? [])
-            ->filter(fn (array $schedule) => filled($schedule['day'] ?? null))
-            ->map(fn (array $schedule) => [
-                'day' => $this->normalizeText($schedule['day'] ?? null),
-                'open' => $this->normalizeText($schedule['open'] ?? null),
-                'close' => $this->normalizeText($schedule['close'] ?? null),
-                'closed' => filter_var($schedule['closed'] ?? false, FILTER_VALIDATE_BOOL),
-            ])
-            ->values()
-            ->all();
-
-        $validated['food_items'] = collect($validated['food_items'] ?? [])
-            ->filter(fn (array $item) => filled($item['name'] ?? null) || filled($item['desc'] ?? null))
-            ->map(fn (array $item) => [
-                'name' => $this->normalizeText($item['name'] ?? null),
-                'desc' => $this->normalizeText($item['desc'] ?? null),
-            ])
-            ->values()
-            ->all();
-
-        return [$validated, $submissionAction];
-    }
-
-    private function contentRules(string $submissionAction): array
-    {
-        $requiredForSubmission = Rule::requiredIf($submissionAction === 'submit');
-
-        return [
-            'contribution_title' => [$requiredForSubmission, 'nullable', 'string', 'max:255'],
-            'shop_name' => [$requiredForSubmission, 'nullable', 'string', 'max:255'],
-            'primary_food_category' => [$requiredForSubmission, 'nullable', 'string', 'max:255'],
-            'establishment_year' => [$requiredForSubmission, 'nullable', 'integer', 'min:1000', 'max:'.now()->year],
-            'founder_name' => [$requiredForSubmission, 'nullable', 'string', 'max:255'],
-            'founder_background' => [$requiredForSubmission, 'nullable', 'string', 'max:5000'],
-            'current_owner_name' => [$requiredForSubmission, 'nullable', 'string', 'max:255'],
+            'contribution_title' => ['required_if:submission_action,submit', 'nullable', 'string', 'max:255'],
+            'shop_name' => ['required_if:submission_action,submit', 'nullable', 'string', 'max:255'],
+            'primary_food_category' => ['required_if:submission_action,submit', 'nullable', 'string', 'max:255'],
+            'establishment_year' => ['required_if:submission_action,submit', 'nullable', 'integer', 'min:1000', 'max:'.now()->year],
+            'founder_name' => ['required_if:submission_action,submit', 'nullable', 'string', 'max:255'],
+            'founder_background' => ['required_if:submission_action,submit', 'nullable', 'string', 'max:5000'],
+            'current_owner_name' => ['required_if:submission_action,submit', 'nullable', 'string', 'max:255'],
             'current_owner_details' => ['nullable', 'string', 'max:5000'],
-            'heritage_story' => [$requiredForSubmission, 'nullable', 'string', 'max:10000'],
-            'contact_number' => ['nullable', 'string', 'max:30', 'regex:/^[0-9+()\-\s.]+$/'],
-            'address' => [$requiredForSubmission, 'nullable', 'string', 'max:500'],
-            'city' => ['nullable', 'string', 'max:255'],
-            'state' => ['nullable', 'string', 'max:255'],
-            'postal_code' => ['nullable', 'string', 'max:20'],
-            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
-            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
-            'operating_hours' => ['nullable', 'array', 'max:7'],
-            'operating_hours.*' => ['array'],
+            'heritage_story' => ['required_if:submission_action,submit', 'nullable', 'string', 'max:10000'],
+            'operating_hours' => ['nullable', 'array'],
             'operating_hours.*.day' => ['nullable', 'string', 'max:30'],
             'operating_hours.*.open' => ['nullable', 'date_format:H:i'],
             'operating_hours.*.close' => ['nullable', 'date_format:H:i'],
             'operating_hours.*.closed' => ['nullable', 'boolean'],
-            'food_items' => ['nullable', 'array', 'max:30'],
-            'food_items.*' => ['array'],
+            'food_items' => ['nullable', 'array'],
             'food_items.*.name' => ['nullable', 'string', 'max:255'],
             'food_items.*.desc' => ['nullable', 'string', 'max:1000'],
+            'contact_number' => ['nullable', 'string', 'max:30', 'regex:/^[0-9+()\-\s]*$/'],
+            'address' => ['required_if:submission_action,submit', 'nullable', 'string', 'max:500'],
+            'city' => ['nullable', 'string', 'max:100'],
+            'state' => ['nullable', 'string', 'max:100'],
+            'postal_code' => ['nullable', 'string', 'max:20'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            'supporting_media' => ['nullable', 'array', 'max:6'],
+            'supporting_media.*' => ['file', 'mimes:jpg,jpeg,png,webp,mp4,mov,avi', 'max:20480'],
+            'remove_media' => ['nullable', 'array'],
+            'remove_media.*' => ['string'],
+        ]);
+
+        return $validated;
+    }
+
+    private function contributionData(Request $request, array $validated): array
+    {
+        $textFields = [
+            'contribution_title',
+            'shop_name',
+            'primary_food_category',
+            'founder_name',
+            'founder_background',
+            'current_owner_name',
+            'current_owner_details',
+            'heritage_story',
+            'contact_number',
+            'address',
+            'city',
+            'state',
+            'postal_code',
         ];
-    }
+        $data = [];
 
-    private function prepareMedia(Request $request, array $existingMediaPaths = []): array
-    {
-        $requestedRemovals = (array) $request->input('remove_media', []);
-        $removedMediaPaths = array_values(array_intersect($existingMediaPaths, $requestedRemovals));
-        $keptMediaPaths = array_values(array_diff($existingMediaPaths, $removedMediaPaths));
-        $uploadedFiles = (array) $request->file('supporting_media', []);
-
-        if (count($keptMediaPaths) + count($uploadedFiles) > 6) {
-            throw ValidationException::withMessages([
-                'supporting_media' => 'A contribution may contain at most 6 media files in total.',
-            ]);
+        foreach ($textFields as $field) {
+            $data[$field] = $this->normalizeText($validated[$field] ?? null);
         }
 
-        $newMediaPaths = [];
+        $data['establishment_year'] = isset($validated['establishment_year'])
+            ? (int) $validated['establishment_year']
+            : null;
+        $data['latitude'] = isset($validated['latitude']) ? (float) $validated['latitude'] : null;
+        $data['longitude'] = isset($validated['longitude']) ? (float) $validated['longitude'] : null;
+        $data['operating_hours'] = collect($request->input('operating_hours', []))
+            ->filter(fn (array $schedule) => filled($schedule['day'] ?? null))
+            ->map(function (array $schedule): array {
+                $closed = filter_var($schedule['closed'] ?? false, FILTER_VALIDATE_BOOL);
 
-        foreach ($uploadedFiles as $uploadedFile) {
-            $newMediaPaths[] = $uploadedFile->store('community-contributions/heritage-shops', 'public');
-        }
+                return [
+                    'day' => $this->normalizeText($schedule['day'] ?? null),
+                    'open' => $closed ? null : $this->normalizeText($schedule['open'] ?? null),
+                    'close' => $closed ? null : $this->normalizeText($schedule['close'] ?? null),
+                    'closed' => $closed,
+                ];
+            })->values()->all();
+        $data['food_items'] = collect($request->input('food_items', []))
+            ->filter(fn (array $item) => filled($item['name'] ?? null) || filled($item['desc'] ?? null))
+            ->map(fn (array $item): array => [
+                'name' => $this->normalizeText($item['name'] ?? null),
+                'desc' => $this->normalizeText($item['desc'] ?? null),
+            ])->values()->all();
 
-        return [[...$keptMediaPaths, ...$newMediaPaths], $removedMediaPaths, $newMediaPaths];
+        return $data;
     }
 
-    private function authorizeOwnedDraft(Request $request, HeritageShopContribution $contribution): void
+    private function storeNewMedia(Request $request): array
     {
-        abort_unless(
-            (int) $contribution->user_id === (int) $request->user()->id
-                && $contribution->status === HeritageShopContribution::STATUS_DRAFT,
-            403
-        );
+        return collect($request->file('supporting_media', []))
+            ->map(fn ($file) => $file->store('community-contributions/heritage-shops', 'public'))
+            ->values()
+            ->all();
     }
 
     private function normalizeText(?string $value): ?string
     {
         $value = is_string($value) ? trim($value) : null;
 
-        return filled($value) ? trim(strip_tags($value)) : null;
+        return blank($value) ? null : trim(strip_tags($value));
     }
 }

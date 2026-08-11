@@ -13,14 +13,11 @@ return new class extends Migration
             $table->foreignId('heritage_shop_contribution_id')->constrained()->cascadeOnDelete();
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
             $table->unsignedInteger('version_number');
-            $table->string('reason');
+            $table->string('reason', 50);
             $table->json('snapshot');
             $table->timestamps();
 
-            $table->unique(
-                ['heritage_shop_contribution_id', 'version_number'],
-                'contribution_versions_contribution_version_unique'
-            );
+            $table->unique(['heritage_shop_contribution_id', 'version_number'], 'contribution_version_unique');
         });
     }
 

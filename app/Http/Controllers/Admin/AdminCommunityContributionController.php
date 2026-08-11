@@ -1,16 +1,14 @@
 <?php
 
-namespace App\Http\Controllers\Admin;
+namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use App\Models\HeritageShopContribution;
+use App\Models\ModerationActivity;
 use App\Notifications\ContributionStatusChanged;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class AdminCommunityContributionController extends Controller
@@ -21,211 +19,187 @@ class AdminCommunityContributionController extends Controller
             HeritageShopContribution::STATUS_PENDING_REVIEW,
             HeritageShopContribution::STATUS_UNDER_REVIEW,
         ];
-
         $query = HeritageShopContribution::query()
             ->with('user')
-            ->whereIn('status', $activeStatuses);
+            ->whereIn('status', $activeStatuses)
+            ->oldest('submitted_at');
 
-        $this->applySearch($query, $request);
-
-        if (in_array($request->input('status'), $activeStatuses, true)) {
-            $query->where('status', $request->input('status'));
+        if ($request->filled('status') && in_array($request->string('status')->toString(), $activeStatuses, true)) {
+            $query->where('status', $request->string('status')->toString());
         }
 
-        $submissions = $query
-            ->orderByRaw('CASE WHEN status = ? THEN 0 ELSE 1 END', [HeritageShopContribution::STATUS_PENDING_REVIEW])
-            ->oldest('submitted_at')
-            ->paginate(15)
-            ->withQueryString();
+        if ($request->filled('search')) {
+            $search = '%'.$request->string('search')->trim()->toString().'%';
+            $query->where(function ($builder) use ($search): void {
+                $builder->where('contribution_title', 'like', $search)
+                    ->orWhere('shop_name', 'like', $search)
+                    ->orWhereHas('user', fn ($userQuery) => $userQuery->where('name', 'like', $search));
+            });
+        }
 
-        return view('community-contributions.admin.submissions', compact('activeStatuses', 'submissions'));
+        $submissions = $query->paginate(15)->withQueryString();
+
+        return view('community-contributions.admin.submissions', compact('submissions', 'activeStatuses'));
     }
 
     public function show(HeritageShopContribution $contribution): View
     {
-        $contribution->load(['user', 'versions.user', 'moderationActivities.actor']);
+        $contribution->load(['user', 'reviewedBy', 'versions.user', 'moderationActivities.actor']);
 
         return view('community-contributions.admin.show', compact('contribution'));
     }
 
     public function startReview(Request $request, HeritageShopContribution $contribution): RedirectResponse
     {
-        DB::transaction(function () use ($request, $contribution) {
-            $lockedContribution = HeritageShopContribution::query()
-                ->lockForUpdate()
-                ->findOrFail($contribution->id);
+        if ($contribution->status !== HeritageShopContribution::STATUS_PENDING_REVIEW) {
+            return back()->withErrors(['review' => 'Only a pending contribution can enter review.']);
+        }
 
-            if ($lockedContribution->status !== HeritageShopContribution::STATUS_PENDING_REVIEW) {
-                throw ValidationException::withMessages([
-                    'review' => 'Only a pending contribution can be moved into review.',
-                ]);
-            }
-
-            $fromStatus = $lockedContribution->status;
-            $lockedContribution->update([
+        DB::transaction(function () use ($request, $contribution): void {
+            $fromStatus = $contribution->status;
+            $contribution->forceFill([
                 'status' => HeritageShopContribution::STATUS_UNDER_REVIEW,
                 'reviewed_by_user_id' => $request->user()->id,
                 'review_started_at' => now(),
-            ]);
-            $lockedContribution->moderationActivities()->create([
-                'actor_user_id' => $request->user()->id,
-                'action' => 'start_review',
-                'from_status' => $fromStatus,
-                'to_status' => HeritageShopContribution::STATUS_UNDER_REVIEW,
-            ]);
+            ])->save();
+            $this->recordActivity(
+                $contribution,
+                $request->user()->id,
+                'review_started',
+                $fromStatus,
+                HeritageShopContribution::STATUS_UNDER_REVIEW
+            );
         });
 
-        return redirect()
-            ->route('admin.community-contributions.show', $contribution)
-            ->with('status', 'Review started. The contributor can no longer withdraw this submission.');
+        return back()->with('status', 'Review started. The contributor can no longer withdraw this submission.');
     }
 
     public function moderate(Request $request, HeritageShopContribution $contribution): RedirectResponse
     {
         $validated = $request->validate([
-            'moderation_action' => ['required', Rule::in(['approve', 'request_revision', 'reject', 'delete'])],
+            'moderation_action' => ['required', Rule::in(['approve', 'reject', 'request_revision'])],
             'feedback' => [
-                Rule::requiredIf(in_array($request->input('moderation_action'), ['request_revision', 'reject', 'delete'], true)),
+                Rule::requiredIf(fn () => in_array($request->input('moderation_action'), ['reject', 'request_revision'], true)),
                 'nullable',
                 'string',
                 'max:5000',
             ],
         ]);
 
-        $processedContribution = DB::transaction(function () use ($request, $validated, $contribution) {
-            $lockedContribution = HeritageShopContribution::query()
-                ->lockForUpdate()
-                ->findOrFail($contribution->id);
+        if ($contribution->status !== HeritageShopContribution::STATUS_UNDER_REVIEW) {
+            return back()->withErrors(['moderation' => 'Start the review before selecting a moderation outcome.']);
+        }
 
-            if ($lockedContribution->status !== HeritageShopContribution::STATUS_UNDER_REVIEW) {
-                throw ValidationException::withMessages([
-                    'moderation_action' => 'Only a contribution under review can be moderated.',
-                ]);
-            }
+        $admin = $request->user();
+        $fromStatus = $contribution->status;
+        $feedback = filled($validated['feedback'] ?? null)
+            ? trim(strip_tags($validated['feedback']))
+            : null;
 
-            $action = $validated['moderation_action'];
-            $feedback = $this->normalizeText($validated['feedback'] ?? null);
-            $fromStatus = $lockedContribution->status;
-
-            if ($action === 'approve') {
-                $this->validateForApproval($lockedContribution);
-                $lockedContribution->forceFill(['admin_feedback' => $feedback])->save();
-                $lockedContribution->approve($request->user());
+        DB::transaction(function () use (
+            $validated,
+            $contribution,
+            $admin,
+            $fromStatus,
+            $feedback
+        ): void {
+            if ($validated['moderation_action'] === 'approve') {
+                $contribution->forceFill(['admin_feedback' => $feedback])->save();
+                $contribution->approve($admin);
                 $toStatus = HeritageShopContribution::STATUS_APPROVED;
-                $activityAction = 'approved';
-            } elseif ($action === 'request_revision') {
-                $toStatus = HeritageShopContribution::STATUS_REVISION_REQUIRED;
-                $activityAction = 'revision_requested';
-                $lockedContribution->update([
-                    'status' => $toStatus,
-                    'admin_feedback' => $feedback,
-                    'rejection_reason' => null,
-                ]);
-            } elseif ($action === 'reject') {
+            } elseif ($validated['moderation_action'] === 'reject') {
                 $toStatus = HeritageShopContribution::STATUS_REJECTED;
-                $activityAction = 'rejected';
-                $lockedContribution->update([
+                $contribution->forceFill([
                     'status' => $toStatus,
                     'admin_feedback' => $feedback,
                     'rejection_reason' => $feedback,
-                ]);
+                    'approved_by_user_id' => null,
+                    'approved_at' => null,
+                ])->save();
             } else {
-                $toStatus = HeritageShopContribution::STATUS_DELETED;
-                $activityAction = 'deleted';
-                $lockedContribution->update([
+                $toStatus = HeritageShopContribution::STATUS_REVISION_REQUIRED;
+                $contribution->forceFill([
                     'status' => $toStatus,
                     'admin_feedback' => $feedback,
-                ]);
+                    'rejection_reason' => null,
+                ])->save();
             }
 
-            $lockedContribution->moderationActivities()->create([
-                'actor_user_id' => $request->user()->id,
-                'action' => $activityAction,
-                'from_status' => $fromStatus,
-                'to_status' => $toStatus,
-                'comment' => $feedback,
-                'metadata' => ['version_number' => $lockedContribution->versions()->max('version_number')],
-            ]);
-
-            return $lockedContribution->fresh('user');
+            $this->recordActivity(
+                $contribution,
+                $admin->id,
+                $validated['moderation_action'],
+                $fromStatus,
+                $toStatus,
+                $feedback
+            );
         });
 
-        $processedContribution->user?->notify(new ContributionStatusChanged($processedContribution));
+        $contribution->refresh();
+        $contribution->user?->notify(new ContributionStatusChanged($contribution));
 
-        return redirect()
-            ->route('admin.community-contributions.show', $processedContribution)
-            ->with('status', 'Moderation decision recorded successfully.');
+        return redirect()->route('admin.community-contributions.show', $contribution)
+            ->with('status', 'Moderation outcome saved and the contributor was notified.');
     }
 
     public function history(Request $request): View
     {
+        $request->validate([
+            'date_from' => ['nullable', 'date'],
+            'date_to' => ['nullable', 'date'],
+        ]);
+
         $historyStatuses = [
             HeritageShopContribution::STATUS_REVISION_REQUIRED,
             HeritageShopContribution::STATUS_APPROVED,
             HeritageShopContribution::STATUS_REJECTED,
             HeritageShopContribution::STATUS_WITHDRAWN,
-            HeritageShopContribution::STATUS_DELETED,
         ];
-
         $query = HeritageShopContribution::query()
-            ->with(['user', 'moderationActivities.actor'])
-            ->whereIn('status', $historyStatuses);
+            ->with(['user', 'reviewedBy', 'moderationActivities.actor'])
+            ->whereIn('status', $historyStatuses)
+            ->latest('updated_at');
 
-        $this->applySearch($query, $request);
+        if ($request->filled('status') && in_array($request->string('status')->toString(), $historyStatuses, true)) {
+            $query->where('status', $request->string('status')->toString());
+        }
 
-        if (in_array($request->input('status'), $historyStatuses, true)) {
-            $query->where('status', $request->input('status'));
+        if ($request->filled('search')) {
+            $search = '%'.$request->string('search')->trim()->toString().'%';
+            $query->where(function ($builder) use ($search): void {
+                $builder->where('contribution_title', 'like', $search)
+                    ->orWhere('shop_name', 'like', $search)
+                    ->orWhereHas('user', fn ($userQuery) => $userQuery->where('name', 'like', $search));
+            });
         }
 
         if ($request->filled('date_from')) {
-            $query->whereDate('updated_at', '>=', $request->input('date_from'));
+            $query->whereDate('updated_at', '>=', $request->date('date_from'));
         }
 
         if ($request->filled('date_to')) {
-            $query->whereDate('updated_at', '<=', $request->input('date_to'));
+            $query->whereDate('updated_at', '<=', $request->date('date_to'));
         }
 
-        $history = $query->latest('updated_at')->paginate(15)->withQueryString();
+        $history = $query->paginate(15)->withQueryString();
 
         return view('community-contributions.admin.history', compact('history', 'historyStatuses'));
     }
 
-    private function applySearch($query, Request $request): void
-    {
-        if (! $request->filled('search')) {
-            return;
-        }
-
-        $search = trim((string) $request->input('search'));
-        $query->where(function ($builder) use ($search) {
-            $builder->where('contribution_title', 'like', "%{$search}%")
-                ->orWhere('shop_name', 'like', "%{$search}%")
-                ->orWhereHas('user', function ($userQuery) use ($search) {
-                    $userQuery->where('name', 'like', "%{$search}%")
-                        ->orWhere('email', 'like', "%{$search}%");
-                });
-        });
-    }
-
-    private function validateForApproval(HeritageShopContribution $contribution): void
-    {
-        Validator::make($contribution->toArray(), [
-            'contribution_title' => ['required', 'string'],
-            'shop_name' => ['required', 'string'],
-            'primary_food_category' => ['required', 'string'],
-            'establishment_year' => ['required', 'integer'],
-            'founder_name' => ['required', 'string'],
-            'founder_background' => ['required', 'string'],
-            'current_owner_name' => ['required', 'string'],
-            'heritage_story' => ['required', 'string'],
-            'address' => ['required', 'string'],
-        ])->validate();
-    }
-
-    private function normalizeText(?string $value): ?string
-    {
-        $value = is_string($value) ? trim($value) : null;
-
-        return filled($value) ? trim(strip_tags($value)) : null;
+    private function recordActivity(
+        HeritageShopContribution $contribution,
+        int $actorUserId,
+        string $action,
+        ?string $fromStatus,
+        ?string $toStatus,
+        ?string $comment = null
+    ): ModerationActivity {
+        return $contribution->moderationActivities()->create([
+            'actor_user_id' => $actorUserId,
+            'action' => $action,
+            'from_status' => $fromStatus,
+            'to_status' => $toStatus,
+            'comment' => $comment,
+        ]);
     }
 }

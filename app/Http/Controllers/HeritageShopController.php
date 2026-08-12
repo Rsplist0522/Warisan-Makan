@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\HeritageShop;
 
 class HeritageShopController extends Controller
 {
@@ -12,7 +13,21 @@ class HeritageShopController extends Controller
         $search = trim((string) $request->input('search', ''));
         $category = trim((string) $request->input('category', ''));
 
-        $shops = $this->searchShops($search, $category);
+        $shops = HeritageShop::query()
+            ->when($search, function ($query) use ($search) {
+                $query->where(function ($query) use ($search) {
+                    $query->where('name', 'like', "%{$search}%")
+                        ->orWhere('location', 'like', "%{$search}%")
+                        ->orWhere('description', 'like', "%{$search}%")
+                        ->orWhere('heritage_story', 'like', "%{$search}%")
+                        ->orWhere('category', 'like', "%{$search}%");
+                });
+            })
+            ->when($category, function ($query) use ($category) {
+                $query->where('category', 'like', "%{$category}%");
+            })
+            ->orderBy('name')
+            ->get();
 
         return view('heritage.shops', compact('shops', 'search', 'category'));
     }
@@ -97,22 +112,11 @@ class HeritageShopController extends Controller
         }));
     }
 
-    // Show a single shop detail by numeric index
-    public function show($id)
+    // Show a single shop detail by DB id
+    public function show(string $id)
     {
-        $shops = $this->allShops();
-
-        if (!is_numeric($id)) {
-            abort(404);
-        }
-
-        $idx = (int) $id;
-
-        if (!array_key_exists($idx, $shops)) {
-            abort(404);
-        }
-
-        $shop = $shops[$idx];
+        $shop = HeritageShop::findOrFail($id);
+        $shops = HeritageShop::orderBy('name')->get();
 
         // Provide listing-related variables so the merged view's search form
         // and listing logic do not trigger undefined variable errors.

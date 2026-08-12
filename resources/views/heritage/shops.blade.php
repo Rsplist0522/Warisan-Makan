@@ -169,10 +169,42 @@
 
                 <p>{{ $shop['description'] }}</p>
 
-                <p><strong>Founder:</strong> {{ $shop['founder'] ?? '—' }} · <strong>Established:</strong> {{ $shop['establishment_year'] ?? '—' }}</p>
-                <p><strong>Operating hours:</strong> {{ $shop['operating_hours'] ?? '—' }}</p>
-                <p><strong>Participating since:</strong> {{ $shop['participating_since'] ?? '—' }}</p>
-                <p><strong>Highlight:</strong> {{ $shop['highlight'] ?? '—' }}</p>
+                @if (!empty($shop['founder']) || !empty($shop['establishment_year']))
+                    <p>
+                        @if (!empty($shop['founder']))
+                            <strong>Founder:</strong> {{ $shop['founder'] }}
+                        @endif
+                        @if (!empty($shop['founder']) && !empty($shop['establishment_year']))
+                            ·
+                        @endif
+                        @if (!empty($shop['establishment_year']))
+                            <strong>Established:</strong> {{ $shop['establishment_year'] }}
+                        @endif
+                    </p>
+                @endif
+
+                @if (!empty($shop['operating_hours']))
+                    <p><strong>Operating hours:</strong> {{ $shop['operating_hours'] }}</p>
+                @endif
+
+                @if (!empty($shop['participating_since']))
+                    <p><strong>Participating since:</strong> {{ $shop['participating_since'] }}</p>
+                @endif
+
+                @if (!empty($shop['highlight']))
+                    <p><strong>Highlight:</strong> {{ $shop['highlight'] }}</p>
+                @endif
+
+                @if (!empty($shop['country']))
+                    <p><strong>Country:</strong> {{ ucfirst($shop['country']) }}</p>
+                @endif
+
+                @if (!empty($shop['source_url']))
+                    <p><strong>Source:</strong> <a href="{{ $shop['source_url'] }}" target="_blank" rel="noopener noreferrer">View original</a></p>
+                @endif
+
+                <h2 style="margin-top:16px">About</h2>
+                <p>{{ $shop['description'] ?? 'No description available.' }}</p>
 
                 <h2 style="margin-top:16px">Heritage story</h2>
                 <p>{{ $shop['heritage_story'] ?? 'No story available.' }}</p>
@@ -193,7 +225,7 @@
                             <p><strong>Participating since:</strong> {{ $shop['participating_since'] }}</p>
                             <p><strong>Highlight:</strong> {{ $shop['highlight'] }}</p>
 
-                            <p><a href="{{ route('heritage-shops.show', ['id' => $loop->index]) }}">View details</a></p>
+                            <p><a href="{{ route('heritage-shops.show', ['id' => $shop->id]) }}">View details</a></p>
                         </div>
                     @endforeach
                 </div>

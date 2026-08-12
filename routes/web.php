@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AdminCommunityContributionController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BlindBoxController;
 use App\Http\Controllers\CommunityContributionController;
 use Illuminate\Support\Facades\Route;
 
@@ -44,3 +45,8 @@ Route::middleware('auth')->group(function (): void {
             Route::post('/{contribution}/moderate', [AdminCommunityContributionController::class, 'moderate'])->name('moderate');
         });
 });
+
+// Blind Box routes
+Route::get('/blind-box', [BlindBoxController::class, 'index'])->name('blind-box.index');
+Route::post('/blind-box/draw', [BlindBoxController::class, 'draw'])->name('blind-box.draw');
+Route::get('/blind-box/history', [BlindBoxController::class, 'history'])->name('blind-box.history');

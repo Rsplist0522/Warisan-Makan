@@ -398,8 +398,9 @@
             [
                 'name' => 'Blind Box Recommendation',
                 'description' => 'Reveal surprise heritage food suggestions matched to your taste.',
-                'status' => 'Coming soon',
+                'status' => 'Open module',
                 'icon' => 'box',
+                'route' => 'blind-box.index',
             ],
         ];
         $leadingModules = array_slice($comingSoonModules, 0, 4);
@@ -419,10 +420,16 @@
             <p class="nav-label">Modules</p>
             <nav class="nav" aria-label="Upcoming modules">
                 @foreach ($comingSoonModules as $module)
-                    <span class="nav-item muted">
-                        <span>{{ $module['name'] }}</span>
-                        <small>soon</small>
-                    </span>
+                    @if (isset($module['route']))
+                        <a class="nav-item" href="{{ route($module['route']) }}">
+                            <span>{{ $module['name'] }}</span>
+                        </a>
+                    @else
+                        <span class="nav-item muted">
+                            <span>{{ $module['name'] }}</span>
+                            <small>soon</small>
+                        </span>
+                    @endif
                 @endforeach
             </nav>
 
@@ -475,14 +482,14 @@
                         <strong class="module-status">Open module</strong>
                     </a>
 
-                    <article class="module-card is-static" aria-disabled="true">
+                    <a class="module-card is-active" href="{{ route('blind-box.index') }}">
                         <span class="module-icon" aria-hidden="true">
                             @include('partials.module-icon', ['icon' => $blindBoxModule['icon']])
                         </span>
                         <h3>{{ $blindBoxModule['name'] }}</h3>
                         <p>{{ $blindBoxModule['description'] }}</p>
-                        <strong class="module-status">{{ $blindBoxModule['status'] }}</strong>
-                    </article>
+                        <strong class="module-status">Open module</strong>
+                    </a>
                 </section>
             </main>
         </section>

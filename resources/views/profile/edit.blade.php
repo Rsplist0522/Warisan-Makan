@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Profile - Warisan Makan</title>
+    @fonts
+    <style>
+        :root {
+            color-scheme: light;
+            --wm-bg: #fbf2e7;
+            --wm-panel: #fff8f0;
+            --wm-ink: #5b4335;
+            --wm-muted: #8c6f5f;
+            --wm-border: rgba(177, 140, 106, .16);
+            --wm-accent: #b34d35;
+            --wm-gold: #d19c3b;
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: 'Instrument Sans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(180deg, #fbf2e7 0%, #f5e4d5 100%);
+            color: var(--wm-ink);
+        }
+
+        a { color: inherit; text-decoration: none; }
+        button, input, textarea { font: inherit; }
+
+        .page {
+            max-width: 820px;
+            margin: 0 auto;
+            padding: 24px 22px 42px;
+        }
+
+        .topbar {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 16px;
+            align-items: center;
+            padding: 24px 24px;
+            margin-bottom: 20px;
+            border-radius: 20px;
+            background: linear-gradient(180deg, #fff7f0 0%, #fdf0e3 100%);
+            border: 1px solid rgba(177, 140, 106, .2);
+            box-shadow: 0 18px 36px rgba(104, 71, 42, .08);
+        }
+
+        .section-heading {
+            margin: 0;
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: 1.85rem;
+            line-height: 1.05;
+            color: #7d4634;
+        }
+
+        .section-copy {
+            margin: 10px 0 0;
+            color: var(--wm-muted);
+            max-width: 620px;
+            line-height: 1.75;
+        }
+
+        .topbar-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .button,
+        .button-secondary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 46px;
+            padding: 0 18px;
+            border-radius: 999px;
+            border: 1px solid transparent;
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .button {
+            background: var(--wm-accent);
+            color: #fff;
+        }
+
+        .button-secondary {
+            background: transparent;
+            color: var(--wm-ink);
+            border-color: var(--wm-border);
+        }
+
+        .status-alert {
+            margin-bottom: 18px;
+            padding: 16px 18px;
+            border-radius: 14px;
+            background: rgba(178, 47, 31, .08);
+            color: #8a2417;
+            border: 1px solid rgba(178, 47, 31, .18);
+        }
+
+        .status-alert strong {
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        .status-alert ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        /* ---- Form card ---- */
+
+        .form-card {
+            border-radius: 28px;
+            background: var(--wm-panel);
+            border: 1px solid var(--wm-border);
+            box-shadow: 0 14px 32px rgba(113, 80, 53, .08);
+            overflow: hidden;
+        }
+
+        .photo-row {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            padding: 28px 28px 24px;
+            border-bottom: 1px solid var(--wm-border);
+        }
+
+        .photo-preview {
+            flex: 0 0 auto;
+            width: 68px;
+            height: 68px;
+            border-radius: 18px;
+            overflow: hidden;
+            background: linear-gradient(160deg, #f3e3d5, #e6d0bb);
+            border: 1px solid var(--wm-border);
+            box-shadow: 0 6px 14px rgba(113, 80, 53, .1);
+            display: grid;
+            place-items: center;
+            color: #a14d39;
+            font-weight: 800;
+            font-size: 1.4rem;
+        }
+
+        .photo-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .photo-controls {
+            display: grid;
+            gap: 6px;
+            min-width: 0;
+        }
+
+        .photo-controls label {
+            font-size: .9rem;
+            font-weight: 700;
+        }
+
+        .photo-controls input[type="file"] {
+            font-size: .88rem;
+            color: var(--wm-ink);
+        }
+
+        .photo-controls small {
+            color: var(--wm-muted);
+            font-size: .82rem;
+        }
+
+        .form-fields {
+            padding: 22px 28px 8px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+        }
+
+        .field {
+            display: grid;
+            gap: 8px;
+        }
+
+        .field.span-2 {
+            grid-column: 1 / -1;
+        }
+
+        .field label {
+            font-size: .9rem;
+            font-weight: 700;
+        }
+
+        .field input,
+        .field textarea {
+            width: 100%;
+            min-height: 46px;
+            padding: 12px 14px;
+            border: 1px solid var(--wm-border);
+            border-radius: 14px;
+            background: #fff;
+            color: var(--wm-ink);
+        }
+
+        .field input:focus,
+        .field textarea:focus {
+            outline: 2px solid var(--wm-accent);
+            outline-offset: 1px;
+        }
+
+        .field textarea {
+            min-height: 110px;
+            resize: vertical;
+        }
+
+        .field small {
+            color: var(--wm-muted);
+        }
+
+        .form-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding: 24px 28px 28px;
+        }
+
+        @media (max-width: 640px) {
+            .form-fields { grid-template-columns: 1fr; }
+            .photo-row { flex-wrap: wrap; }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <header class="topbar">
+            <div>
+                <h1 class="section-heading">Edit your profile</h1>
+                <p class="section-copy">Upload a profile photo, keep your contact details current, and let WarisanMakan remember your preferences.</p>
+            </div>
+            <div class="topbar-actions">
+                <a class="button-secondary" href="{{ route('profile.show') }}">View Profile</a>
+                <a class="button" href="{{ route('home') }}">Dashboard</a>
+            </div>
+        </header>
+
+        @if ($errors->any())
+            <div class="status-alert">
+                <strong>There were some issues with your submission.</strong>
+                <ul>
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        <form class="form-card" method="POST" action="{{ route('profile.update') }}" enctype="multipart/form-data">
+            @csrf
+
+            <div class="photo-row">
+                <div class="photo-preview" id="photoPreview">
+                    @if ($user->profile_photo)
+                        <img id="photoPreviewImg" src="{{ asset('storage/' . $user->profile_photo) }}" alt="Current profile photo">
+                    @else
+                        <img id="photoPreviewImg" src="" alt="Selected profile photo" style="display:none;">
+                        <span id="photoPreviewFallback">{{ strtoupper(substr($user->name, 0, 1)) }}</span>
+                    @endif
+                </div>
+                <div class="photo-controls">
+                    <label for="profile_photo">Profile photo</label>
+                    <input id="profile_photo" name="profile_photo" type="file" accept="image/*">
+                    <small id="photoPreviewNote">Optional. Recommended square image, up to 2MB.</small>
+                </div>
+            </div>
+
+            <div class="form-fields">
+                <div class="field span-2">
+                    <label for="name">Name</label>
+                    <input id="name" name="name" type="text" value="{{ old('name', $user->name) }}" required>
+                </div>
+
+                <div class="field span-2">
+                    <label for="email">Email</label>
+                    <input id="email" name="email" type="email" value="{{ old('email', $user->email) }}" required>
+                </div>
+
+                <div class="field">
+                    <label for="phone">Phone</label>
+                    <input id="phone" name="phone" type="text" value="{{ old('phone', $user->phone) }}">                   
+                </div>
+
+                <div class="field">
+                    <label for="city">City</label>
+                    <input id="city" name="city" type="text" value="{{ old('city', $user->city) }}">
+                </div>
+
+                <div class="field span-2">
+                    <label for="bio">Bio</label>
+                    <textarea id="bio" name="bio">{{ old('bio', $user->bio) }}</textarea>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button class="button" type="submit">Save changes</button>
+                <a class="button-secondary" href="{{ route('profile.show') }}">Cancel</a>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        (function () {
+            var input = document.getElementById('profile_photo');
+            var img = document.getElementById('photoPreviewImg');
+            var fallback = document.getElementById('photoPreviewFallback');
+            var note = document.getElementById('photoPreviewNote');
+            var defaultNote = note ? note.textContent : '';
+
+            if (!input || !img) return;
+
+            input.addEventListener('change', function () {
+                var file = input.files && input.files[0];
+
+                if (!file) {
+                    if (note) note.textContent = defaultNote;
+                    return;
+                }
+
+                if (!file.type.startsWith('image/')) {
+                    if (note) note.textContent = 'That file is not an image. Choose an image file.';
+                    input.value = '';
+                    return;
+                }
+
+                var reader = new FileReader();
+                reader.onload = function (e) {
+                    img.src = e.target.result;
+                    img.style.display = 'block';
+                    if (fallback) fallback.style.display = 'none';
+                };
+                reader.readAsDataURL(file);
+
+                if (note) {
+                    var sizeKb = Math.round(file.size / 1024);
+                    note.textContent = file.name + ' selected (' + sizeKb + ' KB). Not saved until you click "Save changes".';
+                }
+            });
+        })();
+    </script>
+</body>
+</html>

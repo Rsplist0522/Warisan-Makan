@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AdminCommunityContributionController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BlindBoxController;
 use App\Http\Controllers\CommunityContributionController;
+use App\Http\Controllers\HeritageShopController;
 use App\Http\Controllers\PassportController;
 use Illuminate\Support\Facades\Route;
 
@@ -82,3 +83,5 @@ Route::get('/foodtrails', function () {
 Route::get('/start_trail', function () {
     return view('start_trail');
 });
+
+Route::get('/heritage-shops', [HeritageShopController::class, 'index'])->name('heritage-shops.index');

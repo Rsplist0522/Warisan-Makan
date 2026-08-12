@@ -380,8 +380,9 @@
             [
                 'name' => 'Heritage Shop Tracking',
                 'description' => 'Track verified heritage eateries, ownership notes, and updates.',
-                'status' => 'Coming soon',
+                'status' => 'Open module',
                 'icon' => 'shop',
+                'route' => 'heritage-shops.index',
             ],
             [
                 'name' => 'Food Passport & Achievement',

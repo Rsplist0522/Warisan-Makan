@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\AdminCommunityContributionController;
+use App\Http\Controllers\Admin\AdminCommunityContributionController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CommunityContributionController;
 use Illuminate\Support\Facades\Route;

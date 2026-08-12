@@ -164,7 +164,7 @@
         @if (isset($shop))
             <div class="card-detail" style="margin-top:16px;">
                 <a class="back" href="{{ route('heritage-shops.index') }}" style="color:var(--red-deep);font-weight:700;text-decoration:none;">← Back to list</a>
-                <h1 style="margin-top:12px">{{ $shop['name'] }}</h1>
+                <h1 style="margin-top:12px">{{ $shop['shop_name'] }}</h1>
                 <div class="meta">{{ $shop['location'] }} · {{ $shop['category'] }}</div>
 
                 <p>{{ $shop['description'] }}</p>

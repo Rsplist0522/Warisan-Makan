@@ -16,7 +16,7 @@ class HeritageShopController extends Controller
         $shops = HeritageShop::query()
             ->when($search, function ($query) use ($search) {
                 $query->where(function ($query) use ($search) {
-                    $query->where('name', 'like', "%{$search}%")
+                    $query->where('shop_name', 'like', "%{$search}%")
                         ->orWhere('location', 'like', "%{$search}%")
                         ->orWhere('description', 'like', "%{$search}%")
                         ->orWhere('heritage_story', 'like', "%{$search}%")
@@ -26,7 +26,7 @@ class HeritageShopController extends Controller
             ->when($category, function ($query) use ($category) {
                 $query->where('category', 'like', "%{$category}%");
             })
-            ->orderBy('name')
+            ->orderBy('shop_name')
             ->get();
 
         return view('heritage.shops', compact('shops', 'search', 'category'));

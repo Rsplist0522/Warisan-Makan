@@ -288,7 +288,7 @@
 
                 <div class="field span-2">
                     <label for="email">Email</label>
-                    <input id="email" name="email" type="email" value="{{ old('email', $user->email) }}" required>
+                    <input id="email" name="email" type="email" value="{{ old('email', $user->email) }}" required readonly>
                 </div>
 
                 <div class="field">

@@ -386,8 +386,9 @@
             [
                 'name' => 'Food Passport & Achievement',
                 'description' => 'Collect stamps, badges, and milestones from heritage food visits.',
-                'status' => 'Coming soon',
+                'status' => 'Open module',
                 'icon' => 'award',
+                'route' => 'passport.index',
             ],
             [
                 'name' => 'Food Trail & Navigation',
@@ -463,14 +464,25 @@
 
                 <section class="module-grid" aria-label="WarisanMakan modules">
                     @foreach ($leadingModules as $module)
-                        <article class="module-card is-static" aria-disabled="true">
-                            <span class="module-icon" aria-hidden="true">
-                                @include('partials.module-icon', ['icon' => $module['icon']])
-                            </span>
-                            <h3>{{ $module['name'] }}</h3>
-                            <p>{{ $module['description'] }}</p>
-                            <strong class="module-status">{{ $module['status'] }}</strong>
-                        </article>
+                        @if (isset($module['route']))
+                            <a class="module-card is-active" href="{{ route($module['route']) }}">
+                                <span class="module-icon" aria-hidden="true">
+                                    @include('partials.module-icon', ['icon' => $module['icon']])
+                                </span>
+                                <h3>{{ $module['name'] }}</h3>
+                                <p>{{ $module['description'] }}</p>
+                                <strong class="module-status">{{ $module['status'] }}</strong>
+                            </a>
+                        @else
+                            <article class="module-card is-static" aria-disabled="true">
+                                <span class="module-icon" aria-hidden="true">
+                                    @include('partials.module-icon', ['icon' => $module['icon']])
+                                </span>
+                                <h3>{{ $module['name'] }}</h3>
+                                <p>{{ $module['description'] }}</p>
+                                <strong class="module-status">{{ $module['status'] }}</strong>
+                            </article>
+                        @endif
                     @endforeach
 
                     <a class="module-card is-active" href="{{ route('community-contribution.create') }}">

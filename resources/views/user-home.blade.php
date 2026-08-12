@@ -393,8 +393,9 @@
             [
                 'name' => 'Food Trail & Navigation',
                 'description' => 'Discover curated routes to heritage food spots across Malaysia.',
-                'status' => 'Coming soon',
+                'status' => 'Open module',
                 'icon' => 'map',
+                'url' => url('/foodtrails'),
             ],
             [
                 'name' => 'Blind Box Recommendation',
@@ -421,8 +422,8 @@
             <p class="nav-label">Modules</p>
             <nav class="nav" aria-label="Upcoming modules">
                 @foreach ($comingSoonModules as $module)
-                    @if (isset($module['route']))
-                        <a class="nav-item" href="{{ route($module['route']) }}">
+                    @if (isset($module['route']) || isset($module['url']))
+                        <a class="nav-item" href="{{ isset($module['route']) ? route($module['route']) : $module['url'] }}">
                             <span>{{ $module['name'] }}</span>
                         </a>
                     @else
@@ -464,8 +465,8 @@
 
                 <section class="module-grid" aria-label="WarisanMakan modules">
                     @foreach ($leadingModules as $module)
-                        @if (isset($module['route']))
-                            <a class="module-card is-active" href="{{ route($module['route']) }}">
+                        @if (isset($module['route']) || isset($module['url']))
+                            <a class="module-card is-active" href="{{ isset($module['route']) ? route($module['route']) : $module['url'] }}">
                                 <span class="module-icon" aria-hidden="true">
                                     @include('partials.module-icon', ['icon' => $module['icon']])
                                 </span>

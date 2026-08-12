@@ -72,3 +72,13 @@ Route::middleware('auth')->group(function () {
 // Public test endpoint for local development: simulate a logged-in user
 Route::post('/passport/check-in-test', [PassportController::class, 'checkInTest'])
     ->name('passport.checkin.test');
+
+// Food trails page
+Route::get('/foodtrails', function () {
+    return view('foodtrails');
+});
+
+// Start trail page
+Route::get('/start_trail', function () {
+    return view('start_trail');
+});

@@ -16,6 +16,11 @@ class CommunityContributionController extends Controller
 {
     public function index(): View
     {
+        return view('user-home');
+    }
+
+    public function create(): View
+    {
         return view('community-contribution', ['contribution' => null]);
     }
 

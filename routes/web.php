@@ -12,6 +12,8 @@ Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->n
 
 Route::middleware('auth')->group(function (): void {
     Route::get('/', [CommunityContributionController::class, 'index'])->name('home');
+    Route::get('/community-contributions/create', [CommunityContributionController::class, 'create'])
+        ->name('community-contribution.create');
     Route::post('/community-contributions/heritage-shop', [CommunityContributionController::class, 'store'])
         ->name('community-contribution.store');
 

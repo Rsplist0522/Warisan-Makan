@@ -161,23 +161,43 @@
             </form>
         </div>
 
-        @if (count($shops) === 0)
-            <div class="empty">
-                <strong>No participating shops found.</strong>
-                <p>Try a different keyword or category to explore the heritage food network.</p>
+        @if (isset($shop))
+            <div class="card-detail" style="margin-top:16px;">
+                <a class="back" href="{{ route('heritage-shops.index') }}" style="color:var(--red-deep);font-weight:700;text-decoration:none;">← Back to list</a>
+                <h1 style="margin-top:12px">{{ $shop['name'] }}</h1>
+                <div class="meta">{{ $shop['location'] }} · {{ $shop['category'] }}</div>
+
+                <p>{{ $shop['description'] }}</p>
+
+                <p><strong>Founder:</strong> {{ $shop['founder'] ?? '—' }} · <strong>Established:</strong> {{ $shop['establishment_year'] ?? '—' }}</p>
+                <p><strong>Operating hours:</strong> {{ $shop['operating_hours'] ?? '—' }}</p>
+                <p><strong>Participating since:</strong> {{ $shop['participating_since'] ?? '—' }}</p>
+                <p><strong>Highlight:</strong> {{ $shop['highlight'] ?? '—' }}</p>
+
+                <h2 style="margin-top:16px">Heritage story</h2>
+                <p>{{ $shop['heritage_story'] ?? 'No story available.' }}</p>
             </div>
         @else
-            <div class="shop-list">
-                @foreach ($shops as $shop)
-                    <div class="shop-item">
-                        <h3>{{ $shop['name'] }}</h3>
-                        <div class="meta">{{ $shop['location'] }} · {{ $shop['category'] }}</div>
-                        <p>{{ $shop['description'] }}</p>
-                        <p><strong>Participating since:</strong> {{ $shop['participating_since'] }}</p>
-                        <p><strong>Highlight:</strong> {{ $shop['highlight'] }}</p>
-                    </div>
-                @endforeach
-            </div>
+            @if (count($shops) === 0)
+                <div class="empty">
+                    <strong>No participating shops found.</strong>
+                    <p>Try a different keyword or category to explore the heritage food network.</p>
+                </div>
+            @else
+                <div class="shop-list">
+                    @foreach ($shops as $shop)
+                        <div class="shop-item">
+                            <h3>{{ $shop['name'] }}</h3>
+                            <div class="meta">{{ $shop['location'] }} · {{ $shop['category'] }}</div>
+                            <p>{{ $shop['description'] }}</p>
+                            <p><strong>Participating since:</strong> {{ $shop['participating_since'] }}</p>
+                            <p><strong>Highlight:</strong> {{ $shop['highlight'] }}</p>
+
+                            <p><a href="{{ route('heritage-shops.show', ['id' => $loop->index]) }}">View details</a></p>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
         @endif
     </div>
 </div>

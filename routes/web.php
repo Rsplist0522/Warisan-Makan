@@ -21,6 +21,9 @@ Route::get('/auth/google/callback', [AuthController::class, 'callback']);
 // Remove this block and the heritage route once authentication is ready.
 Route::get('/heritage-shops', [HeritageShopController::class, 'index'])->name('heritage-shops.index');
 
+// Heritage shop detail
+Route::get('/heritage-shops/{id}', [HeritageShopController::class, 'show'])->name('heritage-shops.show');
+
 Route::get('/', function () {
     return redirect('/heritage-shops');
 });

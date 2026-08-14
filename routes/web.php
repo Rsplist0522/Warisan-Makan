@@ -11,6 +11,11 @@ use Illuminate\Support\Facades\Route;
 Route::view('/login', 'auth.login')->middleware('guest')->name('login');
 Route::get('/auth/google', [AuthController::class, 'redirect'])->middleware('guest')->name('auth.google');
 Route::get('/auth/google/callback', [AuthController::class, 'callback'])->middleware('guest');
+Route::get('/admin-login', [AuthController::class, 'showAdminLogin'])
+    ->name('admin.login');
+Route::post('/admin-login', [AuthController::class, 'adminLogin'])
+    ->middleware('throttle:6,1')
+    ->name('admin.login.submit');
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
 
 Route::middleware('auth')->group(function (): void {
@@ -45,8 +50,50 @@ Route::middleware('auth')->group(function (): void {
             Route::get('/{contribution}', [AdminCommunityContributionController::class, 'show'])->name('show');
             Route::post('/{contribution}/start-review', [AdminCommunityContributionController::class, 'startReview'])->name('start-review');
             Route::post('/{contribution}/moderate', [AdminCommunityContributionController::class, 'moderate'])->name('moderate');
-        });
+    });
 });
+
+Route::prefix('admin')
+    ->name('admin.')
+    ->middleware('admin')
+    ->group(function () {
+        Route::view('/', 'admin.dashboard')->name('dashboard');
+
+        Route::get('/modules/{moduleSlug}', function (string $moduleSlug) {
+            $modules = [
+                'heritage-registry' => [
+                    'name' => 'Heritage Registry',
+                    'description' => 'A future workspace for approved shop records, ownership notes, and heritage metadata.',
+                ],
+                'food-map' => [
+                    'name' => 'Food Map',
+                    'description' => 'A planned map and discovery module for browsing heritage eateries by location.',
+                ],
+                'stories-editorial' => [
+                    'name' => 'Stories & Editorial',
+                    'description' => 'A future editorial queue for oral histories, guides, and feature stories.',
+                ],
+                'events-trails' => [
+                    'name' => 'Events & Trails',
+                    'description' => 'A planned module for curated food trails, walking routes, and community events.',
+                ],
+                'users-roles' => [
+                    'name' => 'Users & Roles',
+                    'description' => 'A future workspace for contributor profiles, reviewer roles, and access controls.',
+                ],
+                'reports-analytics' => [
+                    'name' => 'Reports & Analytics',
+                    'description' => 'A planned reporting area for contribution trends and moderation throughput.',
+                ],
+            ];
+
+            abort_unless(array_key_exists($moduleSlug, $modules), 404);
+
+            return view('admin.module-placeholder', [
+                'module' => $modules[$moduleSlug],
+            ]);
+        })->name('modules.show');
+    });
 
 // Blind Box routes
 Route::get('/blind-box', [BlindBoxController::class, 'index'])->name('blind-box.index');
@@ -85,3 +132,6 @@ Route::get('/start_trail', function () {
 });
 
 Route::get('/heritage-shops', [HeritageShopController::class, 'index'])->name('heritage-shops.index');
+
+// Heritage shop detail
+Route::get('/heritage-shops/{id}', [HeritageShopController::class, 'show'])->name('heritage-shops.show');

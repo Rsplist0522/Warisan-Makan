@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Models;
 
@@ -32,22 +32,68 @@ class HeritageShop extends Model
         'longitude',
         'supporting_media',
         'publish_status',
+        'location',
+        'country',
+        'category',
+        'description',
+        'participating_since',
+        'highlight',
+        'source_url',
     ];
 
-    protected function casts(): array
-    {
-        return [
-            'operating_hours' => 'array',
-            'food_items' => 'array',
-            'supporting_media' => 'array',
-            'establishment_year' => 'integer',
-            'latitude' => 'float',
-            'longitude' => 'float',
-        ];
-    }
+    protected $casts = [
+        'operating_hours' => 'array',
+        'food_items' => 'array',
+        'supporting_media' => 'array',
+        'establishment_year' => 'integer',
+        'latitude' => 'float',
+        'longitude' => 'float',
+    ];
 
     public function sourceContribution()
     {
         return $this->belongsTo(HeritageShopContribution::class, 'source_contribution_id');
+    }
+
+    public function getNameAttribute(?string $value): ?string
+    {
+        return $value ?: $this->shop_name;
+    }
+
+    public function getCategoryAttribute(?string $value): ?string
+    {
+        return $value ?: $this->primary_food_category;
+    }
+
+    public function getFounderAttribute(?string $value): ?string
+    {
+        return $value ?: $this->founder_name;
+    }
+
+    public function getDescriptionAttribute(?string $value): ?string
+    {
+        return $value ?: $this->heritage_story;
+    }
+
+    public function getLocationAttribute(?string $value): ?string
+    {
+        if (!empty($value)) {
+            return $value;
+        }
+
+        return trim(implode(', ', array_filter([
+            $this->address,
+            $this->city,
+            $this->state,
+        ])));
+    }
+
+    public function getOperatingHoursAttribute($value)
+    {
+        if (is_array($value)) {
+            return implode('; ', array_filter($value));
+        }
+
+        return $value;
     }
 }

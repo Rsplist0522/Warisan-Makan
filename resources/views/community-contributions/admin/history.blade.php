@@ -47,30 +47,32 @@
             <p>No processed submission matches the selected filters.</p>
         </section>
     @else
-        <div class="record-list">
-            @foreach ($history as $record)
-                @php $latestActivity = $record->moderationActivities->first(); @endphp
-                <article class="record-card">
-                    <div>
-                        <span class="badge badge-{{ $record->status }}">{{ $record->statusLabel() }}</span>
-                        <h2>{{ $record->contribution_title ?: $record->shop_name }}</h2>
-                        <p>{{ str($record->heritage_story)->limit(180) }}</p>
-                        <div class="record-meta">
-                            <span>Contributor: {{ $record->user?->name ?? 'Deleted user' }}</span>
-                            <span>Shop: {{ $record->shop_name }}</span>
-                            <span>Location: {{ collect([$record->city, $record->state])->filter()->join(', ') ?: $record->address }}</span>
-                            <span>Established: {{ $record->establishment_year ?: 'Unknown' }}</span>
-                            <span>Food type: {{ $record->primary_food_category ?: 'Not provided' }}</span>
-                            <span>Last action: {{ $latestActivity ? str($latestActivity->action)->replace('_', ' ')->title() : 'No audit action' }}</span>
-                            <span>Updated: {{ $record->updated_at->format('d M Y, g:i A') }}</span>
+        <div class="admin-scroll">
+            <div class="record-list">
+                @foreach ($history as $record)
+                    @php $latestActivity = $record->moderationActivities->first(); @endphp
+                    <article class="record-card">
+                        <div>
+                            <span class="badge badge-{{ $record->status }}">{{ $record->statusLabel() }}</span>
+                            <h2>{{ $record->contribution_title ?: $record->shop_name }}</h2>
+                            <p>{{ str($record->heritage_story)->limit(180) }}</p>
+                            <div class="record-meta">
+                                <span>Contributor: {{ $record->user?->name ?? 'Deleted user' }}</span>
+                                <span>Shop: {{ $record->shop_name }}</span>
+                                <span>Location: {{ collect([$record->city, $record->state])->filter()->join(', ') ?: $record->address }}</span>
+                                <span>Established: {{ $record->establishment_year ?: 'Unknown' }}</span>
+                                <span>Food type: {{ $record->primary_food_category ?: 'Not provided' }}</span>
+                                <span>Last action: {{ $latestActivity ? str($latestActivity->action)->replace('_', ' ')->title() : 'No audit action' }}</span>
+                                <span>Updated: {{ $record->updated_at->format('d M Y, g:i A') }}</span>
+                            </div>
                         </div>
-                    </div>
-                    <div class="record-actions">
-                        <a class="button secondary small" href="{{ route('admin.community-contributions.show', $record) }}">View audit details</a>
-                    </div>
-                </article>
-            @endforeach
+                        <div class="record-actions">
+                            <a class="button secondary small" href="{{ route('admin.community-contributions.show', $record) }}">View audit details</a>
+                        </div>
+                    </article>
+                @endforeach
+            </div>
         </div>
-        <div class="pagination">{{ $history->links() }}</div>
+        <div class="admin-scroll pagination">{{ $history->links() }}</div>
     @endif
 @endsection

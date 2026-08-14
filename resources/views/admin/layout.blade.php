@@ -22,7 +22,6 @@
         body { margin: 0; min-height: 100vh; color: var(--ink); background: var(--canvas); font-family: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif; }
         a { color: inherit; }
         button { font: inherit; }
-        body.nav-open { overflow: hidden; }
         .shell { min-height: 100vh; display: grid; grid-template-columns: 270px 1fr; }
         .sidebar { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; padding: 28px 20px; color: #fff5ec; background: linear-gradient(180deg, var(--sidebar), #281010); }
         .brand { display: flex; align-items: center; gap: 12px; padding: 2px 10px 28px; border-bottom: 1px solid rgba(255,255,255,.1); font-family: Georgia, serif; font-size: 1.2rem; font-weight: 800; }
@@ -45,15 +44,11 @@
         .admin-role { margin: 0 0 14px; color: rgba(255,245,236,.52); font-size: .76rem; }
         .logout { width: 100%; padding: 9px 12px; border: 1px solid rgba(255,255,255,.16); border-radius: 9px; color: #fff5ec; background: transparent; cursor: pointer; text-align: left; }
         .logout:hover { background: rgba(255,255,255,.08); }
-        .sidebar-backdrop { display: none; }
         .main { min-width: 0; }
         .topbar { min-height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 16px 34px; border-bottom: 1px solid var(--line); background: rgba(255,253,249,.9); }
-        .menu-toggle { display: none; width: 44px; height: 44px; flex: 0 0 auto; flex-direction: column; align-items: center; justify-content: center; gap: 4px; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); background: #fffdf9; cursor: pointer; }
-        .menu-toggle span, .menu-toggle::before, .menu-toggle::after { content: ''; width: 19px; height: 2px; display: block; border-radius: 999px; background: currentColor; }
         .topbar h1 { margin: 0; font-family: Georgia, serif; font-size: 1.35rem; }
         .topbar p { margin: 3px 0 0; color: var(--muted); font-size: .82rem; }
         .content { padding: 34px; }
-        .admin-scroll { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
         .page-header { display: flex; align-items: end; justify-content: space-between; gap: 18px; margin-bottom: 22px; }
         .eyebrow { margin: 0 0 7px; color: var(--accent); font-size: .78rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
         .page-header h1 { margin: 0; font-family: Georgia, serif; font-size: clamp(2rem, 5vw, 3.2rem); line-height: 1; }
@@ -133,65 +128,16 @@
         .pagination { margin-top: 18px; }
         nav[role='navigation'] svg { width: 18px; height: 18px; }
         @media (max-width: 850px) {
+            .shell { grid-template-columns: 1fr; }
+            .sidebar { position: static; height: auto; }
+            .nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .subnav { grid-column: 1 / -1; margin-left: 0; }
+            .sidebar-footer { margin-top: 24px; }
             .topbar, .content { padding-inline: 20px; }
             .filters, .filters.four { grid-template-columns: 1fr 1fr; }
             .filters .filter-action { grid-column: 1 / -1; }
             .module-grid { grid-template-columns: 1fr; }
             .detail-grid { grid-template-columns: 1fr; }
-        }
-        @media (max-width: 767px) {
-            .shell { grid-template-columns: 1fr; }
-            .sidebar {
-                position: fixed;
-                z-index: 40;
-                inset: 0 auto 0 0;
-                width: min(84vw, 320px);
-                max-width: 100%;
-                height: 100vh;
-                height: 100dvh;
-                padding-top: calc(24px + env(safe-area-inset-top));
-                padding-right: 20px;
-                padding-bottom: calc(24px + env(safe-area-inset-bottom));
-                padding-left: max(20px, env(safe-area-inset-left));
-                overflow-y: auto;
-                overscroll-behavior: contain;
-                box-shadow: 24px 0 50px rgba(31, 14, 11, .3);
-                transform: translateX(-100%);
-                transition: transform .22s ease;
-            }
-            body.nav-open .sidebar { transform: translateX(0); }
-            .sidebar-backdrop {
-                position: fixed;
-                z-index: 30;
-                inset: 0;
-                display: block;
-                border: 0;
-                padding: 0;
-                background: rgba(35, 18, 15, .42);
-                opacity: 0;
-                pointer-events: none;
-                transition: opacity .2s ease;
-            }
-            body.nav-open .sidebar-backdrop { opacity: 1; pointer-events: auto; }
-            .brand { padding-top: 0; }
-            .nav { grid-template-columns: 1fr; }
-            .subnav { margin-left: 0; }
-            .nav-item, .logout, .button { min-height: 44px; }
-            .sidebar-footer { margin-top: 24px; }
-            .main { width: 100%; }
-            .topbar {
-                position: sticky;
-                top: 0;
-                z-index: 20;
-                min-height: calc(64px + env(safe-area-inset-top));
-                justify-content: flex-start;
-                padding: calc(10px + env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 10px max(16px, env(safe-area-inset-left));
-            }
-            .menu-toggle { display: flex; }
-            .content { overflow-x: hidden; }
-            .panel, .record-card, .status-banner, .pagination { min-width: 0; }
-            .panel { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-            .panel table, .admin-scroll table { min-width: 680px; }
         }
         @media (max-width: 520px) {
             .nav, .filters, .filters.four, .definition-grid { grid-template-columns: 1fr; }
@@ -214,7 +160,7 @@
         ];
     @endphp
     <div class="shell">
-        <aside class="sidebar" id="admin-sidebar">
+        <aside class="sidebar">
             <div class="brand"><span class="brand-mark">W</span> Warisan Makan</div>
             <p class="nav-label">Admin home</p>
             <nav class="nav" aria-label="Administrator modules">
@@ -250,13 +196,9 @@
                 </form>
             </div>
         </aside>
-        <button class="sidebar-backdrop" type="button" data-nav-close aria-label="Close navigation"></button>
 
         <section class="main">
             <header class="topbar">
-                <button class="menu-toggle" type="button" data-nav-toggle aria-label="Open navigation" aria-controls="admin-sidebar" aria-expanded="false">
-                    <span aria-hidden="true"></span>
-                </button>
                 <div>
                     <h1>@yield('page-title', 'Admin Dashboard')</h1>
                     <p>Warisan Makan management portal</p>
@@ -265,48 +207,5 @@
             <main class="content">@yield('content')</main>
         </section>
     </div>
-    <script>
-        (() => {
-            const toggle = document.querySelector('[data-nav-toggle]');
-            const closeTargets = document.querySelectorAll('[data-nav-close], .sidebar .nav-item[href]');
-            const mobileQuery = window.matchMedia('(max-width: 767px)');
-
-            if (!toggle) {
-                return;
-            }
-
-            const setOpen = (isOpen) => {
-                document.body.classList.toggle('nav-open', isOpen);
-                toggle.setAttribute('aria-expanded', String(isOpen));
-                toggle.setAttribute('aria-label', isOpen ? 'Close navigation' : 'Open navigation');
-            };
-
-            toggle.addEventListener('click', () => {
-                setOpen(!document.body.classList.contains('nav-open'));
-            });
-
-            closeTargets.forEach((target) => {
-                target.addEventListener('click', () => setOpen(false));
-            });
-
-            document.addEventListener('keydown', (event) => {
-                if (event.key === 'Escape') {
-                    setOpen(false);
-                }
-            });
-
-            const handleViewportChange = (event) => {
-                if (!event.matches) {
-                    setOpen(false);
-                }
-            };
-
-            if (typeof mobileQuery.addEventListener === 'function') {
-                mobileQuery.addEventListener('change', handleViewportChange);
-            } else {
-                mobileQuery.addListener(handleViewportChange);
-            }
-        })();
-    </script>
 </body>
 </html>

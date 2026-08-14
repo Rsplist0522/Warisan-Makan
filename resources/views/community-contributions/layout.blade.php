@@ -128,13 +128,6 @@
         .muted { color: var(--wm-muted); }
         .page-header p:last-child { margin: 9px 0 0; color: var(--wm-muted); }
 
-        .page-back {
-            width: fit-content;
-            gap: 8px;
-            margin-bottom: 14px;
-            padding-inline: 16px;
-        }
-
         .status-banner {
             margin-bottom: 18px;
             padding: 14px 16px;

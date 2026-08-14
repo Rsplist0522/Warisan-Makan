@@ -5,10 +5,6 @@
 @section('content')
     <header class="page-header">
         <div>
-            <a class="button secondary page-back" href="{{ route('home') }}" aria-label="Go back to dashboard">
-                <span aria-hidden="true">&larr;</span>
-                <span>Back to dashboard</span>
-            </a>
             <p class="eyebrow">Community contribution</p>
             <h1>{{ $contribution ? 'Edit Heritage Shop' : 'Submit Heritage Shop' }}</h1>
             <p>

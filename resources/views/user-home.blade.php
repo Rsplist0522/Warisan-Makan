@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>User Home - Warisan Makan</title>
     @fonts
     <style>
@@ -33,10 +33,6 @@
         a { color: inherit; }
         button { font: inherit; }
         h1, h2, h3, p { overflow-wrap: anywhere; }
-
-        body.nav-open {
-            overflow: hidden;
-        }
 
         .shell {
             min-height: 100vh;
@@ -166,10 +162,6 @@
 
         .logout:hover { background: rgba(255, 255, 255, .08); }
 
-        .sidebar-backdrop {
-            display: none;
-        }
-
         .main {
             min-width: 0;
             background:
@@ -188,33 +180,6 @@
             border-bottom: 1px solid var(--wm-line);
             background: rgba(255, 253, 249, .9);
             backdrop-filter: blur(14px);
-        }
-
-        .menu-toggle {
-            display: none;
-            width: 44px;
-            height: 44px;
-            flex: 0 0 auto;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 4px;
-            border: 1px solid var(--wm-line);
-            border-radius: 10px;
-            color: var(--wm-ink);
-            background: #fffdf9;
-            cursor: pointer;
-        }
-
-        .menu-toggle span,
-        .menu-toggle::before,
-        .menu-toggle::after {
-            content: '';
-            width: 19px;
-            height: 2px;
-            display: block;
-            border-radius: 999px;
-            background: currentColor;
         }
 
         .topbar h2 {
@@ -376,97 +341,27 @@
             color: #8a7a70;
         }
 
-        @media (max-width: 767px) {
+        @media (max-width: 980px) {
             .shell { grid-template-columns: 1fr; }
-
             .sidebar {
-                position: fixed;
-                z-index: 40;
-                inset: 0 auto 0 0;
-                width: min(84vw, 320px);
-                max-width: 100%;
-                height: 100vh;
-                height: 100dvh;
-                padding-top: calc(24px + env(safe-area-inset-top));
-                padding-right: 20px;
-                padding-bottom: calc(24px + env(safe-area-inset-bottom));
-                padding-left: max(20px, env(safe-area-inset-left));
-                overflow-y: auto;
-                overscroll-behavior: contain;
-                box-shadow: 24px 0 50px rgba(31, 14, 11, .3);
-                transform: translateX(-100%);
-                transition: transform .22s ease;
+                position: static;
+                height: auto;
             }
-
-            body.nav-open .sidebar {
-                transform: translateX(0);
-            }
-
-            .sidebar-backdrop {
-                position: fixed;
-                z-index: 30;
-                inset: 0;
-                display: block;
-                border: 0;
-                padding: 0;
-                background: rgba(35, 18, 15, .42);
-                opacity: 0;
-                pointer-events: none;
-                transition: opacity .2s ease;
-            }
-
-            body.nav-open .sidebar-backdrop {
-                opacity: 1;
-                pointer-events: auto;
-            }
-
-            .brand {
-                padding-top: 0;
-            }
-
-            .nav {
-                grid-template-columns: 1fr;
-            }
-
-            .nav-item,
-            .logout {
-                min-height: 44px;
-            }
-
+            .nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
             .sidebar-footer { margin-top: 24px; }
-
-            .main {
-                width: 100%;
-            }
-
-            .topbar {
-                position: sticky;
-                top: 0;
-                z-index: 20;
-                min-height: calc(64px + env(safe-area-inset-top));
-                justify-content: flex-start;
-                padding: calc(10px + env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 10px max(16px, env(safe-area-inset-left));
-            }
-
-            .menu-toggle {
-                display: flex;
-            }
-
-            .module-grid { grid-template-columns: 1fr; }
-
-            .page-header {
-                display: grid;
-            }
-
+            .module-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .topbar,
             .content { padding-inline: 22px; }
         }
 
         @media (max-width: 620px) {
-            .topbar {
-                padding-right: max(16px, env(safe-area-inset-right));
-                padding-left: max(16px, env(safe-area-inset-left));
+            .topbar,
+            .page-header {
+                display: grid;
             }
             .content { padding: 22px 16px 34px; }
+            .nav,
+            .module-grid { grid-template-columns: 1fr; }
             .page-header { padding: 24px; }
             .header-pill { justify-self: start; }
         }
@@ -516,7 +411,7 @@
     @endphp
 
     <div class="shell">
-        <aside class="sidebar" id="user-sidebar">
+        <aside class="sidebar">
             <div class="brand"><span class="brand-mark">W</span> WarisanMakan</div>
 
             <p class="nav-label">Home</p>
@@ -550,13 +445,9 @@
                 </form>
             </div>
         </aside>
-        <button class="sidebar-backdrop" type="button" data-nav-close aria-label="Close navigation"></button>
 
         <section class="main">
             <header class="topbar">
-                <button class="menu-toggle" type="button" data-nav-toggle aria-label="Open navigation" aria-controls="user-sidebar" aria-expanded="false">
-                    <span aria-hidden="true"></span>
-                </button>
                 <div>
                     <h2>User Dashboard</h2>
                     <p>WarisanMakan heritage food portal</p>
@@ -617,48 +508,5 @@
             </main>
         </section>
     </div>
-    <script>
-        (() => {
-            const toggle = document.querySelector('[data-nav-toggle]');
-            const closeTargets = document.querySelectorAll('[data-nav-close], .sidebar .nav-item[href]');
-            const mobileQuery = window.matchMedia('(max-width: 767px)');
-
-            if (!toggle) {
-                return;
-            }
-
-            const setOpen = (isOpen) => {
-                document.body.classList.toggle('nav-open', isOpen);
-                toggle.setAttribute('aria-expanded', String(isOpen));
-                toggle.setAttribute('aria-label', isOpen ? 'Close navigation' : 'Open navigation');
-            };
-
-            toggle.addEventListener('click', () => {
-                setOpen(!document.body.classList.contains('nav-open'));
-            });
-
-            closeTargets.forEach((target) => {
-                target.addEventListener('click', () => setOpen(false));
-            });
-
-            document.addEventListener('keydown', (event) => {
-                if (event.key === 'Escape') {
-                    setOpen(false);
-                }
-            });
-
-            const handleViewportChange = (event) => {
-                if (!event.matches) {
-                    setOpen(false);
-                }
-            };
-
-            if (typeof mobileQuery.addEventListener === 'function') {
-                mobileQuery.addEventListener('change', handleViewportChange);
-            } else {
-                mobileQuery.addListener(handleViewportChange);
-            }
-        })();
-    </script>
 </body>
 </html>

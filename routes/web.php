@@ -115,11 +115,16 @@ Route::middleware('auth')->group(function () {
     Route::post('/passport/check-in', [PassportController::class, 'checkIn'])
         ->name('passport.checkin');
 
+    Route::post('/passport/demo-reset', [PassportController::class, 'resetDemoData'])
+        ->name('passport.demo.reset');
+
 });
 
 // Public test endpoint for local development: simulate a logged-in user
 Route::post('/passport/check-in-test', [PassportController::class, 'checkInTest'])
     ->name('passport.checkin.test');
+Route::post('/passport/demo-reset', [PassportController::class, 'resetDemoData'])
+    ->name('passport.demo.reset.public');
 
 // Food trails page
 Route::get('/foodtrails', function () {

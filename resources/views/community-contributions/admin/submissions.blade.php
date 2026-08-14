@@ -39,28 +39,30 @@
             <p>The review queue is currently empty.</p>
         </section>
     @else
-        <div class="record-list">
-            @foreach ($submissions as $submission)
-                <article class="record-card">
-                    <div>
-                        <span class="badge badge-{{ $submission->status }}">{{ $submission->statusLabel() }}</span>
-                        <h2>{{ $submission->contribution_title ?: $submission->shop_name }}</h2>
-                        <p>{{ str($submission->heritage_story)->limit(180) }}</p>
-                        <div class="record-meta">
-                            <span>Contributor: {{ $submission->user?->name ?? 'Deleted user' }}</span>
-                            <span>Shop: {{ $submission->shop_name }}</span>
-                            <span>Location: {{ collect([$submission->city, $submission->state])->filter()->join(', ') ?: $submission->address }}</span>
-                            <span>Established: {{ $submission->establishment_year ?: 'Unknown' }}</span>
-                            <span>Food type: {{ $submission->primary_food_category ?: 'Not provided' }}</span>
-                            <span>Submitted: {{ optional($submission->submitted_at)->format('d M Y, g:i A') }}</span>
+        <div class="admin-scroll">
+            <div class="record-list">
+                @foreach ($submissions as $submission)
+                    <article class="record-card">
+                        <div>
+                            <span class="badge badge-{{ $submission->status }}">{{ $submission->statusLabel() }}</span>
+                            <h2>{{ $submission->contribution_title ?: $submission->shop_name }}</h2>
+                            <p>{{ str($submission->heritage_story)->limit(180) }}</p>
+                            <div class="record-meta">
+                                <span>Contributor: {{ $submission->user?->name ?? 'Deleted user' }}</span>
+                                <span>Shop: {{ $submission->shop_name }}</span>
+                                <span>Location: {{ collect([$submission->city, $submission->state])->filter()->join(', ') ?: $submission->address }}</span>
+                                <span>Established: {{ $submission->establishment_year ?: 'Unknown' }}</span>
+                                <span>Food type: {{ $submission->primary_food_category ?: 'Not provided' }}</span>
+                                <span>Submitted: {{ optional($submission->submitted_at)->format('d M Y, g:i A') }}</span>
+                            </div>
                         </div>
-                    </div>
-                    <div class="record-actions">
-                        <a class="button info small" href="{{ route('admin.community-contributions.show', $submission) }}">Review details</a>
-                    </div>
-                </article>
-            @endforeach
+                        <div class="record-actions">
+                            <a class="button info small" href="{{ route('admin.community-contributions.show', $submission) }}">Review details</a>
+                        </div>
+                    </article>
+                @endforeach
+            </div>
         </div>
-        <div class="pagination">{{ $submissions->links() }}</div>
+        <div class="admin-scroll pagination">{{ $submissions->links() }}</div>
     @endif
 @endsection

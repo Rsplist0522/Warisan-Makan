@@ -161,23 +161,75 @@
             </form>
         </div>
 
-        @if (count($shops) === 0)
-            <div class="empty">
-                <strong>No participating shops found.</strong>
-                <p>Try a different keyword or category to explore the heritage food network.</p>
+        @if (isset($shop))
+            <div class="card-detail" style="margin-top:16px;">
+                <a class="back" href="{{ route('heritage-shops.index') }}" style="color:var(--red-deep);font-weight:700;text-decoration:none;">← Back to list</a>
+                <h1 style="margin-top:12px">{{ $shop['shop_name'] }}</h1>
+                <div class="meta">{{ $shop['location'] }} · {{ $shop['category'] }}</div>
+
+                <p>{{ $shop['description'] }}</p>
+
+                @if (!empty($shop['founder']) || !empty($shop['establishment_year']))
+                    <p>
+                        @if (!empty($shop['founder']))
+                            <strong>Founder:</strong> {{ $shop['founder'] }}
+                        @endif
+                        @if (!empty($shop['founder']) && !empty($shop['establishment_year']))
+                            ·
+                        @endif
+                        @if (!empty($shop['establishment_year']))
+                            <strong>Established:</strong> {{ $shop['establishment_year'] }}
+                        @endif
+                    </p>
+                @endif
+
+                @if (!empty($shop['operating_hours']))
+                    <p><strong>Operating hours:</strong> {{ $shop['operating_hours'] }}</p>
+                @endif
+
+                @if (!empty($shop['participating_since']))
+                    <p><strong>Participating since:</strong> {{ $shop['participating_since'] }}</p>
+                @endif
+
+                @if (!empty($shop['highlight']))
+                    <p><strong>Highlight:</strong> {{ $shop['highlight'] }}</p>
+                @endif
+
+                @if (!empty($shop['country']))
+                    <p><strong>Country:</strong> {{ ucfirst($shop['country']) }}</p>
+                @endif
+
+                @if (!empty($shop['source_url']))
+                    <p><strong>Source:</strong> <a href="{{ $shop['source_url'] }}" target="_blank" rel="noopener noreferrer">View original</a></p>
+                @endif
+
+                <h2 style="margin-top:16px">About</h2>
+                <p>{{ $shop['description'] ?? 'No description available.' }}</p>
+
+                <h2 style="margin-top:16px">Heritage story</h2>
+                <p>{{ $shop['heritage_story'] ?? 'No story available.' }}</p>
             </div>
         @else
-            <div class="shop-list">
-                @foreach ($shops as $shop)
-                    <div class="shop-item">
-                        <h3>{{ $shop['name'] }}</h3>
-                        <div class="meta">{{ $shop['location'] }} · {{ $shop['category'] }}</div>
-                        <p>{{ $shop['description'] }}</p>
-                        <p><strong>Participating since:</strong> {{ $shop['participating_since'] }}</p>
-                        <p><strong>Highlight:</strong> {{ $shop['highlight'] }}</p>
-                    </div>
-                @endforeach
-            </div>
+            @if (count($shops) === 0)
+                <div class="empty">
+                    <strong>No participating shops found.</strong>
+                    <p>Try a different keyword or category to explore the heritage food network.</p>
+                </div>
+            @else
+                <div class="shop-list">
+                    @foreach ($shops as $shop)
+                        <div class="shop-item">
+                            <h3>{{ $shop['name'] }}</h3>
+                            <div class="meta">{{ $shop['location'] }} · {{ $shop['category'] }}</div>
+                            <p>{{ $shop['description'] }}</p>
+                            <p><strong>Participating since:</strong> {{ $shop['participating_since'] }}</p>
+                            <p><strong>Highlight:</strong> {{ $shop['highlight'] }}</p>
+
+                            <p><a href="{{ route('heritage-shops.show', ['id' => $shop->id]) }}">View details</a></p>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
         @endif
     </div>
 </div>

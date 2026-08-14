@@ -5,7 +5,21 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Food Trails | {{ config('app.name', 'Warisan Makan') }}</title>
-    @vite(['resources/css/app.css', 'resources/js/food-trails.js'])
+    <script>
+        window.googleMapsApiKey = @json(config('services.google.maps_api_key'));
+        window.googleMapsLoaded = false;
+        window._onGoogleMapsLoaded = function () {
+            window.googleMapsLoaded = true;
+            if (typeof window.initFoodTrailMap === 'function') window.initFoodTrailMap();
+            if (typeof window.initStartTrailMap === 'function') window.initStartTrailMap();
+        };
+        window.gm_authFailure = function () {
+            window.dispatchEvent(new CustomEvent('googleMapsError', { detail: 'Google Maps rejected this API key. Check that Maps JavaScript API is enabled, billing is active, and your key restrictions allow this site.' }));
+        };
+    </script>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <script async defer
+        src="https://maps.googleapis.com/maps/api/js?key={{ urlencode(config('services.google.maps_api_key')) }}&callback=_onGoogleMapsLoaded"></script>
 </head>
 
 <body class="bg-[#f8f3ed] text-[#1f1b19] min-h-screen">
@@ -201,9 +215,10 @@
                         <div id="mapContainer"
                             class="relative mt-6 aspect-[4/3] overflow-hidden rounded-[28px] border border-[#E8D4BE] bg-[#FBF6F1] shadow-inner">
                             <div
-                                class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(255,210,146,0.35),_transparent_40%),radial-gradient(circle_at_bottom_right,_rgba(222,164,95,0.16),_transparent_35%)]">
+                                class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(255,210,146,0.35),_transparent_40%),radial-gradient(circle_at_bottom_right,_rgba(222,164,95,0.16),_transparent_35%)] pointer-events-none">
                             </div>
-                            <div id="mapMarkers" class="absolute inset-0"></div>
+                            <div id="googleMap" class="absolute inset-0"></div>
+                            <div id="googleMapMessage" class="absolute inset-x-4 bottom-14 hidden rounded-2xl bg-white/95 px-4 py-3 text-sm text-[#6B5B4B] shadow-lg"></div>
                             <div
                                 class="absolute bottom-4 left-4 rounded-3xl bg-black/10 px-4 py-2 text-xs text-white backdrop-blur-sm">
                                 Click a restaurant card to view route details.</div>

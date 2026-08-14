@@ -16,6 +16,11 @@ class ModerationActivity extends Model
         'from_status',
         'to_status',
         'comment',
+        'metadata',
+    ];
+
+    protected $casts = [
+        'metadata' => 'array',
     ];
 
     public function contribution()

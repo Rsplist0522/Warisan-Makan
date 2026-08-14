@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('from_status', 40)->nullable();
             $table->string('to_status', 40)->nullable();
             $table->text('comment')->nullable();
+            $table->json('metadata')->nullable();
             $table->timestamps();
 
             $table->index(['action', 'created_at']);

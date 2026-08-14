@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 namespace App\Models;
 
@@ -13,9 +13,11 @@ class HeritageShop extends Model
 
     protected $fillable = [
         'source_contribution_id',
+        'name',
         'shop_name',
         'primary_food_category',
         'establishment_year',
+        'founder',
         'founder_name',
         'founder_background',
         'current_owner_name',

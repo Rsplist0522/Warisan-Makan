@@ -18,15 +18,16 @@ Route::post('/admin-login', [AuthController::class, 'adminLogin'])
     ->name('admin.login.submit');
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
 
-Route::get('/', function () {
-    if (auth()->check()) {
-        return view('user-home', ['userName' => auth()->user()->name]);
-    }
-
-    return view('landing');
-})->name('home');
+Route::view('/landing', 'landing')->name('landing');
 
 Route::middleware('auth')->group(function (): void {
+    Route::middleware('regular_user')->group(function (): void {
+        Route::get('/', [CommunityContributionController::class, 'index'])->name('home');
+        Route::get('/dashboard', function () {
+            return view('user-home', ['userName' => auth()->user()->name]);
+        })->name('user.dashboard');
+    });
+
     Route::get('/profile', [App\Http\Controllers\ProfileController::class, 'show'])->name('profile.show');
     Route::get('/profile/edit', [App\Http\Controllers\ProfileController::class, 'edit'])->name('profile.edit');
     Route::post('/profile', [App\Http\Controllers\ProfileController::class, 'update'])->name('profile.update');
@@ -107,7 +108,7 @@ Route::prefix('admin')
     });
 
 // Blind Box routes
-Route::get('/blind-box', [BlindBoxController::class, 'index'])->name('blind-box.index');
+Route::get('/blind-box', [BlindBoxController::class, 'index'])->middleware('auth')->name('blind-box.index');
 Route::post('/blind-box/draw', [BlindBoxController::class, 'draw'])->name('blind-box.draw');
 Route::get('/blind-box/history', [BlindBoxController::class, 'history'])->name('blind-box.history');
 

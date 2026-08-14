@@ -132,6 +132,3 @@ Route::get('/start_trail', function () {
 });
 
 Route::get('/heritage-shops', [HeritageShopController::class, 'index'])->name('heritage-shops.index');
-
-// Heritage shop detail
-Route::get('/heritage-shops/{id}', [HeritageShopController::class, 'show'])->name('heritage-shops.show');

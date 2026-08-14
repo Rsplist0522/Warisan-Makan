@@ -26,6 +26,5 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $this->call(CommunityContributionDemoSeeder::class);
-        $this->call(\Database\Seeders\HeritageShopSeeder::class);
     }
 }

@@ -8,16 +8,16 @@
     <style>
         :root {
             color-scheme: light;
-            --wm-bg: #f7efe6;
-            --wm-panel: rgba(255, 250, 245, .94);
-            --wm-text: #2d2320;
-            --wm-muted: #6d5b4f;
-            --wm-accent: #9a2b2b;
-            --wm-accent-strong: #7d1f1f;
-            --wm-accent-soft: rgba(154, 43, 43, .1);
-            --wm-border: rgba(45, 35, 32, .14);
-            --wm-shadow: 0 24px 80px rgba(109, 30, 30, .14);
-            --wm-highlight: #c79a28;
+            --wm-bg: #fbf2e7;
+            --wm-panel: #fff8f0;
+            --wm-text: #5b4335;
+            --wm-muted: #8c6f5f;
+            --wm-accent: #b34d35;
+            --wm-accent-strong: #7d4634;
+            --wm-accent-soft: rgba(179, 77, 53, .1);
+            --wm-border: rgba(177, 140, 106, .16);
+            --wm-shadow: 0 18px 36px rgba(104, 71, 42, .08);
+            --wm-highlight: #d19c3b;
             --wm-success: #296447;
             --wm-danger: #b42318;
             --wm-info: #315d83;
@@ -30,7 +30,7 @@
             min-height: 100vh;
             font-family: 'Instrument Sans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             color: var(--wm-text);
-            background: linear-gradient(135deg, #f8efe7 0%, #f2e5d8 48%, #eadbcf 100%);
+            background: linear-gradient(180deg, #fbf2e7 0%, #f5e4d5 100%);
         }
 
         body::before {
@@ -39,10 +39,9 @@
             inset: 0;
             pointer-events: none;
             background-image:
-                linear-gradient(120deg, rgba(154, 43, 43, .05) 0 14%, transparent 14% 100%),
-                repeating-linear-gradient(90deg, transparent 0 18px, rgba(109, 91, 79, .045) 18px 20px),
-                repeating-linear-gradient(0deg, transparent 0 18px, rgba(109, 91, 79, .035) 18px 20px);
-            opacity: .7;
+                repeating-linear-gradient(90deg, transparent 0 18px, rgba(140, 111, 95, .035) 18px 20px),
+                repeating-linear-gradient(0deg, transparent 0 18px, rgba(140, 111, 95, .026) 18px 20px);
+            opacity: .42;
             z-index: -1;
         }
 
@@ -54,7 +53,7 @@
             top: 0;
             z-index: 10;
             border-bottom: 1px solid var(--wm-border);
-            background: rgba(255, 250, 245, .9);
+            background: rgba(255, 248, 240, .92);
             backdrop-filter: blur(16px);
         }
 
@@ -69,7 +68,7 @@
 
         .brand {
             margin-right: auto;
-            color: var(--wm-accent);
+            color: var(--wm-accent-strong);
             font-family: Georgia, 'Times New Roman', serif;
             font-size: 1.2rem;
             font-weight: 800;
@@ -122,7 +121,7 @@
         }
 
         h1, h2, h3, p { overflow-wrap: anywhere; }
-        h1 { margin: 0; font-size: clamp(2rem, 5vw, 3.5rem); line-height: 1; letter-spacing: -.055em; }
+        h1 { margin: 0; font-size: clamp(2rem, 5vw, 3.5rem); line-height: 1; letter-spacing: 0; }
         h2 { margin: 0; font-size: 1.25rem; }
         h3 { margin: 0; font-size: 1rem; }
         .muted { color: var(--wm-muted); }
@@ -212,8 +211,8 @@
             text-decoration: none;
             cursor: pointer;
         }
-        .button.primary { background: var(--wm-highlight); color: #3f2a0d; box-shadow: 0 10px 24px rgba(199, 154, 40, .22); }
-        .button.secondary { border-color: var(--wm-border); background: rgba(255, 255, 255, .78); color: var(--wm-text); }
+        .button.primary { background: var(--wm-accent); color: #fff; box-shadow: 0 10px 24px rgba(179, 77, 53, .18); }
+        .button.secondary { border-color: var(--wm-border); background: transparent; color: var(--wm-text); }
         .button.danger { border-color: rgba(180, 35, 24, .22); background: rgba(180, 35, 24, .08); color: var(--wm-danger); }
         .button.info { border-color: rgba(49, 93, 131, .2); background: rgba(49, 93, 131, .09); color: var(--wm-info); }
         .button.small { min-height: 36px; padding: 0 13px; font-size: .82rem; }

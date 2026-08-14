@@ -483,6 +483,13 @@
                 'icon' => 'users',
             ],
             [
+                'name' => 'Community Contribution',
+                'description' => 'Submit heritage shop stories, food details, media, and location notes.',
+                'status' => 'Open module',
+                'icon' => 'community',
+                'route' => 'community-contribution.create',
+            ],
+            [
                 'name' => 'Heritage Shop Tracking',
                 'description' => 'Track verified heritage eateries, ownership notes, and updates.',
                 'status' => 'Open module',
@@ -511,8 +518,6 @@
                 'route' => 'blind-box.index',
             ],
         ];
-        $leadingModules = array_slice($comingSoonModules, 0, 4);
-        $blindBoxModule = $comingSoonModules[4];
     @endphp
 
     <div class="shell">
@@ -523,7 +528,6 @@
             <nav class="nav" aria-label="User home navigation">
                 <a class="nav-item active" href="{{ route('home') }}">Dashboard</a>
                 <a class="nav-item" href="{{ route('profile.show') }}">Profile</a>
-                <a class="nav-item" href="{{ route('community-contribution.create') }}">Community Contribution</a>
             </nav>
 
             <p class="nav-label">Modules</p>
@@ -585,7 +589,7 @@
                 </header>
 
                 <section class="module-grid" aria-label="WarisanMakan modules">
-                    @foreach ($leadingModules as $module)
+                    @foreach ($comingSoonModules as $module)
                         @if (isset($module['route']) || isset($module['url']))
                             <a class="module-card is-active" href="{{ isset($module['route']) ? route($module['route']) : $module['url'] }}">
                                 <span class="module-icon" aria-hidden="true">
@@ -606,24 +610,6 @@
                             </article>
                         @endif
                     @endforeach
-
-                    <a class="module-card is-active" href="{{ route('community-contribution.create') }}">
-                        <span class="module-icon" aria-hidden="true">
-                            @include('partials.module-icon', ['icon' => 'community'])
-                        </span>
-                        <h3>Community Contribution</h3>
-                        <p>Submit heritage shop stories, food details, media, and location notes.</p>
-                        <strong class="module-status">Open module</strong>
-                    </a>
-
-                    <a class="module-card is-active" href="{{ route('blind-box.index') }}">
-                        <span class="module-icon" aria-hidden="true">
-                            @include('partials.module-icon', ['icon' => $blindBoxModule['icon']])
-                        </span>
-                        <h3>{{ $blindBoxModule['name'] }}</h3>
-                        <p>{{ $blindBoxModule['description'] }}</p>
-                        <strong class="module-status">Open module</strong>
-                    </a>
                 </section>
             </main>
         </section>

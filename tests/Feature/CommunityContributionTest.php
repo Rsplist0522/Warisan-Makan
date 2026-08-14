@@ -23,7 +23,7 @@ class CommunityContributionTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $response = $this->actingAs($user)->get(route('home'));
+        $response = $this->actingAs($user)->get(route('community-contribution.create'));
 
         $response->assertOk();
         $response->assertSee('Submit Heritage Shop');

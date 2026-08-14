@@ -22,7 +22,9 @@ Route::view('/landing', 'landing')->name('landing');
 
 Route::middleware('auth')->group(function (): void {
     Route::middleware('regular_user')->group(function (): void {
-        Route::get('/', [CommunityContributionController::class, 'index'])->name('home');
+        Route::get('/', function () {
+            return view('user-home', ['userName' => auth()->user()->name]);
+        })->name('home');
         Route::get('/dashboard', function () {
             return view('user-home', ['userName' => auth()->user()->name]);
         })->name('user.dashboard');

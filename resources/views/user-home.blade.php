@@ -475,13 +475,7 @@
 <body>
     @php
         $userName = auth()->user()->name ?? 'Food Explorer';
-        $comingSoonModules = [
-            [
-                'name' => 'User Management',
-                'description' => 'View profile access and account preferences for WarisanMakan.',
-                'status' => 'Coming soon',
-                'icon' => 'users',
-            ],
+        $modules = [
             [
                 'name' => 'Community Contribution',
                 'description' => 'Submit heritage shop stories, food details, media, and location notes.',
@@ -531,18 +525,11 @@
             </nav>
 
             <p class="nav-label">Modules</p>
-            <nav class="nav" aria-label="Upcoming modules">
-                @foreach ($comingSoonModules as $module)
-                    @if (isset($module['route']) || isset($module['url']))
-                        <a class="nav-item" href="{{ isset($module['route']) ? route($module['route']) : $module['url'] }}">
-                            <span>{{ $module['name'] }}</span>
-                        </a>
-                    @else
-                        <span class="nav-item muted">
-                            <span>{{ $module['name'] }}</span>
-                            <small>soon</small>
-                        </span>
-                    @endif
+            <nav class="nav" aria-label="WarisanMakan modules">
+                @foreach ($modules as $module)
+                    <a class="nav-item" href="{{ isset($module['route']) ? route($module['route']) : $module['url'] }}">
+                        <span>{{ $module['name'] }}</span>
+                    </a>
                 @endforeach
             </nav>
 
@@ -589,7 +576,7 @@
                 </header>
 
                 <section class="module-grid" aria-label="WarisanMakan modules">
-                    @foreach ($comingSoonModules as $module)
+                    @foreach ($modules as $module)
                         @if (isset($module['route']) || isset($module['url']))
                             <a class="module-card is-active" href="{{ isset($module['route']) ? route($module['route']) : $module['url'] }}">
                                 <span class="module-icon" aria-hidden="true">

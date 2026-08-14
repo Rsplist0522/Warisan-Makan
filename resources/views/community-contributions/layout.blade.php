@@ -99,8 +99,12 @@
 
         .page-shell {
             width: min(1120px, calc(100% - 32px));
-            margin: 0 auto;
-            padding: 38px 0 64px;
+            margin: 34px auto 64px;
+            padding: 28px;
+            border: 1px solid rgba(177, 140, 106, .22);
+            border-radius: 24px;
+            background: linear-gradient(135deg, #fff8ef 0%, #f4e1c5 100%);
+            box-shadow: 0 18px 38px rgba(104, 71, 42, .08);
         }
 
         .page-header {
@@ -148,9 +152,9 @@
 
         .panel, .form-section, .record-card, .stat-card {
             border: 1px solid var(--wm-border);
-            border-radius: 22px;
-            background: var(--wm-panel);
-            box-shadow: 0 12px 36px rgba(69, 42, 28, .05);
+            border-radius: 18px;
+            background: rgba(255, 253, 249, .72);
+            box-shadow: none;
         }
 
         .panel { padding: 22px; }
@@ -282,6 +286,7 @@
             .topbar-inner { display: grid; }
             .brand { margin: 0; }
             .nav-links { justify-content: start; }
+            .page-shell { width: min(100% - 24px, 1120px); padding: 18px; margin-top: 18px; }
             .page-header, .record-card { display: grid; }
             .record-actions { justify-content: start; }
             .field-grid, .field-grid.three, .definition-grid, .filters, .filters.four { grid-template-columns: 1fr; }

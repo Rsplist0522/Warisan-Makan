@@ -18,8 +18,19 @@ Route::post('/admin-login', [AuthController::class, 'adminLogin'])
     ->name('admin.login.submit');
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
 
+Route::get('/', function () {
+    if (auth()->check()) {
+        return view('user-home', ['userName' => auth()->user()->name]);
+    }
+
+    return view('landing');
+})->name('home');
+
 Route::middleware('auth')->group(function (): void {
-    Route::get('/', [CommunityContributionController::class, 'index'])->name('home');
+    Route::get('/profile', [App\Http\Controllers\ProfileController::class, 'show'])->name('profile.show');
+    Route::get('/profile/edit', [App\Http\Controllers\ProfileController::class, 'edit'])->name('profile.edit');
+    Route::post('/profile', [App\Http\Controllers\ProfileController::class, 'update'])->name('profile.update');
+
     Route::get('/community-contributions/create', [CommunityContributionController::class, 'create'])
         ->name('community-contribution.create');
     Route::post('/community-contributions/heritage-shop', [CommunityContributionController::class, 'store'])

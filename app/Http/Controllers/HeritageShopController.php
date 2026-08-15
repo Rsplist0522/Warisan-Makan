@@ -17,14 +17,15 @@ class HeritageShopController extends Controller
             ->when($search, function ($query) use ($search) {
                 $query->where(function ($query) use ($search) {
                     $query->where('shop_name', 'like', "%{$search}%")
-                        ->orWhere('location', 'like', "%{$search}%")
-                        ->orWhere('description', 'like', "%{$search}%")
+                        ->orWhere('address', 'like', "%{$search}%")
+                        ->orWhere('city', 'like', "%{$search}%")
+                        ->orWhere('state', 'like', "%{$search}%")
                         ->orWhere('heritage_story', 'like', "%{$search}%")
-                        ->orWhere('category', 'like', "%{$search}%");
+                        ->orWhere('primary_food_category', 'like', "%{$search}%");
                 });
             })
             ->when($category, function ($query) use ($category) {
-                $query->where('category', 'like', "%{$category}%");
+                $query->where('primary_food_category', 'like', "%{$category}%");
             })
             ->orderBy('shop_name')
             ->get();
@@ -116,7 +117,7 @@ class HeritageShopController extends Controller
     public function show(string $id)
     {
         $shop = HeritageShop::findOrFail($id);
-        $shops = HeritageShop::orderBy('name')->get();
+        $shops = HeritageShop::orderBy('shop_name')->get();
 
         // Provide listing-related variables so the merged view's search form
         // and listing logic do not trigger undefined variable errors.

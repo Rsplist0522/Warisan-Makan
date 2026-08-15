@@ -11,6 +11,7 @@ class ModerationActivity extends Model
 
     protected $fillable = [
         'heritage_shop_contribution_id',
+        'correction_request_id',
         'actor_user_id',
         'action',
         'from_status',
@@ -26,6 +27,11 @@ class ModerationActivity extends Model
     public function contribution()
     {
         return $this->belongsTo(HeritageShopContribution::class, 'heritage_shop_contribution_id');
+    }
+
+    public function correctionRequest()
+    {
+        return $this->belongsTo(CorrectionRequest::class);
     }
 
     public function actor()

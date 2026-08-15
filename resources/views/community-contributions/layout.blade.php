@@ -239,6 +239,8 @@
         .badge-rejected { background: rgba(180, 35, 24, .13); color: var(--wm-danger); }
         .badge-withdrawn { background: rgba(109, 91, 79, .12); color: var(--wm-muted); }
         .badge-deleted { background: rgba(45, 35, 32, .13); color: var(--wm-text); }
+        .badge-pending { background: rgba(199, 154, 40, .16); color: #72520d; }
+        .badge-needs_information { background: rgba(180, 35, 24, .1); color: var(--wm-danger); }
 
         .empty-state { padding: 46px 24px; text-align: center; }
         .empty-state h2 { margin-bottom: 7px; }
@@ -304,6 +306,7 @@
                 <a class="nav-link {{ request()->routeIs('community-contribution.create', 'community-contribution.edit') ? 'active' : '' }}" href="{{ route('community-contribution.create') }}">Submit shop</a>
                 <a class="nav-link {{ request()->routeIs('community-contribution.drafts*') ? 'active' : '' }}" href="{{ route('community-contribution.drafts') }}">Drafts</a>
                 <a class="nav-link {{ request()->routeIs('community-contribution.contributions*') ? 'active' : '' }}" href="{{ route('community-contribution.contributions') }}">My contributions</a>
+                <a class="nav-link {{ request()->routeIs('community-contribution.correction-requests*') ? 'active' : '' }}" href="{{ route('community-contribution.correction-requests') }}">My correction requests</a>
                 <form class="inline-form" method="POST" action="{{ route('logout') }}">
                     @csrf
                     <button class="logout-button" type="submit">Log out</button>

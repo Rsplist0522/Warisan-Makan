@@ -84,7 +84,6 @@
                                 <button class="button primary small" type="submit" name="moderation_action" value="approve">Approve</button>
                                 <button class="button info small" type="submit" name="moderation_action" value="request_revision">Request revision</button>
                                 <button class="button danger small" type="submit" name="moderation_action" value="reject">Reject</button>
-                                <button class="button danger small" type="submit" name="moderation_action" value="delete">Delete as inappropriate/duplicate</button>
                             </div>
                         </form>
                     @else
@@ -94,6 +93,32 @@
                         @endif
                     @endif
                 </section>
+
+                @if (in_array($contribution->status, [\App\Models\HeritageShopContribution::STATUS_PENDING_REVIEW, \App\Models\HeritageShopContribution::STATUS_UNDER_REVIEW], true))
+                    <section class="panel">
+                        <h2>Delete submission</h2>
+                        <p class="muted">Use soft delete for inappropriate, spam, or duplicate submissions. The audit record remains in the database.</p>
+                        <form class="form-grid" method="POST" action="{{ route('admin.community-contributions.moderate', $contribution) }}" style="margin-top:14px" onsubmit="return confirm('Soft-delete this contribution? It will be removed from active admin lists but retained for audit.')">
+                            @csrf
+                            <input type="hidden" name="moderation_action" value="delete">
+                            <div class="field">
+                                <label class="required" for="deletion_reason">Deletion reason</label>
+                                <select id="deletion_reason" name="deletion_reason" required>
+                                    <option value="">Choose a reason</option>
+                                    <option value="Duplicate Submission">Duplicate Submission</option>
+                                    <option value="Inappropriate Content">Inappropriate Content</option>
+                                    <option value="Spam">Spam</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label for="deletion_comment">Deletion comment</label>
+                                <textarea id="deletion_comment" name="deletion_comment" placeholder="Required when reason is Other">{{ old('deletion_comment') }}</textarea>
+                            </div>
+                            <button class="button danger" type="submit">Delete submission</button>
+                        </form>
+                    </section>
+                @endif
 
                 <section class="panel">
                     <h2>Moderation history</h2>

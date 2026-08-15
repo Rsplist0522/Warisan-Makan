@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AdminCommunityContributionController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BlindBoxController;
 use App\Http\Controllers\CommunityContributionController;
+use App\Http\Controllers\CorrectionRequestController;
 use App\Http\Controllers\HeritageShopController;
 use App\Http\Controllers\PassportController;
 use Illuminate\Support\Facades\Route;
@@ -52,6 +53,16 @@ Route::middleware('auth')->group(function (): void {
 
     Route::get('/community-contributions', [CommunityContributionController::class, 'contributions'])
         ->name('community-contribution.contributions');
+    Route::get('/community-contributions/correction-requests', [CorrectionRequestController::class, 'index'])
+        ->name('community-contribution.correction-requests');
+    Route::get('/community-contributions/correction-requests/{correctionRequest}', [CorrectionRequestController::class, 'show'])
+        ->name('community-contribution.correction-requests.show');
+    Route::post('/community-contributions/correction-requests/{correctionRequest}/additional-information', [CorrectionRequestController::class, 'provideInformation'])
+        ->name('community-contribution.correction-requests.additional-information');
+    Route::get('/heritage-shops/{heritageShop}/correction-requests/create', [CorrectionRequestController::class, 'create'])
+        ->name('heritage-shops.correction-requests.create');
+    Route::post('/heritage-shops/{heritageShop}/correction-requests', [CorrectionRequestController::class, 'store'])
+        ->name('heritage-shops.correction-requests.store');
     Route::get('/community-contributions/{contribution}', [CommunityContributionController::class, 'show'])
         ->name('community-contribution.contributions.show');
     Route::post('/community-contributions/{contribution}/withdraw', [CommunityContributionController::class, 'withdraw'])
@@ -61,6 +72,10 @@ Route::middleware('auth')->group(function (): void {
         ->middleware('admin')->group(function (): void {
             Route::get('/submissions', [AdminCommunityContributionController::class, 'submissions'])->name('submissions');
             Route::get('/history', [AdminCommunityContributionController::class, 'history'])->name('history');
+            Route::get('/correction-requests', [AdminCommunityContributionController::class, 'correctionRequests'])->name('correction-requests');
+            Route::get('/correction-requests/{correctionRequest}', [AdminCommunityContributionController::class, 'showCorrectionRequest'])->name('correction-requests.show');
+            Route::post('/correction-requests/{correctionRequest}/start-review', [AdminCommunityContributionController::class, 'startCorrectionReview'])->name('correction-requests.start-review');
+            Route::post('/correction-requests/{correctionRequest}/moderate', [AdminCommunityContributionController::class, 'moderateCorrectionRequest'])->name('correction-requests.moderate');
             Route::get('/{contribution}', [AdminCommunityContributionController::class, 'show'])->name('show');
             Route::post('/{contribution}/start-review', [AdminCommunityContributionController::class, 'startReview'])->name('start-review');
             Route::post('/{contribution}/moderate', [AdminCommunityContributionController::class, 'moderate'])->name('moderate');

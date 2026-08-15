@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class HeritageShopContribution extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     public const STATUS_DRAFT = 'draft';
 
@@ -69,6 +70,7 @@ class HeritageShopContribution extends Model
             'resubmitted_at' => 'datetime',
             'withdrawn_at' => 'datetime',
             'approved_at' => 'datetime',
+            'deleted_at' => 'datetime',
             'establishment_year' => 'integer',
             'latitude' => 'float',
             'longitude' => 'float',
@@ -190,7 +192,7 @@ class HeritageShopContribution extends Model
             'latitude' => $this->latitude,
             'longitude' => $this->longitude,
             'supporting_media' => $this->supporting_media,
-            'publish_status' => 'draft',
+            'publish_status' => 'approved',
         ]);
     }
 }

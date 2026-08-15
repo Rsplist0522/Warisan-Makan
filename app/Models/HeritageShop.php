@@ -13,11 +13,9 @@ class HeritageShop extends Model
 
     protected $fillable = [
         'source_contribution_id',
-        'name',
         'shop_name',
         'primary_food_category',
         'establishment_year',
-        'founder',
         'founder_name',
         'founder_background',
         'current_owner_name',
@@ -34,10 +32,7 @@ class HeritageShop extends Model
         'longitude',
         'supporting_media',
         'publish_status',
-        'location',
         'country',
-        'category',
-        'description',
         'participating_since',
         'highlight',
         'source_url',
@@ -57,32 +52,13 @@ class HeritageShop extends Model
         return $this->belongsTo(HeritageShopContribution::class, 'source_contribution_id');
     }
 
-    public function getNameAttribute(?string $value): ?string
+    public function correctionRequests()
     {
-        return $value ?: $this->shop_name;
-    }
-
-    public function getCategoryAttribute(?string $value): ?string
-    {
-        return $value ?: $this->primary_food_category;
-    }
-
-    public function getFounderAttribute(?string $value): ?string
-    {
-        return $value ?: $this->founder_name;
-    }
-
-    public function getDescriptionAttribute(?string $value): ?string
-    {
-        return $value ?: $this->heritage_story;
+        return $this->hasMany(CorrectionRequest::class);
     }
 
     public function getLocationAttribute(?string $value): ?string
     {
-        if (!empty($value)) {
-            return $value;
-        }
-
         return trim(implode(', ', array_filter([
             $this->address,
             $this->city,

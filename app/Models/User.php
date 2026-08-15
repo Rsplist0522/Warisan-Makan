@@ -22,6 +22,11 @@ class User extends Authenticatable
         return $this->hasMany(HeritageShopContribution::class);
     }
 
+    public function correctionRequests()
+    {
+        return $this->hasMany(CorrectionRequest::class);
+    }
+
     public function isAdmin(): bool
     {
         return $this->role === 'admin';

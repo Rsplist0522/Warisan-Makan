@@ -244,7 +244,11 @@ class CommunityContributionController extends Controller
         }
 
         $contributions = $query->paginate(10)->withQueryString();
-        $notifications = $request->user()->notifications()->latest()->limit(5)->get();
+        $notifications = $request->user()->notifications()
+            ->whereNotNull('data->contribution_id')
+            ->latest()
+            ->limit(5)
+            ->get();
 
         return view('community-contributions.index', compact(
             'contributions',

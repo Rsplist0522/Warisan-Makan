@@ -70,6 +70,7 @@
         .panel { padding: 22px; }
         .filters { display: grid; grid-template-columns: minmax(220px, 2fr) minmax(160px, 1fr) auto; gap: 10px; align-items: end; margin-bottom: 18px; }
         .filters.four { grid-template-columns: 1.5fr 1fr 1fr 1fr auto; }
+        .filters.six { grid-template-columns: 1.5fr 1fr 1.2fr 1fr 1fr auto; }
         .field { display: grid; gap: 7px; }
         label { font-size: .88rem; font-weight: 750; }
         input:not([type='hidden']):not([type='checkbox']):not([type='radio']), textarea, select {
@@ -104,6 +105,8 @@
         .badge-rejected { background: rgba(180, 35, 24, .13); color: #b42318; }
         .badge-withdrawn { background: rgba(109, 91, 79, .12); color: var(--muted); }
         .badge-deleted { background: rgba(45, 35, 32, .13); color: var(--ink); }
+        .badge-pending { background: rgba(199, 154, 40, .16); color: #72520d; }
+        .badge-needs_information { background: rgba(180, 35, 24, .1); color: #b42318; }
         .empty-state { padding: 46px 24px; text-align: center; }
         .empty-state h2 { margin-bottom: 7px; }
         .empty-state p { margin: 0 0 18px; color: var(--muted); }
@@ -134,7 +137,7 @@
         nav[role='navigation'] svg { width: 18px; height: 18px; }
         @media (max-width: 850px) {
             .topbar, .content { padding-inline: 20px; }
-            .filters, .filters.four { grid-template-columns: 1fr 1fr; }
+            .filters, .filters.four, .filters.six { grid-template-columns: 1fr 1fr; }
             .filters .filter-action { grid-column: 1 / -1; }
             .module-grid { grid-template-columns: 1fr; }
             .detail-grid { grid-template-columns: 1fr; }
@@ -194,7 +197,7 @@
             .panel table, .admin-scroll table { min-width: 680px; }
         }
         @media (max-width: 520px) {
-            .nav, .filters, .filters.four, .definition-grid { grid-template-columns: 1fr; }
+            .nav, .filters, .filters.four, .filters.six, .definition-grid { grid-template-columns: 1fr; }
             .page-header, .record-card { display: grid; }
             .record-actions { justify-content: start; }
         }
@@ -230,6 +233,7 @@
                     <div class="subnav" aria-label="Community Contribution functions">
                         <a class="nav-item {{ request()->routeIs('admin.community-contributions.submissions') ? 'active' : '' }}" href="{{ route('admin.community-contributions.submissions') }}">Review Queue</a>
                         <a class="nav-item {{ request()->routeIs('admin.community-contributions.show') ? 'active' : '' }}" href="{{ route('admin.community-contributions.submissions') }}">Review Submission</a>
+                        <a class="nav-item {{ request()->routeIs('admin.community-contributions.correction-requests*') ? 'active' : '' }}" href="{{ route('admin.community-contributions.correction-requests') }}">Correction Requests</a>
                         <a class="nav-item {{ request()->routeIs('admin.community-contributions.history') ? 'active' : '' }}" href="{{ route('admin.community-contributions.history') }}">Admin History</a>
                     </div>
                 @endif

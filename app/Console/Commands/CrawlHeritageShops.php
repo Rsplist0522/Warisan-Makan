@@ -17,12 +17,12 @@ class CrawlHeritageShops extends Command
     protected Client $http;
     protected array $config;
     protected array $maxStringLengths = [
-        'name' => 255,
         'slug' => 255,
-        'location' => 255,
+        'shop_name' => 255,
         'country' => 255,
-        'category' => 255,
-        'founder' => 255,
+        'primary_food_category' => 255,
+        'founder_name' => 255,
+        'address' => 255,
         'operating_hours' => 255,
         'source_url' => 255,
     ];
@@ -71,7 +71,8 @@ class CrawlHeritageShops extends Command
                     $shopData['source_url'] = $seed;
                     $shopData = $this->normalizeShopData($shopData);
 
-                    $isMalaysia = $this->isMalaysia($shopData['country'], $shopData['location']);
+                    $locationText = $this->locationText($shopData);
+                    $isMalaysia = $this->isMalaysia($shopData['country'], $locationText);
                     $minYears = (int) ($this->config['minimum_years'] ?? 30);
                     $okByAge = true;
                     if ($shopData['establishment_year']) {
@@ -79,11 +80,11 @@ class CrawlHeritageShops extends Command
                     }
 
                     if (!$isMalaysia) {
-                        $this->warn("    skipped (not Malaysia): {$shopData['name']} - {$shopData['location']}");
+                        $this->warn("    skipped (not Malaysia): {$shopData['shop_name']} - {$locationText}");
                         continue;
                     }
                     if (!$okByAge) {
-                        $this->warn("    skipped (not >= {$minYears} years): {$shopData['name']} - year: {$shopData['establishment_year']}");
+                        $this->warn("    skipped (not >= {$minYears} years): {$shopData['shop_name']} - year: {$shopData['establishment_year']}");
                         continue;
                     }
 
@@ -92,7 +93,7 @@ class CrawlHeritageShops extends Command
                         array_filter($shopData)
                     );
 
-                    $this->info("    saved: {$shopData['name']}");
+                    $this->info("    saved: {$shopData['shop_name']}");
                     $count++;
                     sleep((int)($site['rate_limit_seconds'] ?? 1));
                     continue;
@@ -124,7 +125,8 @@ class CrawlHeritageShops extends Command
                             $shopData['source_url'] = $detailUrl;
                             $shopData = $this->normalizeShopData($shopData);
 
-                            $isMalaysia = $this->isMalaysia($shopData['country'], $shopData['location']);
+                            $locationText = $this->locationText($shopData);
+                            $isMalaysia = $this->isMalaysia($shopData['country'], $locationText);
                             $minYears = (int) ($this->config['minimum_years'] ?? 30);
                             $okByAge = true;
                             if ($shopData['establishment_year']) {
@@ -132,11 +134,11 @@ class CrawlHeritageShops extends Command
                             }
 
                             if (!$isMalaysia) {
-                                $this->warn("    skipped (not Malaysia): {$shopData['name']} - {$shopData['location']}");
+                                $this->warn("    skipped (not Malaysia): {$shopData['shop_name']} - {$locationText}");
                                 return;
                             }
                             if (!$okByAge) {
-                                $this->warn("    skipped (not >= {$minYears} years): {$shopData['name']} - year: {$shopData['establishment_year']}");
+                                $this->warn("    skipped (not >= {$minYears} years): {$shopData['shop_name']} - year: {$shopData['establishment_year']}");
                                 return;
                             }
 
@@ -145,7 +147,7 @@ class CrawlHeritageShops extends Command
                                 array_filter($shopData)
                             );
 
-                            $this->info("    saved: {$shopData['name']}");
+                            $this->info("    saved: {$shopData['shop_name']}");
                             $count++;
                             sleep((int)($site['rate_limit_seconds'] ?? 1));
                         });
@@ -303,7 +305,7 @@ class CrawlHeritageShops extends Command
 
     protected function normalizeShopData(array $shopData): array
     {
-        foreach (['name', 'location', 'country', 'category', 'description', 'founder', 'heritage_story', 'operating_hours', 'source_url'] as $field) {
+        foreach (['name', 'shop_name', 'location', 'address', 'country', 'category', 'primary_food_category', 'description', 'founder', 'founder_name', 'heritage_story', 'operating_hours', 'source_url'] as $field) {
             if (isset($shopData[$field])) {
                 $shopData[$field] = trim((string) $shopData[$field]);
             }
@@ -317,8 +319,30 @@ class CrawlHeritageShops extends Command
 
         $shopData['country'] = strtolower($shopData['country'] ?? '');
         $shopData['establishment_year'] = $this->extractYear($shopData['establishment_year'] ?? '');
+        $shopData['shop_name'] = $shopData['shop_name'] ?? ($shopData['name'] ?? null);
+        $shopData['primary_food_category'] = $shopData['primary_food_category'] ?? ($shopData['category'] ?? null);
+        $shopData['founder_name'] = $shopData['founder_name'] ?? ($shopData['founder'] ?? null);
+        $shopData['heritage_story'] = $shopData['heritage_story'] ?? ($shopData['description'] ?? null);
+        $shopData['address'] = $shopData['address'] ?? ($shopData['location'] ?? null);
+
+        unset(
+            $shopData['name'],
+            $shopData['location'],
+            $shopData['category'],
+            $shopData['description'],
+            $shopData['founder']
+        );
 
         return $shopData;
+    }
+
+    protected function locationText(array $shopData): string
+    {
+        return trim(implode(', ', array_filter([
+            $shopData['address'] ?? null,
+            $shopData['city'] ?? null,
+            $shopData['state'] ?? null,
+        ])));
     }
 
     protected function absoluteUrl(?string $href, ?string $base = null): ?string

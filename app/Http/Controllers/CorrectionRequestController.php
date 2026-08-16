@@ -6,6 +6,7 @@ use App\Models\CorrectionRequest;
 use App\Models\HeritageShop;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -33,8 +34,7 @@ class CorrectionRequestController extends Controller
                 $builder->where('field_name', 'like', $search)
                     ->orWhere('suggested_value', 'like', $search)
                     ->orWhereHas('heritageShop', function ($shopQuery) use ($search): void {
-                        $shopQuery->where('shop_name', 'like', $search)
-                            ->orWhere('name', 'like', $search);
+                        $shopQuery->where('shop_name', 'like', $search);
                     });
             });
         }
@@ -67,10 +67,10 @@ class CorrectionRequestController extends Controller
     public function store(Request $request, HeritageShop $heritageShop): RedirectResponse
     {
         $validated = $this->validateCorrectionRequest($request);
-        $evidence = $this->storeEvidence($request, 'evidence');
+        $storedMedia = [];
 
         try {
-            $correctionRequest = DB::transaction(function () use ($request, $heritageShop, $validated, $evidence) {
+            $correctionRequest = DB::transaction(function () use ($request, $heritageShop, $validated, &$storedMedia) {
                 $correctionRequest = CorrectionRequest::create([
                     'user_id' => $request->user()->id,
                     'heritage_shop_id' => $heritageShop->id,
@@ -78,9 +78,16 @@ class CorrectionRequestController extends Controller
                     'current_value' => $this->currentValueForField($heritageShop, $validated['field_name']),
                     'suggested_value' => $this->normalizeText($validated['suggested_value']),
                     'reason' => $this->normalizeText($validated['reason']),
-                    'evidence_paths' => $evidence ?: null,
                     'status' => CorrectionRequest::STATUS_PENDING,
                 ]);
+
+                $storedMedia = $this->storeEvidence(
+                    $request,
+                    'evidence',
+                    "correction-requests/{$correctionRequest->id}",
+                    $request->user()->id
+                );
+                $this->createMediaRecords($correctionRequest, $storedMedia);
 
                 $this->recordCorrectionActivity(
                     $correctionRequest,
@@ -93,7 +100,7 @@ class CorrectionRequestController extends Controller
                 return $correctionRequest;
             });
         } catch (Throwable $exception) {
-            Storage::disk('public')->delete($evidence);
+            $this->deleteStoredMedia($storedMedia);
             throw $exception;
         }
 
@@ -105,7 +112,7 @@ class CorrectionRequestController extends Controller
     {
         abort_unless((int) $correctionRequest->user_id === (int) $request->user()->id, 403);
 
-        $correctionRequest->load(['heritageShop', 'reviewedBy', 'moderationActivities.actor']);
+        $correctionRequest->load(['media', 'heritageShop', 'reviewedBy', 'moderationActivities.actor']);
         $request->user()->unreadNotifications()
             ->where('data->correction_request_id', $correctionRequest->id)
             ->update(['read_at' => now()]);
@@ -120,32 +127,40 @@ class CorrectionRequestController extends Controller
         $validated = $request->validate([
             'additional_information' => ['required', 'string', 'max:5000'],
             'additional_evidence' => ['nullable', 'array', 'max:4'],
-            'additional_evidence.*' => ['file', 'mimes:jpg,jpeg,png,webp,pdf,doc,docx', 'max:10240'],
+            'additional_evidence.*' => ['file', 'mimes:jpg,jpeg,png,webp,mp4,mov,avi', 'max:20480'],
         ]);
 
-        $existingEvidence = $correctionRequest->evidence_paths ?? [];
-        $newEvidence = $this->storeEvidence($request, 'additional_evidence');
+        $correctionRequest->load('media');
+        $existingEvidenceCount = $correctionRequest->media->count();
+        $newFiles = $request->file('additional_evidence', []);
 
-        if (count($existingEvidence) + count($newEvidence) > 8) {
-            Storage::disk('public')->delete($newEvidence);
-
+        if ($existingEvidenceCount + count($newFiles) > 8) {
             throw ValidationException::withMessages([
                 'additional_evidence' => 'A correction request may contain no more than 8 evidence files.',
             ]);
         }
 
         $fromStatus = $correctionRequest->status;
+        $storedMedia = [];
 
         try {
-            DB::transaction(function () use ($request, $correctionRequest, $validated, $existingEvidence, $newEvidence, $fromStatus): void {
+            DB::transaction(function () use ($request, $correctionRequest, $validated, $existingEvidenceCount, &$storedMedia, $fromStatus): void {
                 $correctionRequest->forceFill([
                     'additional_information' => $this->normalizeText($validated['additional_information']),
-                    'evidence_paths' => [...$existingEvidence, ...$newEvidence] ?: null,
                     'status' => CorrectionRequest::STATUS_PENDING,
                     'reviewed_by_user_id' => null,
                     'review_started_at' => null,
                     'reviewed_at' => null,
                 ])->save();
+
+                $storedMedia = $this->storeEvidence(
+                    $request,
+                    'additional_evidence',
+                    "correction-requests/{$correctionRequest->id}",
+                    $request->user()->id,
+                    $existingEvidenceCount
+                );
+                $this->createMediaRecords($correctionRequest, $storedMedia);
 
                 $this->recordCorrectionActivity(
                     $correctionRequest,
@@ -157,7 +172,7 @@ class CorrectionRequestController extends Controller
                 );
             });
         } catch (Throwable $exception) {
-            Storage::disk('public')->delete($newEvidence);
+            $this->deleteStoredMedia($storedMedia);
             throw $exception;
         }
 
@@ -172,7 +187,7 @@ class CorrectionRequestController extends Controller
             'suggested_value' => ['required', 'string', 'max:5000'],
             'reason' => ['required', 'string', 'max:5000'],
             'evidence' => ['nullable', 'array', 'max:6'],
-            'evidence.*' => ['file', 'mimes:jpg,jpeg,png,webp,pdf,doc,docx', 'max:10240'],
+            'evidence.*' => ['file', 'mimes:jpg,jpeg,png,webp,mp4,mov,avi', 'max:20480'],
         ]);
     }
 
@@ -199,12 +214,51 @@ class CorrectionRequestController extends Controller
         return filled($value) ? (string) $value : 'Not provided';
     }
 
-    private function storeEvidence(Request $request, string $field): array
+    private function storeEvidence(Request $request, string $field, string $directory, int $userId, int $startOrder = 0): array
     {
         return collect($request->file($field, []))
-            ->map(fn ($file) => $file->store('community-contributions/correction-requests', 'public'))
+            ->values()
+            ->map(function (UploadedFile $file, int $index) use ($directory, $userId, $startOrder): array {
+                $objectKey = $file->store($directory, config('filesystems.media_disk'));
+
+                if ($objectKey === false) {
+                    throw ValidationException::withMessages([
+                        $field => 'The evidence file could not be uploaded. Please try again.',
+                    ]);
+                }
+
+                return [
+                    'uploaded_by_user_id' => $userId,
+                    'media_type' => $this->mediaType($file),
+                    'r2_object_key' => $objectKey,
+                    'original_name' => $file->getClientOriginalName(),
+                    'mime_type' => $file->getMimeType(),
+                    'file_size_bytes' => $file->getSize(),
+                    'display_order' => $startOrder + $index,
+                    'is_primary' => $startOrder === 0 && $index === 0,
+                ];
+            })
             ->values()
             ->all();
+    }
+
+    private function createMediaRecords(CorrectionRequest $correctionRequest, array $records): void
+    {
+        foreach ($records as $record) {
+            $correctionRequest->media()->create($record);
+        }
+    }
+
+    private function deleteStoredMedia(array $records): void
+    {
+        Storage::disk(config('filesystems.media_disk'))->delete(
+            collect($records)->pluck('r2_object_key')->all()
+        );
+    }
+
+    private function mediaType(UploadedFile $file): string
+    {
+        return str_starts_with((string) $file->getMimeType(), 'video/') ? 'video' : 'image';
     }
 
     private function recordCorrectionActivity(

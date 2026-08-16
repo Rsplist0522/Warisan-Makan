@@ -267,7 +267,7 @@
             <div class="photo-row">
                 <div class="photo-preview" id="photoPreview">
                     @if ($user->profile_photo)
-                        <img id="photoPreviewImg" src="{{ asset('storage/' . $user->profile_photo) }}" alt="Current profile photo">
+                        <img id="photoPreviewImg" src="{{ $user->profilePhotoUrl() }}" alt="Current profile photo">
                     @else
                         <img id="photoPreviewImg" src="" alt="Selected profile photo" style="display:none;">
                         <span id="photoPreviewFallback">{{ strtoupper(substr($user->name, 0, 1)) }}</span>

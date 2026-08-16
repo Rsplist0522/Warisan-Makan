@@ -26,7 +26,6 @@ class CorrectionRequest extends Model
         'current_value',
         'suggested_value',
         'reason',
-        'evidence_paths',
         'status',
         'admin_comment',
         'additional_information',
@@ -38,7 +37,6 @@ class CorrectionRequest extends Model
     protected function casts(): array
     {
         return [
-            'evidence_paths' => 'array',
             'review_started_at' => 'datetime',
             'reviewed_at' => 'datetime',
         ];
@@ -96,6 +94,11 @@ class CorrectionRequest extends Model
     public function moderationActivities()
     {
         return $this->hasMany(ModerationActivity::class)->latest();
+    }
+
+    public function media()
+    {
+        return $this->morphMany(Media::class, 'attachable')->orderBy('display_order');
     }
 
     public function statusLabel(): string

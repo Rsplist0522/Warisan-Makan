@@ -57,7 +57,7 @@
             <h2 class="section-title">Supporting evidence</h2>
             <div class="field">
                 <label for="evidence">Evidence files</label>
-                <input id="evidence" type="file" name="evidence[]" multiple accept=".jpg,.jpeg,.png,.webp,.pdf,.doc,.docx">
+                <input id="evidence" type="file" name="evidence[]" multiple accept=".jpg,.jpeg,.png,.webp,.mp4,.mov,.avi">
                 <p class="help-text">Upload up to 6 image or document files. Each file may be up to 10 MB.</p>
             </div>
         </section>

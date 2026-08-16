@@ -69,15 +69,14 @@
 
             <section class="panel">
                 <h2>Supporting media</h2>
-                @if ($contribution->supporting_media)
+                @if ($contribution->media->isNotEmpty())
                     <div class="media-grid" style="margin-top:14px">
-                        @foreach ($contribution->supporting_media as $path)
-                            @php $isVideo = in_array(strtolower(pathinfo($path, PATHINFO_EXTENSION)), ['mp4', 'mov', 'avi']); @endphp
-                            <a class="media-card" href="{{ asset('storage/'.$path) }}" target="_blank" rel="noopener">
-                                @if ($isVideo)
-                                    <video controls preload="metadata"><source src="{{ asset('storage/'.$path) }}"></video>
+                        @foreach ($contribution->media as $media)
+                            <a class="media-card" href="{{ $media->url }}" target="_blank" rel="noopener">
+                                @if ($media->media_type === 'video')
+                                    <video controls preload="metadata"><source src="{{ $media->url }}"></video>
                                 @else
-                                    <img src="{{ asset('storage/'.$path) }}" alt="Supporting evidence">
+                                    <img src="{{ $media->url }}" alt="Supporting evidence">
                                 @endif
                             </a>
                         @endforeach

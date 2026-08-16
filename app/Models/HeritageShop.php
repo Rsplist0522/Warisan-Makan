@@ -30,8 +30,8 @@ class HeritageShop extends Model
         'postal_code',
         'latitude',
         'longitude',
-        'supporting_media',
         'publish_status',
+        'slug',
         'country',
         'participating_since',
         'highlight',
@@ -41,7 +41,6 @@ class HeritageShop extends Model
     protected $casts = [
         'operating_hours' => 'array',
         'food_items' => 'array',
-        'supporting_media' => 'array',
         'establishment_year' => 'integer',
         'latitude' => 'float',
         'longitude' => 'float',
@@ -55,6 +54,16 @@ class HeritageShop extends Model
     public function correctionRequests()
     {
         return $this->hasMany(CorrectionRequest::class);
+    }
+
+    public function media()
+    {
+        return $this->morphMany(Media::class, 'attachable')->orderBy('display_order');
+    }
+
+    public function primaryMedia()
+    {
+        return $this->morphOne(Media::class, 'attachable')->where('is_primary', true);
     }
 
     public function getLocationAttribute(?string $value): ?string

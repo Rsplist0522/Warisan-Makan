@@ -40,15 +40,14 @@
 
             <section class="panel">
                 <h2>Supporting evidence</h2>
-                @if ($correctionRequest->evidence_paths)
+                @if ($correctionRequest->media->isNotEmpty())
                     <div class="media-grid" style="margin-top:14px">
-                        @foreach ($correctionRequest->evidence_paths as $path)
-                            @php $isImage = in_array(strtolower(pathinfo($path, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'webp']); @endphp
-                            <a class="media-card" href="{{ asset('storage/'.$path) }}" target="_blank" rel="noopener">
-                                @if ($isImage)
-                                    <img src="{{ asset('storage/'.$path) }}" alt="Correction evidence">
+                        @foreach ($correctionRequest->media as $media)
+                            <a class="media-card" href="{{ $media->url }}" target="_blank" rel="noopener">
+                                @if ($media->media_type === 'image')
+                                    <img src="{{ $media->url }}" alt="Correction evidence">
                                 @else
-                                    <div class="media-placeholder">View evidence file</div>
+                                    <video controls preload="metadata"><source src="{{ $media->url }}"></video>
                                 @endif
                             </a>
                         @endforeach
@@ -71,7 +70,7 @@
                         </div>
                         <div class="field">
                             <label for="additional_evidence">Additional evidence</label>
-                            <input id="additional_evidence" type="file" name="additional_evidence[]" multiple accept=".jpg,.jpeg,.png,.webp,.pdf,.doc,.docx">
+                            <input id="additional_evidence" type="file" name="additional_evidence[]" multiple accept=".jpg,.jpeg,.png,.webp,.mp4,.mov,.avi">
                         </div>
                         <button class="button primary" type="submit">Send additional information</button>
                     </form>

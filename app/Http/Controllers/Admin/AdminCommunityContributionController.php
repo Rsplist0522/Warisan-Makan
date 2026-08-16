@@ -72,7 +72,7 @@ class AdminCommunityContributionController extends Controller
 
     public function show(HeritageShopContribution $contribution): View
     {
-        $contribution->load(['user', 'reviewedBy', 'versions.user', 'moderationActivities.actor']);
+        $contribution->load(['media', 'user', 'reviewedBy', 'versions.user', 'moderationActivities.actor']);
 
         return view('community-contributions.admin.show', compact('contribution'));
     }
@@ -241,8 +241,7 @@ class AdminCommunityContributionController extends Controller
                 $builder->where('field_name', 'like', $search)
                     ->orWhere('suggested_value', 'like', $search)
                     ->orWhereHas('heritageShop', fn ($shopQuery) => $shopQuery
-                        ->where('shop_name', 'like', $search)
-                        ->orWhere('name', 'like', $search))
+                        ->where('shop_name', 'like', $search))
                     ->orWhereHas('user', fn ($userQuery) => $userQuery
                         ->where('name', 'like', $search)
                         ->orWhere('email', 'like', $search));
@@ -264,7 +263,7 @@ class AdminCommunityContributionController extends Controller
 
     public function showCorrectionRequest(CorrectionRequest $correctionRequest): View
     {
-        $correctionRequest->load(['user', 'heritageShop', 'reviewedBy', 'moderationActivities.actor']);
+        $correctionRequest->load(['media', 'user', 'heritageShop', 'reviewedBy', 'moderationActivities.actor']);
 
         return view('community-contributions.admin.correction-requests.show', compact('correctionRequest'));
     }

@@ -556,7 +556,7 @@
                 <div style="display:flex;align-items:center;gap:14px">
                     <a href="{{ route('profile.show') }}" style="display:inline-flex;align-items:center;gap:10px;padding:10px 14px;border-radius:999px;border:1px solid rgba(46, 36, 32, .14);background:#fff;">
                         @if (auth()->user()->profile_photo)
-                            <img src="{{ asset('storage/' . auth()->user()->profile_photo) }}" alt="Profile photo" style="width:38px;height:38px;border-radius:999px;object-fit:cover;">
+                            <img src="{{ auth()->user()->profilePhotoUrl() }}" alt="Profile photo" style="width:38px;height:38px;border-radius:999px;object-fit:cover;">
                         @else
                             <span style="display:inline-flex;width:38px;height:38px;align-items:center;justify-content:center;border-radius:999px;background:#f2e7dd;color:var(--wm-accent);font-weight:800;">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</span>
                         @endif

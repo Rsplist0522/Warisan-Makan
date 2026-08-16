@@ -35,10 +35,17 @@ class ProfileController extends Controller
         ]);
 
         if ($request->hasFile('profile_photo')) {
-            $path = $request->file('profile_photo')->store('profile_photos', 'public');
+            $disk = config('filesystems.media_disk');
+            $path = $request->file('profile_photo')->store("users/{$user->id}/profile", $disk);
 
-            if ($user->profile_photo && Storage::disk('public')->exists($user->profile_photo)) {
-                Storage::disk('public')->delete($user->profile_photo);
+            if ($path === false) {
+                return back()
+                    ->withErrors(['profile_photo' => 'The profile photo could not be uploaded. Please try again.'])
+                    ->withInput();
+            }
+
+            if ($user->profile_photo && Storage::disk($disk)->exists($user->profile_photo)) {
+                Storage::disk($disk)->delete($user->profile_photo);
             }
 
             $data['profile_photo'] = $path;

@@ -16,7 +16,6 @@ return new class extends Migration
             $table->text('current_value');
             $table->text('suggested_value');
             $table->text('reason');
-            $table->json('evidence_paths')->nullable();
             $table->string('status', 40)->default('pending');
             $table->text('admin_comment')->nullable();
             $table->text('additional_information')->nullable();

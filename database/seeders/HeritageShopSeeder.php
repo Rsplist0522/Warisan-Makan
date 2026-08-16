@@ -21,6 +21,7 @@ class HeritageShopSeeder extends Seeder
                 'operating_hours' => 'Tue–Sun 09:00–18:00',
                 'participating_since' => '2018',
                 'highlight' => 'Known for hand-pulled noodles and heritage sambal.',
+                'publish_status' => 'approved',
                 'source_url' => 'https://example.com/restoran-warisan-selera',
             ],
             [
@@ -34,6 +35,7 @@ class HeritageShopSeeder extends Seeder
                 'operating_hours' => 'Daily 17:00–23:00',
                 'participating_since' => '2015',
                 'highlight' => 'Signature satay and charcoal-grilled skewers.',
+                'publish_status' => 'approved',
                 'source_url' => 'https://example.com/satay-house-batu-pahat',
             ],
             [
@@ -47,6 +49,7 @@ class HeritageShopSeeder extends Seeder
                 'operating_hours' => 'Wed–Sun 10:00–16:00',
                 'participating_since' => '2021',
                 'highlight' => 'Popular for kuih lapis and gula melaka treats.',
+                'publish_status' => 'approved',
                 'source_url' => 'https://example.com/kampung-desserts-hub',
             ],
             [
@@ -61,6 +64,7 @@ class HeritageShopSeeder extends Seeder
                 'operating_hours' => 'Mon–Sat 08:00–15:00',
                 'participating_since' => '2017',
                 'highlight' => 'Famous for nasi dagang and slow-cooked curries.',
+                'publish_status' => 'approved',
                 'source_url' => 'https://example.com/makan-tradisi-kuantan',
             ],
             [
@@ -75,6 +79,7 @@ class HeritageShopSeeder extends Seeder
                 'operating_hours' => 'Daily 08:00–20:00',
                 'participating_since' => '2014',
                 'highlight' => 'Authentic charcoal-brewed coffee and kaya toast.',
+                'publish_status' => 'approved',
                 'source_url' => 'https://example.com/melaka-heritage-kopitiam',
             ],
         ];

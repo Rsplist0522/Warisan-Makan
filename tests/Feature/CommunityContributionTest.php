@@ -55,7 +55,7 @@ class CommunityContributionTest extends TestCase
 
     public function test_complete_submission_uploads_media_and_stores_database_record(): void
     {
-        Storage::fake('public');
+        Storage::fake(config('filesystems.media_disk'));
         $user = User::factory()->create();
         $data = $this->validContributionData();
         $data['supporting_media'] = [UploadedFile::fake()->image('capital-cafe.jpg')];
@@ -67,10 +67,12 @@ class CommunityContributionTest extends TestCase
         $this->assertSame(HeritageShopContribution::STATUS_PENDING_REVIEW, $contribution->status);
         $this->assertSame($user->id, $contribution->user_id);
         $this->assertNotNull($contribution->submitted_at);
-        $this->assertCount(1, $contribution->supporting_media);
+        $media = $contribution->media()->firstOrFail();
+        $this->assertSame('image', $media->media_type);
+        $this->assertSame($user->id, $media->uploaded_by_user_id);
         $this->assertTrue(
-            Storage::disk('public')->exists($contribution->supporting_media[0]),
-            'The uploaded supporting media file was not stored on the public disk.'
+            Storage::disk(config('filesystems.media_disk'))->exists($media->r2_object_key),
+            'The uploaded supporting media file was not stored on the configured media disk.'
         );
     }
 
@@ -228,7 +230,7 @@ class CommunityContributionTest extends TestCase
 
     public function test_user_can_submit_correction_request_and_admin_can_approve_it(): void
     {
-        Storage::fake('public');
+        Storage::fake(config('filesystems.media_disk'));
         $user = User::factory()->create();
         $admin = User::factory()->create(['role' => 'admin']);
         $shop = HeritageShop::create([
@@ -250,7 +252,7 @@ class CommunityContributionTest extends TestCase
         $correctionRequest = CorrectionRequest::firstOrFail();
         $this->assertSame(CorrectionRequest::STATUS_PENDING, $correctionRequest->status);
         $this->assertSame('+60 3-1111 1111', $correctionRequest->current_value);
-        $this->assertCount(1, $correctionRequest->evidence_paths);
+        $this->assertCount(1, $correctionRequest->media);
         $this->assertDatabaseHas('moderation_activities', [
             'correction_request_id' => $correctionRequest->id,
             'action' => 'correction_submitted',
@@ -330,6 +332,43 @@ class CommunityContributionTest extends TestCase
         $this->actingAs($user)
             ->get(route('admin.community-contributions.submissions'))
             ->assertForbidden();
+    }
+
+    public function test_invalid_supporting_media_is_rejected_server_side(): void
+    {
+        Storage::fake(config('filesystems.media_disk'));
+        $user = User::factory()->create();
+        $data = $this->validContributionData();
+        $data['supporting_media'] = [
+            UploadedFile::fake()->create('not-an-image.txt', 1, 'text/plain'),
+        ];
+
+        $this->actingAs($user)
+            ->post(route('community-contribution.store'), $data)
+            ->assertSessionHasErrors('supporting_media.0');
+
+        $this->assertDatabaseCount('heritage_shop_contributions', 0);
+        $this->assertDatabaseCount('media', 0);
+    }
+
+    public function test_valid_supporting_video_is_stored_as_video_media(): void
+    {
+        Storage::fake(config('filesystems.media_disk'));
+        $user = User::factory()->create();
+        $data = $this->validContributionData();
+        $data['supporting_media'] = [
+            UploadedFile::fake()->create('audit-video.mp4', 64, 'video/mp4'),
+        ];
+
+        $this->actingAs($user)
+            ->post(route('community-contribution.store'), $data)
+            ->assertSessionHasNoErrors();
+
+        $media = HeritageShopContribution::firstOrFail()->media()->firstOrFail();
+
+        $this->assertSame('video', $media->media_type);
+        $this->assertSame('video/mp4', $media->mime_type);
+        $this->assertTrue(Storage::disk(config('filesystems.media_disk'))->exists($media->r2_object_key));
     }
 
     private function validContributionData(): array

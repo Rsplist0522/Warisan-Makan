@@ -37,15 +37,14 @@
 
                 <section class="panel">
                     <h2>Supporting evidence</h2>
-                    @if ($correctionRequest->evidence_paths)
+                    @if ($correctionRequest->media->isNotEmpty())
                         <div class="media-grid" style="margin-top:14px">
-                            @foreach ($correctionRequest->evidence_paths as $path)
-                                @php $isImage = in_array(strtolower(pathinfo($path, PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'webp']); @endphp
-                                <a class="media-card" href="{{ asset('storage/'.$path) }}" target="_blank" rel="noopener">
-                                    @if ($isImage)
-                                        <img src="{{ asset('storage/'.$path) }}" alt="Correction evidence">
+                            @foreach ($correctionRequest->media as $media)
+                                <a class="media-card" href="{{ $media->url }}" target="_blank" rel="noopener">
+                                    @if ($media->media_type === 'image')
+                                        <img src="{{ $media->url }}" alt="Correction evidence">
                                     @else
-                                        <div style="height:150px;display:grid;place-items:center;padding:10px;color:var(--muted);text-align:center">View evidence file</div>
+                                        <video controls preload="metadata"><source src="{{ $media->url }}"></video>
                                     @endif
                                 </a>
                             @endforeach

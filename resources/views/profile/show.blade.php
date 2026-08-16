@@ -250,7 +250,7 @@
             <div class="profile-identity">
                 <div class="avatar">
                     @if ($user->profile_photo)
-                        <img src="{{ asset('storage/' . $user->profile_photo) }}" alt="{{ $user->name }} profile photo">
+                        <img src="{{ $user->profilePhotoUrl() }}" alt="{{ $user->name }} profile photo">
                     @else
                         {{ strtoupper(substr($user->name, 0, 1)) }}
                     @endif

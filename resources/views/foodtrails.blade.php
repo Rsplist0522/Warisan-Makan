@@ -5,10 +5,95 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Food Trails | {{ config('app.name', 'Warisan Makan') }}</title>
-    @vite(['resources/css/app.css', 'resources/js/food-trails.js'])
+    <script>
+        window.googleMapsApiKey = @json(config('services.google.maps_api_key'));
+        window.googleMapsLoaded = false;
+        window._onGoogleMapsLoaded = function () {
+            window.googleMapsLoaded = true;
+            if (typeof window.initFoodTrailMap === 'function') window.initFoodTrailMap();
+            if (typeof window.initStartTrailMap === 'function') window.initStartTrailMap();
+        };
+        window.gm_authFailure = function () {
+            window.dispatchEvent(new CustomEvent('googleMapsError', { detail: 'Google Maps rejected this API key. Check that Maps JavaScript API is enabled, billing is active, and your key restrictions allow this site.' }));
+        };
+    </script>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @if (config('services.google.maps_api_key'))
+        <script async defer
+            src="https://maps.googleapis.com/maps/api/js?key={{ urlencode(config('services.google.maps_api_key')) }}&callback=_onGoogleMapsLoaded"></script>
+    @endif
+    <style>
+        .wm-foodtrail-nav {
+            position: sticky;
+            top: 0;
+            z-index: 30;
+            display: flex;
+            min-height: 68px;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            border-bottom: 1px solid #E9D7BF;
+            background: rgba(255, 255, 255, 0.88);
+            padding: 12px clamp(16px, 4vw, 32px);
+            backdrop-filter: blur(12px);
+        }
+
+        .wm-foodtrail-brand,
+        .wm-foodtrail-links,
+        .wm-foodtrail-links form {
+            display: flex;
+            align-items: center;
+        }
+
+        .wm-foodtrail-brand {
+            gap: 12px;
+            color: #B8874A;
+            font-size: 18px;
+            font-weight: 800;
+            text-decoration: none;
+        }
+
+        .wm-foodtrail-brand-mark {
+            display: inline-flex;
+            width: 42px;
+            height: 42px;
+            align-items: center;
+            justify-content: center;
+            border-radius: 14px;
+            background: #FDE7CA;
+            color: #B8874A;
+        }
+
+        .wm-foodtrail-links {
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        .wm-foodtrail-links a,
+        .wm-foodtrail-links button {
+            border: 1px solid #E9D7BF;
+            border-radius: 999px;
+            background: #FFFFFF;
+            color: #6B553F;
+            padding: 9px 14px;
+            font-size: 13px;
+            font-weight: 700;
+            text-decoration: none;
+            transition: background-color 160ms ease, color 160ms ease;
+        }
+
+        .wm-foodtrail-links a.active,
+        .wm-foodtrail-links a:hover,
+        .wm-foodtrail-links button:hover {
+            background: #B8874A;
+            color: #FFFFFF;
+        }
+    </style>
 </head>
 
 <body class="bg-[#f8f3ed] text-[#1f1b19] min-h-screen">
+    @include('partials.foodtrail-nav')
     <div class="max-w-6xl mx-auto px-4 py-6 lg:px-8">
         <header class="mb-8 rounded-[32px] bg-white p-6 shadow-[0_18px_40px_rgba(62,44,23,0.08)]">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -20,11 +105,9 @@
                         then use the map and vendor cards to navigate your trail step by step.</p>
                 </div>
                 <div class="flex flex-wrap gap-3">
-                    <a href="/"
+                    <a href="{{ auth()->check() ? route('home') : url('/') }}"
                         class="inline-flex items-center rounded-full border border-[#D8B58F] bg-white px-4 py-2 text-sm font-semibold text-[#7A5F3A] shadow-sm hover:bg-[#F6EFE3]">Back
                         to Home</a>
-                    <a href="/login"
-                        class="inline-flex items-center rounded-full bg-[#B8874A] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#9c6f33]">Login</a>
                 </div>
             </div>
         </header>
@@ -201,9 +284,12 @@
                         <div id="mapContainer"
                             class="relative mt-6 aspect-[4/3] overflow-hidden rounded-[28px] border border-[#E8D4BE] bg-[#FBF6F1] shadow-inner">
                             <div
-                                class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(255,210,146,0.35),_transparent_40%),radial-gradient(circle_at_bottom_right,_rgba(222,164,95,0.16),_transparent_35%)]">
+                                class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(255,210,146,0.35),_transparent_40%),radial-gradient(circle_at_bottom_right,_rgba(222,164,95,0.16),_transparent_35%)] pointer-events-none">
                             </div>
-                            <div id="mapMarkers" class="absolute inset-0"></div>
+                            <div id="googleMap" class="absolute inset-0"></div>
+                            <div id="googleMapMessage"
+                                class="absolute inset-x-4 bottom-14 hidden rounded-2xl bg-white/95 px-4 py-3 text-sm text-[#6B5B4B] shadow-lg">
+                            </div>
                             <div
                                 class="absolute bottom-4 left-4 rounded-3xl bg-black/10 px-4 py-2 text-xs text-white backdrop-blur-sm">
                                 Click a restaurant card to view route details.</div>

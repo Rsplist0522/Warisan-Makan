@@ -165,20 +165,25 @@
             <div class="card-detail" style="margin-top:16px;">
                 <a class="back" href="{{ route('heritage-shops.index') }}" style="color:var(--red-deep);font-weight:700;text-decoration:none;">← Back to list</a>
                 <h1 style="margin-top:12px">{{ $shop['shop_name'] }}</h1>
-                <div class="meta">{{ $shop['location'] }} · {{ $shop['category'] }}</div>
+                <p>
+                    <a href="{{ route('heritage-shops.correction-requests.create', $shop) }}" style="display:inline-block;background:var(--red);color:#fff;text-decoration:none;font-weight:700;border-radius:10px;padding:10px 12px;">
+                        Report Incorrect Information
+                    </a>
+                </p>
+                <div class="meta">{{ $shop->location }} · {{ $shop->primary_food_category }}</div>
 
-                <p>{{ $shop['description'] }}</p>
+                <p>{{ $shop->heritage_story }}</p>
 
-                @if (!empty($shop['founder']) || !empty($shop['establishment_year']))
+                @if (!empty($shop->founder_name) || !empty($shop->establishment_year))
                     <p>
-                        @if (!empty($shop['founder']))
-                            <strong>Founder:</strong> {{ $shop['founder'] }}
+                        @if (!empty($shop->founder_name))
+                            <strong>Founder:</strong> {{ $shop->founder_name }}
                         @endif
-                        @if (!empty($shop['founder']) && !empty($shop['establishment_year']))
+                        @if (!empty($shop->founder_name) && !empty($shop->establishment_year))
                             ·
                         @endif
-                        @if (!empty($shop['establishment_year']))
-                            <strong>Established:</strong> {{ $shop['establishment_year'] }}
+                        @if (!empty($shop->establishment_year))
+                            <strong>Established:</strong> {{ $shop->establishment_year }}
                         @endif
                     </p>
                 @endif
@@ -204,10 +209,10 @@
                 @endif
 
                 <h2 style="margin-top:16px">About</h2>
-                <p>{{ $shop['description'] ?? 'No description available.' }}</p>
+                <p>{{ $shop->heritage_story ?? 'No description available.' }}</p>
 
                 <h2 style="margin-top:16px">Heritage story</h2>
-                <p>{{ $shop['heritage_story'] ?? 'No story available.' }}</p>
+                <p>{{ $shop->heritage_story ?? 'No story available.' }}</p>
             </div>
         @else
             @if (count($shops) === 0)
@@ -219,9 +224,9 @@
                 <div class="shop-list">
                     @foreach ($shops as $shop)
                         <div class="shop-item">
-                            <h3>{{ $shop['name'] }}</h3>
-                            <div class="meta">{{ $shop['location'] }} · {{ $shop['category'] }}</div>
-                            <p>{{ $shop['description'] }}</p>
+                            <h3>{{ $shop->shop_name }}</h3>
+                            <div class="meta">{{ $shop->location }} · {{ $shop->primary_food_category }}</div>
+                            <p>{{ $shop->heritage_story }}</p>
                             <p><strong>Participating since:</strong> {{ $shop['participating_since'] }}</p>
                             <p><strong>Highlight:</strong> {{ $shop['highlight'] }}</p>
 

@@ -370,12 +370,13 @@
 <body>
     @php
         $userName = auth()->user()->name ?? 'Food Explorer';
-        $comingSoonModules = [
+        $modules = [
             [
-                'name' => 'User Management',
-                'description' => 'View profile access and account preferences for WarisanMakan.',
-                'status' => 'Coming soon',
-                'icon' => 'users',
+                'name' => 'Community Contribution',
+                'description' => 'Submit heritage shop stories, food details, media, and location notes.',
+                'status' => 'Open module',
+                'icon' => 'community',
+                'route' => 'community-contribution.create',
             ],
             [
                 'name' => 'Heritage Shop Tracking',
@@ -406,8 +407,6 @@
                 'route' => 'blind-box.index',
             ],
         ];
-        $leadingModules = array_slice($comingSoonModules, 0, 4);
-        $blindBoxModule = $comingSoonModules[4];
     @endphp
 
     <div class="shell">
@@ -417,22 +416,15 @@
             <p class="nav-label">Home</p>
             <nav class="nav" aria-label="User home navigation">
                 <a class="nav-item active" href="{{ route('home') }}">Dashboard</a>
-                <a class="nav-item" href="{{ route('community-contribution.create') }}">Community Contribution</a>
+                <a class="nav-item" href="{{ route('profile.show') }}">Profile</a>
             </nav>
 
             <p class="nav-label">Modules</p>
-            <nav class="nav" aria-label="Upcoming modules">
-                @foreach ($comingSoonModules as $module)
-                    @if (isset($module['route']) || isset($module['url']))
-                        <a class="nav-item" href="{{ isset($module['route']) ? route($module['route']) : $module['url'] }}">
-                            <span>{{ $module['name'] }}</span>
-                        </a>
-                    @else
-                        <span class="nav-item muted">
-                            <span>{{ $module['name'] }}</span>
-                            <small>soon</small>
-                        </span>
-                    @endif
+            <nav class="nav" aria-label="WarisanMakan modules">
+                @foreach ($modules as $module)
+                    <a class="nav-item" href="{{ isset($module['route']) ? route($module['route']) : $module['url'] }}">
+                        <span>{{ $module['name'] }}</span>
+                    </a>
                 @endforeach
             </nav>
 
@@ -452,6 +444,16 @@
                     <h2>User Dashboard</h2>
                     <p>WarisanMakan heritage food portal</p>
                 </div>
+                <div style="display:flex;align-items:center;gap:14px">
+                    <a href="{{ route('profile.show') }}" style="display:inline-flex;align-items:center;gap:10px;padding:10px 14px;border-radius:999px;border:1px solid rgba(46, 36, 32, .14);background:#fff;">
+                        @if (auth()->user()->profile_photo)
+                            <img src="{{ auth()->user()->profilePhotoUrl() }}" alt="Profile photo" style="width:38px;height:38px;border-radius:999px;object-fit:cover;">
+                        @else
+                            <span style="display:inline-flex;width:38px;height:38px;align-items:center;justify-content:center;border-radius:999px;background:#f2e7dd;color:var(--wm-accent);font-weight:800;">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</span>
+                        @endif
+                        <span style="font-size:.92rem;font-weight:700">{{ $userName }}</span>
+                    </a>
+                </div>
             </header>
 
             <main class="content">
@@ -465,7 +467,7 @@
                 </header>
 
                 <section class="module-grid" aria-label="WarisanMakan modules">
-                    @foreach ($leadingModules as $module)
+                    @foreach ($modules as $module)
                         @if (isset($module['route']) || isset($module['url']))
                             <a class="module-card is-active" href="{{ isset($module['route']) ? route($module['route']) : $module['url'] }}">
                                 <span class="module-icon" aria-hidden="true">
@@ -486,24 +488,6 @@
                             </article>
                         @endif
                     @endforeach
-
-                    <a class="module-card is-active" href="{{ route('community-contribution.create') }}">
-                        <span class="module-icon" aria-hidden="true">
-                            @include('partials.module-icon', ['icon' => 'community'])
-                        </span>
-                        <h3>Community Contribution</h3>
-                        <p>Submit heritage shop stories, food details, media, and location notes.</p>
-                        <strong class="module-status">Open module</strong>
-                    </a>
-
-                    <a class="module-card is-active" href="{{ route('blind-box.index') }}">
-                        <span class="module-icon" aria-hidden="true">
-                            @include('partials.module-icon', ['icon' => $blindBoxModule['icon']])
-                        </span>
-                        <h3>{{ $blindBoxModule['name'] }}</h3>
-                        <p>{{ $blindBoxModule['description'] }}</p>
-                        <strong class="module-status">Open module</strong>
-                    </a>
                 </section>
             </main>
         </section>

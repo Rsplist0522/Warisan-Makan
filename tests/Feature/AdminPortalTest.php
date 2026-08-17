@@ -95,25 +95,13 @@ class AdminPortalTest extends TestCase
             ->assertSee('planned map and discovery module');
     }
 
-    public function test_database_seeder_creates_community_contribution_demo_records(): void
+    public function test_database_seeder_only_creates_the_default_admin_account(): void
     {
         $this->seed();
 
-        $this->assertDatabaseHas('heritage_shop_contributions', [
-            'shop_name' => 'Hameediyah Restaurant',
-            'establishment_year' => 1907,
-            'status' => 'pending_review',
-        ]);
-        $this->assertDatabaseHas('heritage_shop_contributions', [
-            'shop_name' => 'Sek Yuen Restaurant',
-            'establishment_year' => 1948,
-            'status' => 'approved',
-        ]);
-        $this->assertDatabaseHas('heritage_shop_contributions', [
-            'shop_name' => 'Durbar at FMS',
-            'establishment_year' => 1906,
-            'status' => 'rejected',
-        ]);
+        $this->assertDatabaseCount('users', 1);
+        $this->assertDatabaseCount('heritage_shop_contributions', 0);
+        $this->assertDatabaseCount('heritage_shops', 0);
     }
 
     public function test_invalid_admin_credentials_are_rejected(): void

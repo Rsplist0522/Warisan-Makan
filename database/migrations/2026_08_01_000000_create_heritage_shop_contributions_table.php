@@ -1,6 +1,5 @@
 <?php
 
-use App\Models\User;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -30,12 +29,21 @@ return new class extends Migration
             $table->string('postal_code', 20)->nullable();
             $table->decimal('latitude', 10, 7)->nullable();
             $table->decimal('longitude', 10, 7)->nullable();
-            $table->json('supporting_media')->nullable();
-            $table->string('status')->default('draft');
+            $table->string('status', 40)->default('draft');
             $table->timestamp('submitted_at')->nullable();
+            $table->foreignId('reviewed_by_user_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->timestamp('review_started_at')->nullable();
+            $table->text('admin_feedback')->nullable();
+            $table->timestamp('resubmitted_at')->nullable();
+            $table->timestamp('withdrawn_at')->nullable();
+            $table->foreignId('approved_by_user_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->timestamp('approved_at')->nullable();
+            $table->text('rejection_reason')->nullable();
             $table->timestamps();
+            $table->softDeletes();
 
             $table->index(['user_id', 'status']);
+            $table->index(['status', 'submitted_at']);
         });
     }
 

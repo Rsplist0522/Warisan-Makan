@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 namespace App\Models;
 
@@ -30,12 +30,9 @@ class HeritageShop extends Model
         'postal_code',
         'latitude',
         'longitude',
-        'supporting_media',
         'publish_status',
-        'location',
+        'slug',
         'country',
-        'category',
-        'description',
         'participating_since',
         'highlight',
         'source_url',
@@ -44,7 +41,6 @@ class HeritageShop extends Model
     protected $casts = [
         'operating_hours' => 'array',
         'food_items' => 'array',
-        'supporting_media' => 'array',
         'establishment_year' => 'integer',
         'latitude' => 'float',
         'longitude' => 'float',
@@ -55,32 +51,23 @@ class HeritageShop extends Model
         return $this->belongsTo(HeritageShopContribution::class, 'source_contribution_id');
     }
 
-    public function getNameAttribute(?string $value): ?string
+    public function correctionRequests()
     {
-        return $value ?: $this->shop_name;
+        return $this->hasMany(CorrectionRequest::class);
     }
 
-    public function getCategoryAttribute(?string $value): ?string
+    public function media()
     {
-        return $value ?: $this->primary_food_category;
+        return $this->morphMany(Media::class, 'attachable')->orderBy('display_order');
     }
 
-    public function getFounderAttribute(?string $value): ?string
+    public function primaryMedia()
     {
-        return $value ?: $this->founder_name;
-    }
-
-    public function getDescriptionAttribute(?string $value): ?string
-    {
-        return $value ?: $this->heritage_story;
+        return $this->morphOne(Media::class, 'attachable')->where('is_primary', true);
     }
 
     public function getLocationAttribute(?string $value): ?string
     {
-        if (!empty($value)) {
-            return $value;
-        }
-
         return trim(implode(', ', array_filter([
             $this->address,
             $this->city,

@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class HeritageShopContribution extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     public const STATUS_DRAFT = 'draft';
 
@@ -45,7 +46,6 @@ class HeritageShopContribution extends Model
         'postal_code',
         'latitude',
         'longitude',
-        'supporting_media',
         'status',
         'submitted_at',
         'reviewed_by_user_id',
@@ -63,12 +63,12 @@ class HeritageShopContribution extends Model
         return [
             'operating_hours' => 'array',
             'food_items' => 'array',
-            'supporting_media' => 'array',
             'submitted_at' => 'datetime',
             'review_started_at' => 'datetime',
             'resubmitted_at' => 'datetime',
             'withdrawn_at' => 'datetime',
             'approved_at' => 'datetime',
+            'deleted_at' => 'datetime',
             'establishment_year' => 'integer',
             'latitude' => 'float',
             'longitude' => 'float',
@@ -98,6 +98,11 @@ class HeritageShopContribution extends Model
     public function moderationActivities()
     {
         return $this->hasMany(ModerationActivity::class)->latest();
+    }
+
+    public function media()
+    {
+        return $this->morphMany(Media::class, 'attachable')->orderBy('display_order');
     }
 
     public function canBeEditedBy(User $user): bool
@@ -155,7 +160,6 @@ class HeritageShopContribution extends Model
                 'postal_code',
                 'latitude',
                 'longitude',
-                'supporting_media',
                 'status',
             ]),
         ]);
@@ -170,7 +174,7 @@ class HeritageShopContribution extends Model
             'rejection_reason' => null,
         ])->save();
 
-        return HeritageShop::updateOrCreate(['source_contribution_id' => $this->id], [
+        $shop = HeritageShop::updateOrCreate(['source_contribution_id' => $this->id], [
             'source_contribution_id' => $this->id,
             'shop_name' => $this->shop_name,
             'primary_food_category' => $this->primary_food_category,
@@ -189,8 +193,28 @@ class HeritageShopContribution extends Model
             'postal_code' => $this->postal_code,
             'latitude' => $this->latitude,
             'longitude' => $this->longitude,
-            'supporting_media' => $this->supporting_media,
-            'publish_status' => 'draft',
+            'publish_status' => 'approved',
         ]);
+
+        $existingKeys = $shop->media()->pluck('r2_object_key')->all();
+        $this->media()->get()->each(function (Media $media) use ($shop, $existingKeys): void {
+            if (in_array($media->r2_object_key, $existingKeys, true)) {
+                return;
+            }
+
+            $shop->media()->create([
+                'uploaded_by_user_id' => $media->uploaded_by_user_id,
+                'media_type' => $media->media_type,
+                'r2_object_key' => $media->r2_object_key,
+                'original_name' => $media->original_name,
+                'mime_type' => $media->mime_type,
+                'file_size_bytes' => $media->file_size_bytes,
+                'caption' => $media->caption,
+                'display_order' => $media->display_order,
+                'is_primary' => $media->is_primary,
+            ]);
+        });
+
+        return $shop;
     }
 }

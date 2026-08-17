@@ -30,24 +30,57 @@ class HeritageShop extends Model
         'postal_code',
         'latitude',
         'longitude',
-        'supporting_media',
         'publish_status',
+        'slug',
+        'country',
+        'participating_since',
+        'highlight',
+        'source_url',
     ];
 
-    protected function casts(): array
-    {
-        return [
-            'operating_hours' => 'array',
-            'food_items' => 'array',
-            'supporting_media' => 'array',
-            'establishment_year' => 'integer',
-            'latitude' => 'float',
-            'longitude' => 'float',
-        ];
-    }
+    protected $casts = [
+        'operating_hours' => 'array',
+        'food_items' => 'array',
+        'establishment_year' => 'integer',
+        'latitude' => 'float',
+        'longitude' => 'float',
+    ];
 
     public function sourceContribution()
     {
         return $this->belongsTo(HeritageShopContribution::class, 'source_contribution_id');
+    }
+
+    public function correctionRequests()
+    {
+        return $this->hasMany(CorrectionRequest::class);
+    }
+
+    public function media()
+    {
+        return $this->morphMany(Media::class, 'attachable')->orderBy('display_order');
+    }
+
+    public function primaryMedia()
+    {
+        return $this->morphOne(Media::class, 'attachable')->where('is_primary', true);
+    }
+
+    public function getLocationAttribute(?string $value): ?string
+    {
+        return trim(implode(', ', array_filter([
+            $this->address,
+            $this->city,
+            $this->state,
+        ])));
+    }
+
+    public function getOperatingHoursAttribute($value)
+    {
+        if (is_array($value)) {
+            return implode('; ', array_filter($value));
+        }
+
+        return $value;
     }
 }

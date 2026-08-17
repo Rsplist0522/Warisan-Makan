@@ -10,10 +10,13 @@
             <h1>Review Queue</h1>
             <p>Open Community Contribution submissions, start review, and record a moderation outcome.</p>
         </div>
-        <a class="button secondary" href="{{ route('admin.community-contributions.history') }}">View history</a>
+        <div class="actions">
+            <a class="button secondary" href="{{ route('admin.community-contributions.correction-requests') }}">Correction requests</a>
+            <a class="button secondary" href="{{ route('admin.community-contributions.history') }}">View history</a>
+        </div>
     </header>
 
-    <form class="filters" method="GET" action="{{ route('admin.community-contributions.submissions') }}">
+    <form class="filters six" method="GET" action="{{ route('admin.community-contributions.submissions') }}">
         <div class="field">
             <label for="search">Search submission or contributor</label>
             <input id="search" name="search" value="{{ request('search') }}" placeholder="Title, shop, or contributor name">
@@ -26,6 +29,25 @@
                     <option value="{{ $status }}" @selected(request('status') === $status)>{{ str($status)->replace('_', ' ')->title() }}</option>
                 @endforeach
             </select>
+        </div>
+        <div class="field">
+            <label for="contributor_id">Contributor</label>
+            <select id="contributor_id" name="contributor_id">
+                <option value="">All contributors</option>
+                @foreach ($contributors as $contributor)
+                    <option value="{{ $contributor->id }}" @selected((string) request('contributor_id') === (string) $contributor->id)>
+                        {{ $contributor->name }} ({{ $contributor->email }})
+                    </option>
+                @endforeach
+            </select>
+        </div>
+        <div class="field">
+            <label for="date_from">From</label>
+            <input id="date_from" type="date" name="date_from" value="{{ request('date_from') }}">
+        </div>
+        <div class="field">
+            <label for="date_to">To</label>
+            <input id="date_to" type="date" name="date_to" value="{{ request('date_to') }}">
         </div>
         <div class="actions filter-action">
             <button class="button secondary" type="submit">Filter</button>

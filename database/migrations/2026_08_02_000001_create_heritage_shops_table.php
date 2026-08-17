@@ -12,6 +12,8 @@ return new class extends Migration
             $table->id();
             $table->foreignId('source_contribution_id')->nullable()->constrained('heritage_shop_contributions')->nullOnDelete();
             $table->string('shop_name');
+            $table->string('slug')->nullable()->unique();
+            $table->string('country', 100)->nullable()->default('Malaysia');
             $table->string('primary_food_category')->nullable();
             $table->unsignedSmallInteger('establishment_year')->nullable();
             $table->string('founder_name')->nullable();
@@ -28,8 +30,10 @@ return new class extends Migration
             $table->string('postal_code', 20)->nullable();
             $table->decimal('latitude', 10, 7)->nullable();
             $table->decimal('longitude', 10, 7)->nullable();
-            $table->json('supporting_media')->nullable();
-            $table->string('publish_status')->default('draft');
+            $table->string('source_url', 500)->nullable()->unique();
+            $table->string('publish_status', 30)->default('draft')->index();
+            $table->string('participating_since')->nullable();
+            $table->string('highlight')->nullable();
             $table->timestamps();
         });
     }

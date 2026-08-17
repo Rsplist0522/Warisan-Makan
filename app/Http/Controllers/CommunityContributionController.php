@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\HeritageShopContribution;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -16,7 +17,7 @@ class CommunityContributionController extends Controller
 {
     public function index(): View
     {
-        return view('user-home');
+        return view('community-contribution', ['contribution' => null]);
     }
 
     public function create(): View
@@ -27,20 +28,26 @@ class CommunityContributionController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $this->validateContribution($request);
-        $newMedia = $this->storeNewMedia($request);
+        $storedMedia = [];
 
         try {
-            $contribution = DB::transaction(function () use ($request, $validated, $newMedia) {
+            $contribution = DB::transaction(function () use ($request, $validated, &$storedMedia) {
                 $action = $validated['submission_action'];
                 $contribution = HeritageShopContribution::create([
                     ...$this->contributionData($request, $validated),
                     'user_id' => $request->user()->id,
-                    'supporting_media' => $newMedia ?: null,
                     'status' => $action === 'draft'
                         ? HeritageShopContribution::STATUS_DRAFT
                         : HeritageShopContribution::STATUS_PENDING_REVIEW,
                     'submitted_at' => $action === 'submit' ? now() : null,
                 ]);
+
+                $storedMedia = $this->storeNewMedia(
+                    $request,
+                    "contributions/{$contribution->id}",
+                    $request->user()->id
+                );
+                $this->createMediaRecords($contribution, $storedMedia);
 
                 $contribution->recordVersion(
                     $request->user(),
@@ -50,7 +57,7 @@ class CommunityContributionController extends Controller
                 return $contribution;
             });
         } catch (Throwable $exception) {
-            Storage::disk('public')->delete($newMedia);
+            $this->deleteStoredMedia($storedMedia);
             throw $exception;
         }
 
@@ -76,6 +83,7 @@ class CommunityContributionController extends Controller
     public function edit(Request $request, HeritageShopContribution $contribution): View
     {
         abort_unless($contribution->canBeEditedBy($request->user()), 403);
+        $contribution->load('media');
 
         return view('community-contribution', compact('contribution'));
     }
@@ -85,21 +93,23 @@ class CommunityContributionController extends Controller
         abort_unless($contribution->canBeEditedBy($request->user()), 403);
 
         $validated = $this->validateContribution($request);
-        $existingMedia = $contribution->supporting_media ?? [];
-        $requestedRemovals = array_values(array_intersect(
-            $existingMedia,
-            $request->input('remove_media', [])
-        ));
-        $retainedMedia = array_values(array_diff($existingMedia, $requestedRemovals));
+        $contribution->load('media');
+        $requestedRemovalIds = collect($request->input('remove_media', []))
+            ->map(fn ($id): int => (int) $id)
+            ->all();
+        $requestedRemovals = $contribution->media
+            ->whereIn('id', $requestedRemovalIds)
+            ->values();
+        $retainedMediaCount = $contribution->media->count() - $requestedRemovals->count();
         $newFiles = $request->file('supporting_media', []);
 
-        if (count($retainedMedia) + count($newFiles) > 6) {
+        if ($retainedMediaCount + count($newFiles) > 6) {
             throw ValidationException::withMessages([
                 'supporting_media' => 'A contribution may contain no more than 6 media files.',
             ]);
         }
 
-        $newMedia = $this->storeNewMedia($request);
+        $storedMedia = [];
         $oldStatus = $contribution->status;
 
         try {
@@ -107,8 +117,9 @@ class CommunityContributionController extends Controller
                 $request,
                 $validated,
                 $contribution,
-                $retainedMedia,
-                $newMedia,
+                $requestedRemovals,
+                $retainedMediaCount,
+                &$storedMedia,
                 $oldStatus
             ): void {
                 $action = $validated['submission_action'];
@@ -116,7 +127,6 @@ class CommunityContributionController extends Controller
 
                 $contribution->fill([
                     ...$this->contributionData($request, $validated),
-                    'supporting_media' => [...$retainedMedia, ...$newMedia] ?: null,
                     'status' => $isSubmitting
                         ? HeritageShopContribution::STATUS_PENDING_REVIEW
                         : $oldStatus,
@@ -131,6 +141,15 @@ class CommunityContributionController extends Controller
                     'withdrawn_at' => null,
                 ])->save();
 
+                $requestedRemovals->each->delete();
+                $storedMedia = $this->storeNewMedia(
+                    $request,
+                    "contributions/{$contribution->id}",
+                    $request->user()->id,
+                    $retainedMediaCount
+                );
+                $this->createMediaRecords($contribution, $storedMedia);
+
                 $contribution->recordVersion(
                     $request->user(),
                     $isSubmitting
@@ -139,11 +158,11 @@ class CommunityContributionController extends Controller
                 );
             });
         } catch (Throwable $exception) {
-            Storage::disk('public')->delete($newMedia);
+            $this->deleteStoredMedia($storedMedia);
             throw $exception;
         }
 
-        Storage::disk('public')->delete($requestedRemovals);
+        Storage::disk(config('filesystems.media_disk'))->delete($requestedRemovals->pluck('r2_object_key')->all());
 
         if ($validated['submission_action'] === 'draft') {
             if ($oldStatus === HeritageShopContribution::STATUS_REVISION_REQUIRED) {
@@ -169,9 +188,10 @@ class CommunityContributionController extends Controller
             403
         );
 
-        $media = $contribution->supporting_media ?? [];
+        $media = $contribution->media()->get();
         $contribution->delete();
-        Storage::disk('public')->delete($media);
+        $contribution->media()->delete();
+        Storage::disk(config('filesystems.media_disk'))->delete($media->pluck('r2_object_key')->all());
 
         return redirect()->route('community-contribution.drafts')
             ->with('status', 'Draft deleted successfully.');
@@ -244,7 +264,11 @@ class CommunityContributionController extends Controller
         }
 
         $contributions = $query->paginate(10)->withQueryString();
-        $notifications = $request->user()->notifications()->latest()->limit(5)->get();
+        $notifications = $request->user()->notifications()
+            ->whereNotNull('data->contribution_id')
+            ->latest()
+            ->limit(5)
+            ->get();
 
         return view('community-contributions.index', compact(
             'contributions',
@@ -257,7 +281,7 @@ class CommunityContributionController extends Controller
     {
         abort_unless($contribution->user_id === $request->user()->id, 403);
 
-        $contribution->load(['versions.user', 'moderationActivities.actor']);
+        $contribution->load(['media', 'versions.user', 'moderationActivities.actor']);
         $request->user()->unreadNotifications()
             ->where('data->contribution_id', $contribution->id)
             ->update(['read_at' => now()]);
@@ -324,7 +348,7 @@ class CommunityContributionController extends Controller
             'supporting_media' => ['nullable', 'array', 'max:6'],
             'supporting_media.*' => ['file', 'mimes:jpg,jpeg,png,webp,mp4,mov,avi', 'max:20480'],
             'remove_media' => ['nullable', 'array'],
-            'remove_media.*' => ['string'],
+            'remove_media.*' => ['integer'],
         ]);
 
         return $validated;
@@ -380,12 +404,51 @@ class CommunityContributionController extends Controller
         return $data;
     }
 
-    private function storeNewMedia(Request $request): array
+    private function storeNewMedia(Request $request, string $directory, int $userId, int $startOrder = 0): array
     {
         return collect($request->file('supporting_media', []))
-            ->map(fn ($file) => $file->store('community-contributions/heritage-shops', 'public'))
+            ->values()
+            ->map(function (UploadedFile $file, int $index) use ($directory, $userId, $startOrder): array {
+                $objectKey = $file->store($directory, config('filesystems.media_disk'));
+
+                if ($objectKey === false) {
+                    throw ValidationException::withMessages([
+                        'supporting_media' => 'The media file could not be uploaded. Please try again.',
+                    ]);
+                }
+
+                return [
+                    'uploaded_by_user_id' => $userId,
+                    'media_type' => $this->mediaType($file),
+                    'r2_object_key' => $objectKey,
+                    'original_name' => $file->getClientOriginalName(),
+                    'mime_type' => $file->getMimeType(),
+                    'file_size_bytes' => $file->getSize(),
+                    'display_order' => $startOrder + $index,
+                    'is_primary' => $startOrder === 0 && $index === 0,
+                ];
+            })
             ->values()
             ->all();
+    }
+
+    private function createMediaRecords(HeritageShopContribution $contribution, array $records): void
+    {
+        foreach ($records as $record) {
+            $contribution->media()->create($record);
+        }
+    }
+
+    private function deleteStoredMedia(array $records): void
+    {
+        Storage::disk(config('filesystems.media_disk'))->delete(
+            collect($records)->pluck('r2_object_key')->all()
+        );
+    }
+
+    private function mediaType(UploadedFile $file): string
+    {
+        return str_starts_with((string) $file->getMimeType(), 'video/') ? 'video' : 'image';
     }
 
     private function normalizeText(?string $value): ?string

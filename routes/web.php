@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AdminCommunityContributionController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BlindBoxController;
 use App\Http\Controllers\CommunityContributionController;
+use App\Http\Controllers\CorrectionRequestController;
 use App\Http\Controllers\HeritageShopController;
 use App\Http\Controllers\PassportController;
 use Illuminate\Support\Facades\Route;
@@ -18,8 +19,22 @@ Route::post('/admin-login', [AuthController::class, 'adminLogin'])
     ->name('admin.login.submit');
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
 
+Route::view('/landing', 'landing')->name('landing');
+
 Route::middleware('auth')->group(function (): void {
-    Route::get('/', [CommunityContributionController::class, 'index'])->name('home');
+    Route::middleware('regular_user')->group(function (): void {
+        Route::get('/', function () {
+            return view('user-home', ['userName' => auth()->user()->name]);
+        })->name('home');
+        Route::get('/dashboard', function () {
+            return view('user-home', ['userName' => auth()->user()->name]);
+        })->name('user.dashboard');
+    });
+
+    Route::get('/profile', [App\Http\Controllers\ProfileController::class, 'show'])->name('profile.show');
+    Route::get('/profile/edit', [App\Http\Controllers\ProfileController::class, 'edit'])->name('profile.edit');
+    Route::post('/profile', [App\Http\Controllers\ProfileController::class, 'update'])->name('profile.update');
+
     Route::get('/community-contributions/create', [CommunityContributionController::class, 'create'])
         ->name('community-contribution.create');
     Route::post('/community-contributions/heritage-shop', [CommunityContributionController::class, 'store'])
@@ -38,6 +53,16 @@ Route::middleware('auth')->group(function (): void {
 
     Route::get('/community-contributions', [CommunityContributionController::class, 'contributions'])
         ->name('community-contribution.contributions');
+    Route::get('/community-contributions/correction-requests', [CorrectionRequestController::class, 'index'])
+        ->name('community-contribution.correction-requests');
+    Route::get('/community-contributions/correction-requests/{correctionRequest}', [CorrectionRequestController::class, 'show'])
+        ->name('community-contribution.correction-requests.show');
+    Route::post('/community-contributions/correction-requests/{correctionRequest}/additional-information', [CorrectionRequestController::class, 'provideInformation'])
+        ->name('community-contribution.correction-requests.additional-information');
+    Route::get('/heritage-shops/{heritageShop}/correction-requests/create', [CorrectionRequestController::class, 'create'])
+        ->name('heritage-shops.correction-requests.create');
+    Route::post('/heritage-shops/{heritageShop}/correction-requests', [CorrectionRequestController::class, 'store'])
+        ->name('heritage-shops.correction-requests.store');
     Route::get('/community-contributions/{contribution}', [CommunityContributionController::class, 'show'])
         ->name('community-contribution.contributions.show');
     Route::post('/community-contributions/{contribution}/withdraw', [CommunityContributionController::class, 'withdraw'])
@@ -47,6 +72,10 @@ Route::middleware('auth')->group(function (): void {
         ->middleware('admin')->group(function (): void {
             Route::get('/submissions', [AdminCommunityContributionController::class, 'submissions'])->name('submissions');
             Route::get('/history', [AdminCommunityContributionController::class, 'history'])->name('history');
+            Route::get('/correction-requests', [AdminCommunityContributionController::class, 'correctionRequests'])->name('correction-requests');
+            Route::get('/correction-requests/{correctionRequest}', [AdminCommunityContributionController::class, 'showCorrectionRequest'])->name('correction-requests.show');
+            Route::post('/correction-requests/{correctionRequest}/start-review', [AdminCommunityContributionController::class, 'startCorrectionReview'])->name('correction-requests.start-review');
+            Route::post('/correction-requests/{correctionRequest}/moderate', [AdminCommunityContributionController::class, 'moderateCorrectionRequest'])->name('correction-requests.moderate');
             Route::get('/{contribution}', [AdminCommunityContributionController::class, 'show'])->name('show');
             Route::post('/{contribution}/start-review', [AdminCommunityContributionController::class, 'startReview'])->name('start-review');
             Route::post('/{contribution}/moderate', [AdminCommunityContributionController::class, 'moderate'])->name('moderate');
@@ -96,7 +125,7 @@ Route::prefix('admin')
     });
 
 // Blind Box routes
-Route::get('/blind-box', [BlindBoxController::class, 'index'])->name('blind-box.index');
+Route::get('/blind-box', [BlindBoxController::class, 'index'])->middleware('auth')->name('blind-box.index');
 Route::post('/blind-box/draw', [BlindBoxController::class, 'draw'])->name('blind-box.draw');
 Route::get('/blind-box/history', [BlindBoxController::class, 'history'])->name('blind-box.history');
 
@@ -115,11 +144,16 @@ Route::middleware('auth')->group(function () {
     Route::post('/passport/check-in', [PassportController::class, 'checkIn'])
         ->name('passport.checkin');
 
+    Route::post('/passport/demo-reset', [PassportController::class, 'resetDemoData'])
+        ->name('passport.demo.reset');
+
 });
 
 // Public test endpoint for local development: simulate a logged-in user
 Route::post('/passport/check-in-test', [PassportController::class, 'checkInTest'])
     ->name('passport.checkin.test');
+Route::post('/passport/demo-reset', [PassportController::class, 'resetDemoData'])
+    ->name('passport.demo.reset.public');
 
 // Food trails page
 Route::get('/foodtrails', function () {
@@ -132,3 +166,4 @@ Route::get('/start_trail', function () {
 });
 
 Route::get('/heritage-shops', [HeritageShopController::class, 'index'])->name('heritage-shops.index');
+Route::get('/heritage-shops/{id}', [HeritageShopController::class, 'show'])->whereNumber('id')->name('heritage-shops.show');

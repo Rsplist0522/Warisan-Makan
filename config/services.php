@@ -42,4 +42,13 @@ return [
         'maps_api_key' => env('GOOGLE_MAPS_API_KEY'),
     ],
 
+    // The crawler uses Groq's OpenAI-compatible chat-completions API.  The
+    // OPENAI_* fallbacks retain compatibility with existing deployments.
+    'groq' => [
+        'api_key' => env('GROQ_API_KEY', env('OPENAI_API_KEY')),
+        'model' => env('GROQ_MODEL', env('OPENAI_MODEL', 'llama-3.3-70b-versatile')),
+        'enhancement_enabled' => env('AI_CRAWLER_ENHANCEMENT_ENABLED', true),
+        'endpoint' => env('GROQ_API_ENDPOINT', 'https://api.groq.com/openai/v1/chat/completions'),
+    ],
+
 ];

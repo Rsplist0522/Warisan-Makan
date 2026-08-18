@@ -116,14 +116,63 @@ class HeritageShopController extends Controller
     // Show a single shop detail by DB id
     public function show(string $id)
     {
-        $shop = HeritageShop::findOrFail($id);
-        $shops = HeritageShop::orderBy('shop_name')->get();
+        $shop = HeritageShop::query()->with('images')->findOrFail($id);
+        $shops = HeritageShop::query()->with('images')->orderBy('shop_name')->get();
+        $menuItems = $this->resolveMenuItems($shop);
 
-        // Provide listing-related variables so the merged view's search form
-        // and listing logic do not trigger undefined variable errors.
         $search = '';
         $category = '';
 
-        return view('heritage.shops', compact('shop', 'shops', 'search', 'category'));
+        return view('heritage.shops', compact('shop', 'shops', 'search', 'category', 'menuItems'));
+    }
+
+    private function resolveMenuItems(HeritageShop $shop): array
+    {
+        if (! empty($shop->food_items) && is_array($shop->food_items)) {
+            return $shop->food_items;
+        }
+
+        $category = strtolower((string) ($shop->primary_food_category ?? ''));
+        $name = strtolower((string) ($shop->shop_name ?? ''));
+
+        $fallbackMenus = [
+            'nasi' => [
+                ['name' => 'Nasi Kandar', 'price' => 'RM 18.00', 'desc' => 'Fragrant rice served with curries, vegetables and a choice of classic house sides.'],
+                ['name' => 'Ayam Goreng', 'price' => 'RM 14.00', 'desc' => 'Crisp fried chicken with a heritage spice blend.'],
+                ['name' => 'Teh Tarik', 'price' => 'RM 4.50', 'desc' => 'Pulled milk tea, a staple pairing for the meal.'],
+            ],
+            'kopitiam' => [
+                ['name' => 'Kaya Toast', 'price' => 'RM 7.50', 'desc' => 'Classic toasted bread with coconut jam and butter.'],
+                ['name' => 'Hainanese Chicken Chop', 'price' => 'RM 22.00', 'desc' => 'Traditional chicken chop with a rich house gravy.'],
+                ['name' => 'Ipoh White Coffee', 'price' => 'RM 6.00', 'desc' => 'Smooth local coffee known for its light, aromatic finish.'],
+            ],
+            'dessert' => [
+                ['name' => 'Kuih Lapis', 'price' => 'RM 8.00', 'desc' => 'Layered steamed cake with a soft, fragrant texture.'],
+                ['name' => 'Cendol', 'price' => 'RM 7.00', 'desc' => 'Shaved ice dessert with coconut milk and palm sugar.'],
+                ['name' => 'Gula Melaka Pancake', 'price' => 'RM 9.50', 'desc' => 'A sweet local favourite with toasted caramel notes.'],
+            ],
+            'cantonese' => [
+                ['name' => 'Pipa Duck', 'price' => 'RM 38.00', 'desc' => 'A signature Cantonese roast with a deep, savoury flavour.'],
+                ['name' => 'Eight Treasure Duck', 'price' => 'RM 46.00', 'desc' => 'Festive banquet-style dish with a layered heritage profile.'],
+                ['name' => 'Wok-Fried Greens', 'price' => 'RM 16.00', 'desc' => 'Traditional vegetable preparation with garlic and oyster sauce.'],
+            ],
+            'satay' => [
+                ['name' => 'Chicken Satay', 'price' => 'RM 16.00', 'desc' => 'Charcoal-grilled skewers with a classic peanut dip.'],
+                ['name' => 'Beef Satay', 'price' => 'RM 18.00', 'desc' => 'Tender beef skewers with aromatic spice and smoky char.'],
+                ['name' => 'Nasi Impit', 'price' => 'RM 5.00', 'desc' => 'Compressed rice cakes served with satay and sauce.'],
+            ],
+        ];
+
+        foreach ($fallbackMenus as $keyword => $items) {
+            if (str_contains($category, $keyword) || str_contains($name, $keyword)) {
+                return $items;
+            }
+        }
+
+        return [
+            ['name' => 'Signature Heritage Dish', 'price' => 'RM 20.00', 'desc' => 'A house-special plate highlighting the shop’s long-running recipes.'],
+            ['name' => 'Chef’s Recommendation', 'price' => 'RM 24.00', 'desc' => 'A prepared favourite chosen for tradition, flavour, and local character.'],
+            ['name' => 'House Beverage', 'price' => 'RM 5.50', 'desc' => 'A classic accompaniment that complements the meal experience.'],
+        ];
     }
 }

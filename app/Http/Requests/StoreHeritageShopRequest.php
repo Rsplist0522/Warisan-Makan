@@ -1,0 +1,49 @@
+<?php
+
+namespace App\Http\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+
+class StoreHeritageShopRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return $this->user()?->isAdmin() === true;
+    }
+
+    public function rules(): array
+    {
+        return [
+            'shop_name' => ['required', 'string', 'max:255'],
+            'primary_food_category' => ['nullable', 'string', 'max:255'],
+            'establishment_year' => ['nullable', 'integer', 'min:1000', 'max:'.now()->year],
+            'founder_name' => ['nullable', 'string', 'max:255'],
+            'founder_background' => ['nullable', 'string', 'max:5000'],
+            'current_owner_name' => ['nullable', 'string', 'max:255'],
+            'current_owner_details' => ['nullable', 'string', 'max:5000'],
+            'heritage_story' => ['nullable', 'string', 'max:10000'],
+            'operating_hours' => ['nullable', 'string', 'max:2000'],
+            'food_items' => ['nullable', 'array'],
+            'food_items.*.name' => ['nullable', 'string', 'max:255'],
+            'food_items.*.price' => ['nullable', 'string', 'max:255'],
+            'food_items.*.desc' => ['nullable', 'string', 'max:1000'],
+            'contact_number' => ['nullable', 'string', 'max:30', 'regex:/^[0-9+()\-\s]*$/'],
+            'address' => ['nullable', 'string', 'max:500'],
+            'city' => ['nullable', 'string', 'max:100'],
+            'state' => ['nullable', 'string', 'max:100'],
+            'postal_code' => ['nullable', 'string', 'max:20'],
+            'source_url' => ['nullable', 'url', 'max:500'],
+            'publish_status' => ['nullable', Rule::in(['draft', 'approved'])],
+            'images' => ['nullable', 'array', 'max:10'],
+            'images.*' => ['file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'existing_images' => ['nullable', 'array'],
+            'existing_images.*' => ['integer'],
+            'remove_images' => ['nullable', 'array'],
+            'remove_images.*' => ['integer'],
+            'menu_items_json' => ['nullable', 'string'],
+            'crawler_images' => ['nullable', 'array'],
+            'crawler_images.*' => ['string', 'max:500'],
+        ];
+    }
+}

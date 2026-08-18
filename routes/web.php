@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminCommunityContributionController;
+use App\Http\Controllers\Admin\HeritageShopAdminController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BlindBoxController;
 use App\Http\Controllers\CommunityContributionController;
@@ -87,6 +88,15 @@ Route::prefix('admin')
     ->middleware('admin')
     ->group(function () {
         Route::view('/', 'admin.dashboard')->name('dashboard');
+
+        Route::prefix('heritage-shops')->name('heritage-shops.')->group(function () {
+            Route::get('/', [HeritageShopAdminController::class, 'index'])->name('index');
+            Route::get('/create', [HeritageShopAdminController::class, 'create'])->name('create');
+            Route::post('/', [HeritageShopAdminController::class, 'store'])->name('store');
+            Route::get('/{heritageShop}/edit', [HeritageShopAdminController::class, 'edit'])->name('edit');
+            Route::put('/{heritageShop}', [HeritageShopAdminController::class, 'update'])->name('update');
+            Route::post('/crawl', [HeritageShopAdminController::class, 'crawl'])->name('crawl');
+        });
 
         Route::get('/modules/{moduleSlug}', function (string $moduleSlug) {
             $modules = [

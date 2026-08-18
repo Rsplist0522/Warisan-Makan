@@ -165,14 +165,21 @@
             <div class="card-detail" style="margin-top:16px;">
                 <a class="back" href="{{ route('heritage-shops.index') }}" style="color:var(--red-deep);font-weight:700;text-decoration:none;">← Back to list</a>
                 <h1 style="margin-top:12px">{{ $shop['shop_name'] }}</h1>
-                <p>
-                    <a href="{{ route('heritage-shops.correction-requests.create', $shop) }}" style="display:inline-block;background:var(--red);color:#fff;text-decoration:none;font-weight:700;border-radius:10px;padding:10px 12px;">
-                        Report Incorrect Information
-                    </a>
-                </p>
                 <div class="meta">{{ $shop->location }} · {{ $shop->primary_food_category }}</div>
 
-                <p>{{ $shop->heritage_story }}</p>
+                <div style="display:flex; flex-wrap:wrap; gap:10px; margin:16px 0 20px;">
+                    <a href="{{ route('heritage-shops.correction-requests.create', $shop) }}" style="display:inline-block;background:var(--red);color:#fff;text-decoration:none;font-weight:700;border-radius:10px;padding:11px 16px; box-shadow:0 8px 20px rgba(140,31,31,0.18);">
+                        Report Incorrect Information
+                    </a>
+                </div>
+
+                @if ($shop->images->isNotEmpty())
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin:18px 0 22px;">
+                        @foreach ($shop->images as $image)
+                            <img src="{{ Storage::disk(config('filesystems.media_disk', 'public'))->url($image->path) }}" alt="{{ $shop->shop_name }} photo" style="width:100%; height:180px; object-fit:cover; border-radius:16px; border:1px solid var(--line); background:#fff;">
+                        @endforeach
+                    </div>
+                @endif
 
                 @if (!empty($shop->founder_name) || !empty($shop->establishment_year))
                     <p>
@@ -211,6 +218,25 @@
                 <h2 style="margin-top:16px">About</h2>
                 <p>{{ $shop->heritage_story ?? 'No description available.' }}</p>
 
+                @if (!empty($menuItems) && is_array($menuItems))
+                    <h2 style="margin-top:16px">Menu highlights</h2>
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:12px; margin:12px 0 18px;">
+                        @foreach ($menuItems as $item)
+                            <div style="background:#fffdfa; border:1px solid var(--line); border-radius:16px; padding:14px 16px; box-shadow:0 8px 18px rgba(70,30,10,0.04);">
+                                <div style="display:flex; justify-content:space-between; gap:12px; align-items:center; margin-bottom:8px;">
+                                    <h3 style="margin:0; color:var(--red-deep); font-size:1rem;">{{ $item['name'] ?? 'House special' }}</h3>
+                                    @if (!empty($item['price']))
+                                        <span style="background:rgba(201,151,29,0.12); color:var(--red-deep); border-radius:999px; padding:5px 9px; font-size:11px; font-weight:800;">{{ $item['price'] }}</span>
+                                    @endif
+                                </div>
+                                @if (!empty($item['desc']))
+                                    <p style="margin:0; color:var(--muted); font-size:0.92rem; line-height:1.55;">{{ $item['desc'] }}</p>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+
                 <h2 style="margin-top:16px">Heritage story</h2>
                 <p>{{ $shop->heritage_story ?? 'No story available.' }}</p>
             </div>
@@ -230,7 +256,7 @@
                             <p><strong>Participating since:</strong> {{ $shop['participating_since'] }}</p>
                             <p><strong>Highlight:</strong> {{ $shop['highlight'] }}</p>
 
-                            <p><a href="{{ route('heritage-shops.show', ['id' => $shop->id]) }}">View details</a></p>
+                            <p><a href="{{ route('heritage-shops.show', ['id' => $shop->id]) }}" style="display:inline-block;background:var(--gold);color:#fff;text-decoration:none;font-weight:700;border-radius:10px;padding:10px 16px; border:1px solid rgba(201,151,29,0.5); box-shadow:0 8px 18px rgba(201,151,29,0.2);">View details</a></p>
                         </div>
                     @endforeach
                 </div>

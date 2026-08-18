@@ -153,11 +153,11 @@
 <body>
     @php
         $communityContributionActive = request()->routeIs('admin.community-contributions.*');
+        $foodTrailActive = request()->routeIs('admin.food-trails.*');
         $placeholderModules = [
             'heritage-registry' => 'Heritage Registry',
             'food-map' => 'Food Map',
             'stories-editorial' => 'Stories & Editorial',
-            'events-trails' => 'Events & Trails',
             'users-roles' => 'Users & Roles',
             'reports-analytics' => 'Reports & Analytics',
         ];
@@ -183,6 +183,10 @@
                         <a class="nav-item {{ request()->routeIs('admin.community-contributions.history') ? 'active' : '' }}" href="{{ route('admin.community-contributions.history') }}">Admin History</a>
                     </div>
                 @endif
+
+                <a class="nav-item {{ $foodTrailActive ? 'active' : '' }}" href="{{ route('admin.food-trails.index') }}">
+                    <span>Food Trails</span>
+                </a>
 
                 @foreach ($placeholderModules as $slug => $name)
                     <a class="nav-item placeholder {{ request()->routeIs('admin.modules.show') && request()->route('moduleSlug') === $slug ? 'active' : '' }}" href="{{ route('admin.modules.show', $slug) }}">

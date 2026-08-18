@@ -131,7 +131,9 @@
             display: flex;
             gap: 8px;
             align-items: center;
-            justify-content: flex-end;
+            justify-content: flex-start;
+            grid-column: 4;
+            grid-row: 2;
         }
 
         .trail-visit-button,
@@ -185,6 +187,7 @@
 
             .trail-stop-actions {
                 grid-column: 1 / -1;
+                grid-row: auto;
                 justify-content: space-between;
             }
         }

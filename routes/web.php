@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminCommunityContributionController;
+use App\Http\Controllers\Admin\FoodTrailSuggestionController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BlindBoxController;
 use App\Http\Controllers\CommunityContributionController;
@@ -87,6 +88,7 @@ Route::prefix('admin')
     ->middleware('admin')
     ->group(function () {
         Route::view('/', 'admin.dashboard')->name('dashboard');
+        Route::resource('food-trails', FoodTrailSuggestionController::class)->except('show');
 
         Route::get('/modules/{moduleSlug}', function (string $moduleSlug) {
             $modules = [
@@ -157,7 +159,10 @@ Route::post('/passport/demo-reset', [PassportController::class, 'resetDemoData']
 
 // Food trails page
 Route::get('/foodtrails', function () {
-    return view('foodtrails');
+    return view('foodtrails', [
+        'curatedSuggestions' => \App\Models\FoodTrailSuggestion::query()
+            ->where('is_published', true)->latest()->get(['id', 'title', 'subtitle', 'summary', 'category', 'location']),
+    ]);
 });
 
 // Start trail page

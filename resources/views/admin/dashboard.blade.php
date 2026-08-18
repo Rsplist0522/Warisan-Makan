@@ -47,11 +47,11 @@
             <p>Editorial planning for oral histories, guides, interviews, and featured shop narratives.</p>
             <strong>Coming soon</strong>
         </a>
-        <a class="module-card inactive" href="{{ route('admin.modules.show', 'events-trails') }}">
+        <a class="module-card" href="{{ route('admin.food-trails.index') }}">
             <span class="module-index">05</span>
-            <h3>Events & Trails</h3>
-            <p>Curated walking routes, food trail campaigns, and community makan events.</p>
-            <strong>Coming soon</strong>
+            <h3>Food Trails</h3>
+            <p>Create and publish food-trail recommendations for users to explore.</p>
+            <strong>Open module</strong>
         </a>
         <a class="module-card inactive" href="{{ route('admin.modules.show', 'reports-analytics') }}">
             <span class="module-index">06</span>

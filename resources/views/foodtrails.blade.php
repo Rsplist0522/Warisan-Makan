@@ -330,10 +330,7 @@
                 { id: 'fav-1', title: 'KL Heritage Walk', location: 'Kuala Lumpur', description: 'A classic route for local favorites and street food.', tags: ['Street Food', 'Local'], stops: 3 },
                 { id: 'fav-2', title: 'Penang Sweet Tour', location: 'Penang', description: 'A dessert-focused trail for local heritage sweets.', tags: ['Dessert', 'Heritage'], stops: 3 },
             ],
-            curated: [
-                { id: 'curated-1', title: 'Weekend Food Trail', subtitle: 'Quick heritage route', summary: 'Perfect for a short heritage food adventure with top local vendors.', category: 'All', location: 'Kuala Lumpur' },
-                { id: 'curated-2', title: 'Seafood & Street Bites', subtitle: 'Best of the shore', summary: 'A curated set of the best seafood and street snack options.', category: 'Seafood', location: 'Melaka' },
-            ],
+            curated: @json($curatedSuggestions),
             restaurants: {
                 'Kuala Lumpur': [
                     { id: 'kl-1', name: 'Nasi Lemak Warisan', category: 'Street Food', location: 'Bukit Bintang', rating: 4.7, reviewCount: 218, price: 'RM 8 - RM 15', distance: 0.4, waitTime: '15 min', tags: ['Local', 'Spicy'], description: 'Iconic coconut rice with sambal, chicken, and crispy anchovies.', picture: 'https://images.unsplash.com/photo-1543353071-873f17a7a088?auto=format&fit=crop&w=1200&q=80', coordinates: { x: 18, y: 28 } },

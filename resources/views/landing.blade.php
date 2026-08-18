@@ -67,9 +67,10 @@
         </div>
       </div>
       <nav>
-        <a href="/foodPassport">Food Passport</a>
+        <a href="{{ route('passport.index') }}">Food Passport</a>
         <a href="#shops">Shops</a>
         <a href="#contribute">Contribute</a>
+        <a href="{{ route('login') }}">Sign in</a>
       </nav>
     </header>
 
@@ -79,8 +80,8 @@
           <h1 class="display">Discover Malaysia's living food heritage</h1>
           <p class="muted">Explore traditional vendors, collect passport stamps, earn badges, and support local stories — all in a thoughtful, mobile-first experience.</p>
           <div class="cta">
-            <button class="btn-primary" id="exploreBtn">Explore Heritage Food</button>
-            <button class="btn-outline" id="trailBtn">Generate a Food Trail</button>
+            <a class="btn-primary" href="/login">Join WarisanMakan</a>
+            <a class="btn-outline" href="/foodtrails">Generate a Food Trail</a>
           </div>
 
           <div style="margin-top:14px;color:var(--muted);font-size:.95rem">Why now: connect visitors with authentic heritage vendors while the community documents founders' stories and recipes.</div>
@@ -156,7 +157,7 @@
         <h2>Community Contribution</h2>
         <div class="card">
           <p class="muted">Help preserve stories. Share a shop founder's story or add historical notes. Submissions are reviewed before publishing.</p>
-          <button class="btn-primary">Contribute a Story</button>
+          <a class="btn-primary" href="{{ route('login') }}">Contribute a Story</a>
         </div>
       </section>
 

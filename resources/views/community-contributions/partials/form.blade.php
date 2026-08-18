@@ -9,7 +9,7 @@
         'closed' => false,
     ]))->all());
     $foodItems = old('food_items', $contribution?->food_items ?: [['name' => '', 'desc' => '']]);
-    $existingMedia = $contribution?->supporting_media ?? [];
+    $existingMedia = $contribution?->media ?? collect();
     $fieldValue = fn (string $name, mixed $fallback = null) => old($name, $contribution?->{$name} ?? $fallback);
 @endphp
 
@@ -166,21 +166,17 @@
     <section class="form-section">
         <h2 class="section-title">Supporting media</h2>
 
-        @if ($existingMedia)
+        @if ($existingMedia->isNotEmpty())
             <div class="media-grid" aria-label="Existing media">
-                @foreach ($existingMedia as $path)
-                    @php
-                        $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
-                        $isVideo = in_array($extension, ['mp4', 'mov', 'avi']);
-                    @endphp
+                @foreach ($existingMedia as $media)
                     <div class="media-card">
-                        @if ($isVideo)
-                            <video controls preload="metadata"><source src="{{ asset('storage/'.$path) }}"></video>
+                        @if ($media->media_type === 'video')
+                            <video controls preload="metadata"><source src="{{ $media->url }}"></video>
                         @else
-                            <img src="{{ asset('storage/'.$path) }}" alt="Previously uploaded supporting media">
+                            <img src="{{ $media->url }}" alt="Previously uploaded supporting media">
                         @endif
                         <label class="remove-media">
-                            <input class="checkbox-input" type="checkbox" name="remove_media[]" value="{{ $path }}">
+                            <input class="checkbox-input" type="checkbox" name="remove_media[]" value="{{ $media->id }}">
                             Remove this file
                         </label>
                     </div>

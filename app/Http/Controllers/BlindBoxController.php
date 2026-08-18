@@ -204,6 +204,7 @@ class BlindBoxController extends Controller
 
 
         $shops = HeritageShop::where('publish_status', 'approved')
+            ->with('media')
             ->get()
             ->map(fn (HeritageShop $shop) => [
                 'name' => $shop->shop_name,
@@ -232,10 +233,11 @@ class BlindBoxController extends Controller
 
     private function shopImage(HeritageShop $shop): string
     {
-        if (is_array($shop->supporting_media) && count($shop->supporting_media) > 0) {
-            return $shop->supporting_media[0];
-        }
+        $media = $shop->media->firstWhere('is_primary', true) ?? $shop->media->first();
 
+        if ($media) {
+            return $media->url;
+        }
 
         return 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=900&q=80';
     }

@@ -9,8 +9,24 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
+use Throwable;
 
-#[Fillable(['name', 'username', 'email', 'password', 'google_id', 'role'])]
+#[Fillable([
+    'name',
+    'username',
+    'email',
+    'phone',
+    'city',
+    'bio',
+    'password',
+    'google_id',
+    'profile_photo',
+    'role',
+    'status',
+    'deactivated_at',
+    'deactivated_by_user_id',
+])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -22,9 +38,48 @@ class User extends Authenticatable
         return $this->hasMany(HeritageShopContribution::class);
     }
 
+    public function correctionRequests()
+    {
+        return $this->hasMany(CorrectionRequest::class);
+    }
+
+    public function media()
+    {
+        return $this->hasMany(Media::class, 'uploaded_by_user_id');
+    }
+
+    public function deactivatedBy()
+    {
+        return $this->belongsTo(self::class, 'deactivated_by_user_id');
+    }
+
+    public function deactivatedUsers()
+    {
+        return $this->hasMany(self::class, 'deactivated_by_user_id');
+    }
+
     public function isAdmin(): bool
     {
         return $this->role === 'admin';
+    }
+
+    public function profilePhotoUrl(): ?string
+    {
+        if (! $this->profile_photo) {
+            return null;
+        }
+
+        $diskName = config('filesystems.media_disk');
+        $disk = Storage::disk($diskName);
+
+        if ($diskName === 'r2') {
+            try {
+                return $disk->temporaryUrl($this->profile_photo, now()->addMinutes(15));
+            } catch (Throwable) {
+            }
+        }
+
+        return $disk->url($this->profile_photo);
     }
 
     /**
@@ -36,6 +91,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'deactivated_at' => 'datetime',
             'password' => 'hashed',
         ];
     }

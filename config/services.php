@@ -51,4 +51,13 @@ return [
         'endpoint' => env('GROQ_API_ENDPOINT', 'https://api.groq.com/openai/v1/chat/completions'),
     ],
 
+    // Tavily supplies web-search results to the crawler when the source page
+    // does not contain a required business fact. The LLM is deliberately only
+    // given these returned sources; it never fills a field from its own memory.
+    'tavily' => [
+        'api_key' => env('TAVILY_API_KEY'),
+        'endpoint' => env('TAVILY_API_ENDPOINT', 'https://api.tavily.com/search'),
+        'research_enabled' => env('AI_CRAWLER_WEB_RESEARCH_ENABLED', true),
+    ],
+
 ];

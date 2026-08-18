@@ -51,7 +51,7 @@
         @endif
 
         <section class="panel" style="margin-bottom:18px;">
-            <div class="filters six" style="margin-bottom:0;">
+            <div class="crawl-controls">
                 <div class="field">
                     <label for="crawl_url">Crawl source URL</label>
                     <input id="crawl_url" name="crawl_url" type="url" placeholder="https://example.com/heritage-restaurant" value="{{ old('crawl_url', $shopSourceUrl) }}">
@@ -59,8 +59,9 @@
                 <div class="field" style="align-self:end;">
                     <button class="button secondary small" id="crawl-button" type="button">Fetch / Crawl</button>
                 </div>
-                <div class="field" style="grid-column: 3 / -1;">
+                <div class="field crawl-feedback">
                     <div id="crawl-status" class="status-banner" style="display:none; margin:0; padding:10px 12px;"></div>
+                    <div id="research-sources" class="help-text" style="display:none; margin-top:8px;"></div>
                 </div>
             </div>
         </section>
@@ -215,6 +216,22 @@
             letter-spacing: .04em;
             text-transform: uppercase;
             margin-bottom: 6px;
+            max-width: 100%;
+            overflow-wrap: anywhere;
+            white-space: normal;
+        }
+        .crawl-controls {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 10px;
+            align-items: end;
+        }
+        .crawl-feedback {
+            grid-column: 1 / -1;
+            min-width: 0;
+        }
+        #research-sources, #research-sources a {
+            overflow-wrap: anywhere;
         }
         .menu-item-row {
             display: grid;
@@ -252,6 +269,7 @@
         }
         @media (max-width: 640px) {
             .menu-item-fields { grid-template-columns: 1fr; }
+            .crawl-controls { grid-template-columns: 1fr; }
         }
     </style>
 
@@ -339,7 +357,7 @@
             crawlStatus.textContent = message;
         }
 
-        function markAutofill(fieldId) {
+        function markAutofill(fieldId, source = '') {
             const field = document.getElementById(fieldId);
             if (!field) return;
             field.classList.add('autofill-field');
@@ -348,7 +366,10 @@
             if (!parent.querySelector('.autofill-tag')) {
                 const tag = document.createElement('span');
                 tag.className = 'autofill-tag';
-                tag.textContent = 'Auto-filled';
+                const sourceLabel = source
+                    ? (source.startsWith('http') ? 'Source page' : 'Web research')
+                    : '';
+                tag.textContent = sourceLabel ? 'Auto-filled • ' + sourceLabel : 'Auto-filled';
                 parent.insertBefore(tag, parent.firstChild);
             }
         }
@@ -357,10 +378,33 @@
             return !field || !String(field.value || '').trim();
         }
 
+        function renderResearchSources(sources) {
+            const container = document.getElementById('research-sources');
+            container.replaceChildren();
+            if (!Array.isArray(sources) || !sources.length) {
+                container.style.display = 'none';
+                return;
+            }
+            const heading = document.createElement('strong');
+            heading.textContent = 'Web research sources — review before publishing: ';
+            container.appendChild(heading);
+            sources.forEach((source, index) => {
+                const link = document.createElement('a');
+                link.href = source.url;
+                link.target = '_blank';
+                link.rel = 'noopener noreferrer';
+                link.textContent = source.title || source.url;
+                container.appendChild(link);
+                if (index < sources.length - 1) container.appendChild(document.createTextNode(' · '));
+            });
+            container.style.display = 'block';
+        }
+
         function fillFormFromCrawl(payload) {
             const mapping = {
-                shop_name: 'shop_name',
+                name: 'shop_name',
                 primary_food_category: 'primary_food_category',
+                establishment_year: 'establishment_year',
                 heritage_story: 'heritage_story',
                 description: 'heritage_story',
                 contact_number: 'contact_number',
@@ -383,7 +427,7 @@
                 // value that was deliberately entered in the form.
                 if (field && fieldIsBlank(field) && value !== null && value !== undefined && value !== '') {
                     field.value = value;
-                    markAutofill(fieldId);
+                    markAutofill(fieldId, payload.field_sources?.[sourceKey] || payload.field_sources?.[fieldId] || '');
                 }
             });
 
@@ -406,6 +450,8 @@
                     form.appendChild(hidden);
                 });
             }
+
+            renderResearchSources(payload.research_sources);
         }
 
         crawlButton.addEventListener('click', async () => {
@@ -433,7 +479,10 @@
                 }
 
                 fillFormFromCrawl(responseData);
-                setCrawlStatus('success', 'Shop data was discovered and blank fields were filled. Please review before saving.');
+                const researchNote = responseData.research_status ? ' ' + responseData.research_status : '';
+                setCrawlStatus('success', (responseData.research_sources?.length
+                    ? 'Source data and grounded web research filled blank fields. Review the linked sources before saving.'
+                    : 'Source data filled blank fields. No unsupported values were invented; please review before saving.') + researchNote);
             } catch (error) {
                 setCrawlStatus('error', error.message || 'The crawl request failed.');
             }

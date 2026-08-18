@@ -25,6 +25,18 @@ class ShopCrawlerService
         $html = $response->body();
         $payload = $this->extractFromHtml($url, $html);
 
+        // Many restaurant sites keep their menu on a separate first-party
+        // page. Follow one clearly labelled menu link before using research.
+        if (empty($payload['menu']) && ($menuUrl = $this->findMenuUrl($html, $url))) {
+            $payload = $this->mergeLinkedMenu($payload, $menuUrl);
+        }
+
+        // A chat model cannot browse by itself. Search first and pass only the
+        // returned source excerpts to the model, keeping every suggestion
+        // traceable to a page the administrator can review.
+        $payload['research_sources'] = $this->searchForMissingDetails($payload);
+        $payload['research_status'] = $this->researchStatus($payload['research_sources']);
+
         if ($this->shouldEnhanceWithAi()) {
             $payload = $this->enhanceWithAi($url, $payload, $html);
         }
@@ -43,6 +55,7 @@ class ShopCrawlerService
         $name = $this->firstNonEmpty([
             $jsonLd['name'] ?? null,
             $this->extractMeta($html, ['property' => 'og:title', 'name' => 'title']),
+            $this->extractHeading($html),
             $title,
         ]);
 
@@ -61,51 +74,162 @@ class ShopCrawlerService
 
         $images = $this->extractImages($html, $jsonLd);
 
-        $heritageStory = $description ?: 'This record was auto-filled from the source website and should be reviewed before publishing.';
+        $heritageStory = $description ?: null;
 
         return [
-            'name' => $name ?: 'Crawled Heritage Shop',
+            'name' => $name,
             'description' => $heritageStory,
             'heritage_story' => $heritageStory,
             'menu' => $menu,
             'images' => $images,
-            'address' => $address ?: 'Address not detected from the source website.',
-            'contact_number' => $contactNumber ?: '+603-0000 0000',
+            'address' => $address,
+            'contact_number' => $contactNumber,
             'source_url' => $url,
             'city' => $this->extractCityFromAddress($address),
             'state' => $this->extractStateFromAddress($address),
             'postal_code' => $this->extractPostalCodeFromAddress($address),
-            'primary_food_category' => $category ?: 'Traditional Cuisine',
-            'operating_hours' => $this->extractHours($html),
+            'primary_food_category' => $category,
+            'operating_hours' => $this->extractHours($html, $jsonLd),
             'food_items' => self::menuToFoodItems($menu),
             'crawler_token' => Str::uuid()->toString(),
+            'field_sources' => $this->pageFieldSources($url),
         ];
+    }
+
+    private function searchForMissingDetails(array $payload): array
+    {
+        if (! $this->shouldResearchWeb() || ! $this->hasMissingResearchFields($payload)) {
+            return [];
+        }
+
+        $name = $this->researchQuery($payload);
+
+        try {
+            $response = Http::acceptJson()->timeout(20)->post(config('services.tavily.endpoint'), [
+                'api_key' => config('services.tavily.api_key'),
+                'query' => $name.' Malaysia address contact opening hours menu founder heritage history',
+                'search_depth' => 'advanced',
+                'max_results' => 5,
+                'include_answer' => false,
+                'include_raw_content' => 'text',
+            ]);
+        } catch (\Throwable $exception) {
+            Log::warning('Heritage crawler web research request failed.', ['message' => $exception->getMessage()]);
+            return [];
+        }
+
+        if ($response->failed()) {
+            Log::warning('Heritage crawler web research was rejected.', ['status' => $response->status()]);
+            return [];
+        }
+
+        return collect($response->json('results', []))
+            ->filter(fn ($result) => is_array($result) && filled($result['url'] ?? null))
+            ->map(fn (array $result) => [
+                'title' => Str::limit(trim((string) ($result['title'] ?? 'Untitled source')), 180, ''),
+                'url' => $result['url'],
+                'content' => Str::limit(trim((string) ($result['raw_content'] ?? $result['content'] ?? '')), 5000, ''),
+            ])
+            ->filter(fn (array $result) => $result['content'] !== '')
+            ->take(5)
+            ->values()
+            ->all();
+    }
+
+    private function shouldResearchWeb(): bool
+    {
+        return filter_var(config('services.tavily.research_enabled', true), FILTER_VALIDATE_BOOL)
+            && filled(config('services.tavily.api_key'));
+    }
+
+    private function hasMissingResearchFields(array $payload): bool
+    {
+        foreach (['address', 'city', 'state', 'postal_code', 'contact_number', 'primary_food_category', 'operating_hours', 'establishment_year', 'founder_name', 'founder_background', 'current_owner_name', 'current_owner_details', 'heritage_story'] as $field) {
+            if (blank($payload[$field] ?? null)) {
+                return true;
+            }
+        }
+
+        return empty($payload['menu']);
+    }
+
+    private function pageFieldSources(string $url): array
+    {
+        return array_fill_keys(['name', 'description', 'heritage_story', 'address', 'city', 'state', 'postal_code', 'contact_number', 'primary_food_category', 'operating_hours'], $url);
+    }
+
+    private function researchQuery(array $payload): string
+    {
+        $name = trim((string) ($payload['name'] ?? ''));
+        if ($name !== '') {
+            return $name;
+        }
+
+        $path = parse_url((string) ($payload['source_url'] ?? ''), PHP_URL_PATH);
+        $slug = trim(str_replace(['-', '_', '/'], ' ', (string) $path));
+
+        return $slug !== '' ? $slug : (string) ($payload['source_url'] ?? '');
+    }
+
+    private function researchStatus(array $sources): string
+    {
+        if (! $this->shouldResearchWeb()) {
+            return 'Web research is unavailable because TAVILY_API_KEY is not configured.';
+        }
+
+        if ($sources === []) {
+            return 'Web research found no readable supporting sources for the missing fields.';
+        }
+
+        return 'Web research found '.count($sources).' source(s). Suggestions are limited to supported facts.';
     }
 
     private function extractJsonLd(string $html): array
     {
         preg_match_all('/<script[^>]*type=["\']application\/ld\+json["\'][^>]*>(.*?)<\/script>/is', $html, $matches);
-        $json = [];
+        $nodes = [];
 
         foreach ($matches[1] ?? [] as $block) {
-            $decoded = json_decode(preg_replace('/\s+/', ' ', trim($block)), true);
+            $decoded = json_decode(trim($block), true);
             if (! is_array($decoded)) {
                 continue;
             }
+            $nodes = [...$nodes, ...$this->flattenJsonLdNodes($decoded)];
+        }
 
-            if (isset($decoded['@type']) && is_string($decoded['@type'])) {
-                $json = array_merge($json, $decoded);
-            }
-
-            if (isset($decoded['itemListElement']) && is_array($decoded['itemListElement'])) {
-                $first = $decoded['itemListElement'][0] ?? [];
-                if (isset($first['item']) && is_array($first['item'])) {
-                    $json = array_merge($json, $first['item']);
-                }
+        foreach ($nodes as $node) {
+            $types = (array) ($node['@type'] ?? []);
+            if (collect($types)->contains(fn ($type) => in_array(strtolower((string) $type), ['restaurant', 'foodestablishment', 'localbusiness'], true))) {
+                return $node;
             }
         }
 
-        return $json;
+        return collect($nodes)->first(fn ($node) => filled($node['name'] ?? null)) ?? [];
+    }
+
+    private function flattenJsonLdNodes(array $data): array
+    {
+        $nodes = [];
+        if (array_is_list($data)) {
+            foreach ($data as $item) {
+                if (is_array($item)) {
+                    $nodes = [...$nodes, ...$this->flattenJsonLdNodes($item)];
+                }
+            }
+            return $nodes;
+        }
+
+        if (isset($data['@type']) || isset($data['name'])) {
+            $nodes[] = $data;
+        }
+
+        foreach ((array) ($data['@graph'] ?? []) as $item) {
+            if (is_array($item)) {
+                $nodes = [...$nodes, ...$this->flattenJsonLdNodes($item)];
+            }
+        }
+
+        return $nodes;
     }
 
     private function extractTag(string $html, string $tag): ?string
@@ -134,7 +258,8 @@ class ShopCrawlerService
 
     private function extractTextSnippet(string $html, int $maxLength): ?string
     {
-        $plain = preg_replace('/<script.*?<\/script>/is', ' ', $html);
+        $plain = preg_replace('/<head.*?<\/head>/is', ' ', $html);
+        $plain = preg_replace('/<script.*?<\/script>/is', ' ', $plain);
         $plain = preg_replace('/<style.*?<\/style>/is', ' ', $plain);
         $plain = trim(strip_tags($plain));
         $plain = preg_replace('/\s+/', ' ', $plain);
@@ -246,6 +371,14 @@ class ShopCrawlerService
             && filled(config('services.groq.api_key'));
     }
 
+    private function extractHeading(string $html): ?string
+    {
+        preg_match('/<h1[^>]*>(.*?)<\/h1>/is', $html, $matches);
+        $heading = trim(html_entity_decode(strip_tags($matches[1] ?? ''), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+
+        return $heading !== '' ? $heading : null;
+    }
+
     private function enhanceWithAi(string $url, array $payload, string $html): array
     {
         $apiKey = config('services.groq.api_key');
@@ -261,11 +394,11 @@ class ShopCrawlerService
             'messages' => [
                 [
                     'role' => 'system',
-                    'content' => 'You extract structured facts for Malaysian heritage food shops. Use only the supplied webpage text and extracted data; never infer or invent facts. Return one JSON object with exactly these optional keys: name, description, heritage_story, address, city, state, postal_code, contact_number, primary_food_category, operating_hours, establishment_year, founder_name, founder_background, current_owner_name, current_owner_details, menu. Use null for unknown scalar values and [] for an unknown menu. Replace generic crawler placeholders only when the page provides a specific fact. Keep prose concise. Return JSON only, without markdown.',
+                    'content' => 'You extract structured facts for Malaysian heritage food shops. Use only facts explicitly supported by the supplied webpage text or web-research excerpts. Never infer, guess, combine facts from different businesses, or use your own knowledge. A search result title alone is not evidence. Keep an existing extracted value unless it is empty. Return one JSON object with exactly these optional keys: name, description, heritage_story, address, city, state, postal_code, contact_number, primary_food_category, operating_hours, establishment_year, founder_name, founder_background, current_owner_name, current_owner_details, menu. Use null for unknown scalar values and [] for an unknown menu. Keep prose concise. Return JSON only, without markdown.',
                 ],
                 [
                     'role' => 'user',
-                    'content' => "Website URL: {$url}\n\nPage content:\n{$pageText}\n\nExisting extracted data:\n" . json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES),
+                    'content' => "Website URL: {$url}\n\nPage content:\n{$pageText}\n\nWeb-research sources (may be empty):\n" . json_encode($payload['research_sources'] ?? [], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n\nExisting extracted data:\n" . json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES),
                 ],
             ],
         ];
@@ -299,14 +432,22 @@ class ShopCrawlerService
 
         foreach (['name', 'description', 'heritage_story', 'address', 'city', 'state', 'postal_code', 'contact_number', 'primary_food_category', 'operating_hours', 'founder_name', 'founder_background', 'current_owner_name', 'current_owner_details'] as $field) {
             $candidate = $decoded[$field] ?? null;
-            if ($this->shouldUseAiValue($enhanced[$field] ?? $enhanced['description'] ?? null, $candidate, $field)) {
+            if ($this->shouldUseAiValue($enhanced[$field] ?? null, $candidate, $field)) {
                 $enhanced[$field] = $candidate;
+                $enhanced['field_sources'][$field] = ! empty($payload['research_sources'])
+                    ? 'Web research — review the sources below'
+                    : $url;
             }
         }
 
         $year = $decoded['establishment_year'] ?? null;
         if (is_numeric($year) && (int) $year >= 1000 && (int) $year <= (int) now()->year) {
-            $enhanced['establishment_year'] = (int) $year;
+            if (blank($enhanced['establishment_year'] ?? null)) {
+                $enhanced['establishment_year'] = (int) $year;
+                $enhanced['field_sources']['establishment_year'] = ! empty($payload['research_sources'])
+                    ? 'Web research — review the sources below'
+                    : $url;
+            }
         }
 
         if (! empty($decoded['description']) && empty($enhanced['heritage_story'])) {
@@ -329,6 +470,9 @@ class ShopCrawlerService
         if ($this->shouldReplaceMenu($enhanced['menu'] ?? [], $menu)) {
             $enhanced['menu'] = $menu;
             $enhanced['food_items'] = self::menuToFoodItems($menu);
+            $enhanced['field_sources']['menu'] = ! empty($payload['research_sources'])
+                ? 'Web research — review the sources below'
+                : $url;
         }
 
         return $enhanced;
@@ -346,36 +490,8 @@ class ShopCrawlerService
             return true;
         }
 
-        $placeholderKeywords = [
-            'crawled heritage shop',
-            'address not detected',
-            'this record was auto-filled',
-            'traditional cuisine',
-            'auto-filled from the source website',
-            'not detected from the source website',
-            '+603-0000 0000',
-            '0000 0000',
-        ];
-
-        $normalizedCurrent = strtolower($current);
-        foreach ($placeholderKeywords as $keyword) {
-            if (str_contains($normalizedCurrent, $keyword)) {
-                return true;
-            }
-        }
-
-        if ($field === 'description' && strlen($candidate) > strlen($current)) {
-            return true;
-        }
-
-        if ($field === 'name' && strlen($candidate) > strlen($current)) {
-            return true;
-        }
-
-        if (in_array($field, ['address', 'city', 'state', 'postal_code', 'contact_number', 'primary_food_category', 'operating_hours'], true)) {
-            return strlen($candidate) >= strlen($current);
-        }
-
+        // The source page wins. This fallback exists only to complete unknown
+        // fields, not to have an LLM rewrite a fact it has already extracted.
         return false;
     }
 
@@ -505,15 +621,102 @@ class ShopCrawlerService
         return array_values(array_slice(array_filter($images), 0, 6));
     }
 
-    private function extractHours(string $html): ?string
+    private function findMenuUrl(string $html, string $baseUrl): ?string
     {
-        preg_match('/(?:Opening|Operating|Business)\s*(?:Hours|Hour|Time)[:\s]+([^<]{2,200})/is', $html, $matches);
-        if (! empty($matches[1])) {
-            return trim(strip_tags($matches[1]));
+        preg_match_all('/<a[^>]+href=["\']([^"\']+)["\'][^>]*>(.*?)<\/a>/is', $html, $links, PREG_SET_ORDER);
+        foreach ($links as $link) {
+            $label = strtolower(trim(strip_tags($link[2])));
+            if (! preg_match('/\b(menu|food menu|our food|order online)\b/', $label)) {
+                continue;
+            }
+
+            $href = html_entity_decode(trim($link[1]), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            if (filter_var($href, FILTER_VALIDATE_URL)) {
+                return $href;
+            }
+            if (str_starts_with($href, '/')) {
+                $parts = parse_url($baseUrl);
+                return isset($parts['scheme'], $parts['host']) ? $parts['scheme'].'://'.$parts['host'].$href : null;
+            }
         }
 
-        preg_match('/([A-Za-z]{3,9}\s*-\s*[A-Za-z]{3,9}[,:\s].{2,80})/i', $html, $matches);
-        return ! empty($matches[1]) ? trim(strip_tags($matches[1])) : null;
+        return null;
+    }
+
+    private function mergeLinkedMenu(array $payload, string $menuUrl): array
+    {
+        try {
+            $response = Http::accept('text/html')->timeout(15)->get($menuUrl);
+            if ($response->failed()) {
+                return $payload;
+            }
+            $menu = $this->extractMenu($response->body(), $this->extractJsonLd($response->body()));
+            if (! empty($menu)) {
+                $payload['menu'] = $menu;
+                $payload['food_items'] = self::menuToFoodItems($menu);
+                $payload['field_sources']['menu'] = $menuUrl;
+            }
+        } catch (\Throwable $exception) {
+            Log::info('Heritage crawler could not fetch linked menu.', ['message' => $exception->getMessage()]);
+        }
+
+        return $payload;
+    }
+
+    private function extractHours(string $html, array $jsonLd): ?string
+    {
+        $schemaHours = $this->formatSchemaHours($jsonLd);
+        if ($schemaHours !== null) {
+            return $schemaHours;
+        }
+
+        $body = preg_replace('/<head.*?<\/head>|<script.*?<\/script>|<style.*?<\/style>/is', ' ', $html);
+        $body = preg_replace('/<\/(?:p|div|li|br|h[1-6])[^>]*>/i', "\n", (string) $body);
+        $body = html_entity_decode(strip_tags((string) $body), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $body = preg_replace('/[ \t]+/', ' ', (string) $body);
+
+        foreach (preg_split('/\R+/', (string) $body) as $line) {
+            $line = trim($line);
+            if (preg_match('/\b(?:opening|operating|business)\s*(?:hours?|time)?\b.{0,100}\b(?:[01]?\d|2[0-3])(?::[0-5]\d)?\s*(?:am|pm)?\s*(?:-|–|to)\s*(?:[01]?\d|2[0-3])(?::[0-5]\d)?\s*(?:am|pm)?\b/i', $line)) {
+                return Str::limit($line, 300, '');
+            }
+            if (preg_match('/\b(?:mon|tue|wed|thu|fri|sat|sun|daily)\w*\b.{0,50}\b(?:[01]?\d|2[0-3])(?::[0-5]\d)?\s*(?:am|pm)\s*(?:-|–|to)\s*(?:[01]?\d|2[0-3])(?::[0-5]\d)?\s*(?:am|pm)\b/i', $line)) {
+                return Str::limit($line, 300, '');
+            }
+        }
+
+        return null;
+    }
+
+    private function formatSchemaHours(array $jsonLd): ?string
+    {
+        $hours = $jsonLd['openingHours'] ?? $jsonLd['openingHoursSpecification'] ?? null;
+        if (is_string($hours) && trim($hours) !== '') {
+            return trim($hours);
+        }
+        if (! is_array($hours)) {
+            return null;
+        }
+
+        $formatted = [];
+        foreach (array_is_list($hours) ? $hours : [$hours] as $specification) {
+            if (is_string($specification) && trim($specification) !== '') {
+                $formatted[] = trim($specification);
+                continue;
+            }
+            if (! is_array($specification)) {
+                continue;
+            }
+            $days = $specification['dayOfWeek'] ?? null;
+            $days = is_array($days) ? implode(', ', array_map(fn ($day) => str_replace('https://schema.org/', '', (string) $day), $days)) : str_replace('https://schema.org/', '', (string) $days);
+            $opens = trim((string) ($specification['opens'] ?? ''));
+            $closes = trim((string) ($specification['closes'] ?? ''));
+            if ($opens !== '' && $closes !== '') {
+                $formatted[] = trim($days.' '.$opens.'–'.$closes);
+            }
+        }
+
+        return $formatted !== [] ? implode('; ', $formatted) : null;
     }
 
     private function extractCityFromAddress(?string $address): ?string

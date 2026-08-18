@@ -19,7 +19,7 @@
     <section class="welcome">
         <p class="eyebrow">Administrator portal</p>
         <h2>Welcome, {{ auth()->user()->name }}.</h2>
-        <p>Choose a platform module to manage. Community Contribution is active now; the remaining areas are mapped out for future development.</p>
+        <p>Choose a platform module to manage. Community Contribution and user access controls are active now; the remaining areas are mapped out for future development.</p>
     </section>
 
     <section class="module-grid" aria-label="Admin modules">
@@ -29,32 +29,38 @@
             <p>Review heritage eatery submissions, move items through moderation, and inspect the admin activity history.</p>
             <strong>Open module</strong>
         </a>
-        <a class="module-card inactive" href="{{ route('admin.modules.show', 'heritage-registry') }}">
+        <a class="module-card" href="{{ route('admin.users.index') }}">
             <span class="module-index">02</span>
+            <h3>Users &amp; Roles</h3>
+            <p>Review all member accounts, monitor activation status, and block or restore access as needed.</p>
+            <strong>Open module</strong>
+        </a>
+        <a class="module-card inactive" href="{{ route('admin.modules.show', 'heritage-registry') }}">
+            <span class="module-index">03</span>
             <h3>Heritage Registry</h3>
             <p>Approved shop records, ownership notes, provenance, and publication controls.</p>
             <strong>Coming soon</strong>
         </a>
         <a class="module-card inactive" href="{{ route('admin.modules.show', 'food-map') }}">
-            <span class="module-index">03</span>
+            <span class="module-index">04</span>
             <h3>Food Map</h3>
             <p>Map-based discovery tools for heritage eateries, cuisine clusters, and local trails.</p>
             <strong>Coming soon</strong>
         </a>
         <a class="module-card inactive" href="{{ route('admin.modules.show', 'stories-editorial') }}">
-            <span class="module-index">04</span>
+            <span class="module-index">05</span>
             <h3>Stories & Editorial</h3>
             <p>Editorial planning for oral histories, guides, interviews, and featured shop narratives.</p>
             <strong>Coming soon</strong>
         </a>
         <a class="module-card inactive" href="{{ route('admin.modules.show', 'events-trails') }}">
-            <span class="module-index">05</span>
+            <span class="module-index">06</span>
             <h3>Events & Trails</h3>
             <p>Curated walking routes, food trail campaigns, and community makan events.</p>
             <strong>Coming soon</strong>
         </a>
         <a class="module-card inactive" href="{{ route('admin.modules.show', 'reports-analytics') }}">
-            <span class="module-index">06</span>
+            <span class="module-index">07</span>
             <h3>Reports & Analytics</h3>
             <p>Contribution trends, moderation throughput, geographic coverage, and content gaps.</p>
             <strong>Coming soon</strong>

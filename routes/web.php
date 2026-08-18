@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminCommunityContributionController;
+use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BlindBoxController;
 use App\Http\Controllers\CommunityContributionController;
@@ -21,7 +22,7 @@ Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->n
 
 Route::view('/landing', 'landing')->name('landing');
 
-Route::middleware('auth')->group(function (): void {
+Route::middleware(['auth', 'active_user'])->group(function (): void {
     Route::middleware('regular_user')->group(function (): void {
         Route::get('/', function () {
             return view('user-home', ['userName' => auth()->user()->name]);
@@ -88,6 +89,9 @@ Route::prefix('admin')
     ->group(function () {
         Route::view('/', 'admin.dashboard')->name('dashboard');
 
+        Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');
+        Route::post('/users/{user}/toggle-status', [UserManagementController::class, 'toggleStatus'])->name('users.toggle-status');
+
         Route::get('/modules/{moduleSlug}', function (string $moduleSlug) {
             $modules = [
                 'heritage-registry' => [
@@ -105,10 +109,6 @@ Route::prefix('admin')
                 'events-trails' => [
                     'name' => 'Events & Trails',
                     'description' => 'A planned module for curated food trails, walking routes, and community events.',
-                ],
-                'users-roles' => [
-                    'name' => 'Users & Roles',
-                    'description' => 'A future workspace for contributor profiles, reviewer roles, and access controls.',
                 ],
                 'reports-analytics' => [
                     'name' => 'Reports & Analytics',

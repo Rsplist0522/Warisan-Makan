@@ -158,7 +158,6 @@
             'food-map' => 'Food Map',
             'stories-editorial' => 'Stories & Editorial',
             'events-trails' => 'Events & Trails',
-            'users-roles' => 'Users & Roles',
             'reports-analytics' => 'Reports & Analytics',
         ];
     @endphp
@@ -172,6 +171,9 @@
 
             <p class="nav-label">Modules</p>
             <nav class="nav" aria-label="Administrator modules">
+                <a class="nav-item {{ request()->routeIs('admin.users.*') ? 'active' : '' }}" href="{{ route('admin.users.index') }}">
+                    <span>Users &amp; Roles</span>
+                </a>
                 <a class="nav-item {{ $communityContributionActive ? 'active' : '' }}" href="{{ route('admin.community-contributions.submissions') }}">
                     <span>Community Contribution</span>
                 </a>

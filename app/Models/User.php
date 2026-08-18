@@ -63,13 +63,27 @@ class User extends Authenticatable
         return $this->role === 'admin';
     }
 
+    public function isActive(): bool
+    {
+        return $this->status !== 'inactive';
+    }
+
+    public function isBlocked(): bool
+    {
+        return $this->status === 'inactive';
+    }
+
     public function profilePhotoUrl(): ?string
     {
         if (! $this->profile_photo) {
             return null;
         }
 
-        $diskName = config('filesystems.media_disk');
+        if (str_starts_with($this->profile_photo, 'http://') || str_starts_with($this->profile_photo, 'https://')) {
+            return $this->profile_photo;
+        }
+
+        $diskName = config('filesystems.media_disk', 'public');
         $disk = Storage::disk($diskName);
 
         if ($diskName === 'r2') {
@@ -77,6 +91,14 @@ class User extends Authenticatable
                 return $disk->temporaryUrl($this->profile_photo, now()->addMinutes(15));
             } catch (Throwable) {
             }
+        }
+
+        if ($disk->exists($this->profile_photo)) {
+            return $disk->url($this->profile_photo);
+        }
+
+        if ($diskName === 'local' || $diskName === 'public') {
+            return asset('storage/'.$this->profile_photo);
         }
 
         return $disk->url($this->profile_photo);

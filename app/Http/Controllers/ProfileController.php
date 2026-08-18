@@ -35,7 +35,7 @@ class ProfileController extends Controller
         ]);
 
         if ($request->hasFile('profile_photo')) {
-            $disk = config('filesystems.media_disk');
+            $disk = config('filesystems.media_disk', 'public');
             $path = $request->file('profile_photo')->store("users/{$user->id}/profile", $disk);
 
             if ($path === false) {

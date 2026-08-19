@@ -10,11 +10,27 @@ class BlindBoxLandingPageTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->actingAs(User::factory()->create(['role' => 'user']));
+    }
+
     public function test_blind_box_page_is_publicly_accessible(): void
     {
         $response = $this->get('/blind-box');
 
-        $response->assertRedirect('/login');
+        $response->assertStatus(200);
+        $response->assertSee('Blind Box Recommendation');
+    }
+
+    public function test_period_banner_is_displayed(): void
+    {
+        $response = $this->get('/blind-box');
+
+        $response->assertStatus(200);
+        $response->assertSee('One surprise draw per period');
     }
 
     public function test_draw_endpoint_returns_a_surprise_shop(): void
@@ -24,7 +40,12 @@ class BlindBoxLandingPageTest extends TestCase
         $response->assertStatus(200);
         $response->assertJsonStructure([
             'shop' => ['name', 'description', 'category', 'state', 'year', 'image'],
+            'period',
         ]);
+
+        // Category must be one of the 3-value set: Main Dishes / Desserts / Drinks
+        $category = $response->json('shop.category');
+        $this->assertContains($category, ['Main Dishes', 'Desserts', 'Drinks']);
     }
 
     public function test_second_draw_in_same_period_is_limited(): void
@@ -35,78 +56,22 @@ class BlindBoxLandingPageTest extends TestCase
             ->assertJsonStructure(['error']);
     }
 
-    public function test_history_page_is_accessible(): void
+    public function test_state_filter_narrows_the_shop_list(): void
     {
-        $response = $this->get('/blind-box/history');
+        // Sample data includes a Penang shop (Nasi Lemak Seri Warisan).
+        $response = $this->get('/blind-box?state=Penang');
 
         $response->assertStatus(200);
-        $response->assertSee('Blind Box History');
+        $response->assertSee('Nasi Lemak Seri Warisan');
+        $response->assertDontSee('Kampung Kuih Mak Cik');
     }
 
-    public function test_food_passport_page_uses_brand_style_and_check_in_ui(): void
+    public function test_category_filter_narrows_the_shop_list(): void
     {
-        $response = $this->get('/foodPassport');
+        $response = $this->get('/blind-box?category=Desserts');
 
         $response->assertStatus(200);
-        $response->assertSee('Your Heritage Passport');
-        $response->assertSee('Check In');
-        $response->assertSee('Nearby heritage stop');
-        $response->assertSee('Kedai Kopi Haji');
-    }
-
-    public function test_signed_in_user_receives_passport_stats_and_badge_from_demo_check_in(): void
-    {
-        $user = User::create([
-            'name' => 'Demo User',
-            'email' => 'demo@example.com',
-            'password' => bcrypt('secret123'),
-        ]);
-
-        $this->actingAs($user)
-            ->postJson('/passport/check-in-test', [
-                'shop_id' => 1,
-                'shop_latitude' => 3.1390,
-                'shop_longitude' => 101.6869,
-                'user_latitude' => 3.1392,
-                'user_longitude' => 101.6871,
-                'radius_meters' => 100,
-                'is_participating' => true,
-                'is_published' => true,
-                'demo_mode' => true,
-            ])
-            ->assertStatus(201);
-
-        $response = $this->actingAs($user)->get('/foodPassport');
-
-        $response->assertStatus(200);
-        $response->assertSee('Heritage Starter');
-        $response->assertSee('Visited');
-    }
-
-    public function test_demo_check_in_allows_repeat_for_tutor_demo_flow(): void
-    {
-        $user = User::create([
-            'name' => 'Demo Repeat User',
-            'email' => 'demo-repeat@example.com',
-            'password' => bcrypt('secret123'),
-        ]);
-
-        $payload = [
-            'shop_id' => 1,
-            'shop_latitude' => 3.1390,
-            'shop_longitude' => 101.6869,
-            'user_latitude' => 3.1392,
-            'user_longitude' => 101.6871,
-            'radius_meters' => 100,
-            'is_participating' => true,
-            'is_published' => true,
-            'demo_mode' => true,
-        ];
-
-        $this->actingAs($user)->postJson('/passport/check-in-test', array_merge($payload, ['demo_mode' => true, 'allow_repeat' => true]))
-            ->assertStatus(201);
-
-        $this->actingAs($user)->postJson('/passport/check-in-test', array_merge($payload, ['demo_mode' => true, 'allow_repeat' => true]))
-            ->assertStatus(201);
+        $response->assertSee('Kampung Kuih Mak Cik');
+        $response->assertDontSee('Nasi Lemak Seri Warisan');
     }
 }

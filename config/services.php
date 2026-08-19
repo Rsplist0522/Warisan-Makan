@@ -42,4 +42,13 @@ return [
         'maps_api_key' => env('GOOGLE_MAPS_API_KEY'),
     ],
 
+    // Blind Box chat assistant. Leave GROQ_API_KEY unset in .env to run the
+    // chat UI in stub mode (no live API calls) — useful for testing the
+    // interface before the key is ready. Add the key later to go live,
+    // no code changes needed.
+    'groq' => [
+        'key' => env('GROQ_API_KEY'),
+        'model' => env('GROQ_MODEL', 'llama-3.1-8b-instant'),
+    ],
+
 ];

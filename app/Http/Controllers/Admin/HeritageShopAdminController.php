@@ -134,6 +134,8 @@ class HeritageShopAdminController extends Controller
             'city' => $validated['city'] ?? null,
             'state' => $validated['state'] ?? null,
             'postal_code' => $validated['postal_code'] ?? null,
+            'latitude' => $validated['latitude'] ?? null,
+            'longitude' => $validated['longitude'] ?? null,
             'source_url' => $validated['source_url'] ?? null,
             'publish_status' => $validated['publish_status'] ?? 'draft',
         ];

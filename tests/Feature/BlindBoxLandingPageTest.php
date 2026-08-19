@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Models\HeritageShop;
+use App\Models\PassportStamp;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -45,34 +47,33 @@ class BlindBoxLandingPageTest extends TestCase
 
     public function test_food_passport_page_uses_brand_style_and_check_in_ui(): void
     {
+        $this->createShop(['shop_name' => 'Real Heritage Kitchen']);
+
         $response = $this->get('/foodPassport');
 
         $response->assertStatus(200);
         $response->assertSee('Your Heritage Passport');
         $response->assertSee('Check In');
         $response->assertSee('Nearby heritage stop');
-        $response->assertSee('Kedai Kopi Haji');
+        $response->assertSee('Real Heritage Kitchen');
+        $response->assertDontSee('Radius (m)');
+        $response->assertDontSee('Shop ID');
     }
 
-    public function test_signed_in_user_receives_passport_stats_and_badge_from_demo_check_in(): void
+    public function test_signed_in_user_receives_passport_stats_and_badge_from_real_shop_check_in(): void
     {
+        $shop = $this->createShop();
         $user = User::create([
-            'name' => 'Demo User',
-            'email' => 'demo@example.com',
+            'name' => 'Passport User',
+            'email' => 'passport@example.com',
             'password' => bcrypt('secret123'),
         ]);
 
         $this->actingAs($user)
-            ->postJson('/passport/check-in-test', [
-                'shop_id' => 1,
-                'shop_latitude' => 3.1390,
-                'shop_longitude' => 101.6869,
+            ->postJson('/passport/check-in', [
+                'shop_id' => $shop->id,
                 'user_latitude' => 3.1392,
                 'user_longitude' => 101.6871,
-                'radius_meters' => 100,
-                'is_participating' => true,
-                'is_published' => true,
-                'demo_mode' => true,
             ])
             ->assertStatus(201);
 
@@ -83,30 +84,64 @@ class BlindBoxLandingPageTest extends TestCase
         $response->assertSee('Visited');
     }
 
-    public function test_demo_check_in_allows_repeat_for_tutor_demo_flow(): void
+    public function test_real_check_in_rejects_a_duplicate_visit(): void
     {
+        $shop = $this->createShop();
         $user = User::create([
-            'name' => 'Demo Repeat User',
-            'email' => 'demo-repeat@example.com',
+            'name' => 'Repeat User',
+            'email' => 'repeat@example.com',
             'password' => bcrypt('secret123'),
         ]);
 
         $payload = [
-            'shop_id' => 1,
-            'shop_latitude' => 3.1390,
-            'shop_longitude' => 101.6869,
+            'shop_id' => $shop->id,
             'user_latitude' => 3.1392,
             'user_longitude' => 101.6871,
-            'radius_meters' => 100,
-            'is_participating' => true,
-            'is_published' => true,
-            'demo_mode' => true,
         ];
 
-        $this->actingAs($user)->postJson('/passport/check-in-test', array_merge($payload, ['demo_mode' => true, 'allow_repeat' => true]))
+        $this->actingAs($user)->postJson('/passport/check-in', $payload)
             ->assertStatus(201);
 
-        $this->actingAs($user)->postJson('/passport/check-in-test', array_merge($payload, ['demo_mode' => true, 'allow_repeat' => true]))
-            ->assertStatus(201);
+        $this->actingAs($user)->postJson('/passport/check-in', $payload)
+            ->assertStatus(409);
+    }
+
+    public function test_visited_locations_are_paginated_in_pages_of_five(): void
+    {
+        $user = User::create([
+            'name' => 'History User',
+            'email' => 'history@example.com',
+            'password' => bcrypt('secret123'),
+        ]);
+
+        for ($index = 1; $index <= 6; $index++) {
+            $shop = $this->createShop(['shop_name' => 'Heritage Shop ' . $index]);
+            PassportStamp::create([
+                'user_id' => $user->id,
+                'shop_id' => $shop->id,
+                'stamp_datetime' => now()->subMinutes($index),
+                'gps_latitude' => 3.1392,
+                'gps_longitude' => 101.6871,
+            ]);
+        }
+
+        $firstPage = $this->actingAs($user)->get('/foodPassport');
+        $this->assertSame(5, substr_count($firstPage->getContent(), 'data-visited-location'));
+        $firstPage->assertSee('Page 1');
+
+        $secondPage = $this->actingAs($user)->get('/foodPassport?visited_page=2');
+        $this->assertSame(1, substr_count($secondPage->getContent(), 'data-visited-location'));
+        $secondPage->assertSee('Heritage Shop 6');
+    }
+
+    private function createShop(array $attributes = []): HeritageShop
+    {
+        return HeritageShop::create(array_merge([
+            'shop_name' => 'Kedai Real',
+            'founder_name' => 'Real Founder',
+            'latitude' => 3.1390,
+            'longitude' => 101.6869,
+            'publish_status' => 'published',
+        ], $attributes));
     }
 }

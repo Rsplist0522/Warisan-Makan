@@ -107,6 +107,15 @@
             box-shadow: 0 18px 38px rgba(104, 71, 42, .08);
         }
 
+        .home-back {
+            width: min(1120px, calc(100% - 32px));
+            margin: 24px auto -14px;
+        }
+
+        .home-back .button {
+            background: rgba(255, 248, 240, .7);
+        }
+
         .page-header {
             display: flex;
             align-items: end;
@@ -282,6 +291,7 @@
             .brand { margin: 0; }
             .nav-links { justify-content: start; }
             .page-shell { width: min(100% - 24px, 1120px); padding: 18px; margin-top: 18px; }
+            .home-back { width: min(100% - 24px, 1120px); margin-top: 16px; margin-bottom: -4px; }
             .page-header, .record-card { display: grid; }
             .record-actions { justify-content: start; }
             .field-grid, .field-grid.three, .definition-grid, .filters, .filters.four { grid-template-columns: 1fr; }
@@ -307,6 +317,16 @@
             </nav>
         </div>
     </header>
+
+    @php
+        $backToHomeRoute = trim($__env->yieldContent('back_to_home', 'home'));
+    @endphp
+
+    @if ($backToHomeRoute !== '')
+        <div class="home-back">
+            <a class="button secondary small" href="{{ route($backToHomeRoute) }}">&larr; Back to Home</a>
+        </div>
+    @endif
 
     <main class="page-shell">
         @if (session('status'))

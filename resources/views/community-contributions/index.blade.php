@@ -5,7 +5,7 @@
 @section('content')
     <header class="page-header">
         <div>
-            <p class="eyebrow">User function 3</p>
+            <p class="eyebrow">Contribution history</p>
             <h1>My Contributions</h1>
             <p>View submission status, administrator feedback, versions, and eligible actions.</p>
         </div>
@@ -14,13 +14,16 @@
 
     @if ($notifications->isNotEmpty())
         <section class="panel" style="margin-bottom: 18px">
-            <h2>Recent notifications</h2>
+            <h2>Unread notifications</h2>
             <div style="margin-top: 12px">
                 @foreach ($notifications as $notification)
-                    <a class="notification {{ $notification->read_at ? '' : 'unread' }}" style="display:block;text-decoration:none" href="{{ route('community-contribution.contributions.show', $notification->data['contribution_id']) }}">
-                        <strong>{{ $notification->data['title'] }}</strong>
-                        <p>{{ $notification->data['message'] }}</p>
-                    </a>
+                    @php($notificationContribution = $notificationContributions->get($notification->data['contribution_id'] ?? null))
+                    @if ($notificationContribution)
+                        <a class="notification {{ $notification->read_at ? '' : 'unread' }}" style="display:block;text-decoration:none" href="{{ route('community-contribution.contributions.show', $notificationContribution) }}">
+                            <strong>{{ $notification->data['title'] }}</strong>
+                            <p>{{ $notification->data['message'] }}</p>
+                        </a>
+                    @endif
                 @endforeach
             </div>
         </section>
@@ -61,8 +64,11 @@
                         <h2>{{ $contribution->contribution_title ?: $contribution->shop_name }}</h2>
                         <div class="record-meta">
                             <span>Shop: {{ $contribution->shop_name }}</span>
-                            <span>Submitted: {{ optional($contribution->submitted_at)->format('d M Y, g:i A') ?: 'Not available' }}</span>
-                            <span>Updated: {{ $contribution->updated_at->format('d M Y, g:i A') }}</span>
+                            <span>Submitted: {{ $contribution->formatDateTime($contribution->submitted_at) }}</span>
+                            <span>Updated: {{ $contribution->formatDateTime($contribution->updated_at) }}</span>
+                            @if ($contribution->status === \App\Models\HeritageShopContribution::STATUS_DELETED && $contribution->admin_feedback)
+                                <span>Deleted by admin: {{ $contribution->admin_feedback }}</span>
+                            @endif
                         </div>
                     </div>
                     <div class="record-actions">

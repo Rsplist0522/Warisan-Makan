@@ -35,6 +35,7 @@ class CorrectionRequestStatusChanged extends Notification
                 default => 'The status of your correction request has changed.',
             },
             'correction_request_id' => $this->correctionRequest->id,
+            'correction_request_public_id' => $this->correctionRequest->public_id,
             'heritage_shop_id' => $this->correctionRequest->heritage_shop_id,
             'status' => $status,
         ];

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class CorrectionRequest extends Model
 {
@@ -33,6 +34,20 @@ class CorrectionRequest extends Model
         'review_started_at',
         'reviewed_at',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (CorrectionRequest $correctionRequest): void {
+            if (blank($correctionRequest->public_id)) {
+                $correctionRequest->public_id = (string) Str::uuid();
+            }
+        });
+    }
+
+    public function getRouteKeyName(): string
+    {
+        return 'public_id';
+    }
 
     protected function casts(): array
     {

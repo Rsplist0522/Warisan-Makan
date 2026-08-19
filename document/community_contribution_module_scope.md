@@ -9,7 +9,7 @@
 
 ## 1. Module Purpose
 
-The Community Contribution module allows registered users to contribute information that helps preserve Malaysian culinary heritage. Users can submit heritage shop information, heritage food stories, supporting media, and correction requests. System Administrators review these records before the information is accepted into the main heritage database.
+The Community Contribution module allows registered users to contribute information that helps preserve Malaysian culinary heritage. Users can submit heritage shop information, including heritage story/details fields, supporting media, and correction requests. System Administrators review these records before the information is accepted into the main heritage database.
 
 This module is responsible for the complete workflow from:
 
@@ -74,28 +74,16 @@ The user must be able to create a heritage shop contribution.
 
 ---
 
-## 3.2 Submit Heritage Food Story
+## 3.2 Heritage Story Details Within Shop Submissions
 
-The user must be able to submit a heritage food story as a separate contribution type.
+Heritage story/details are collected only as part of the Heritage Shop submission workflow.
 
-### Form fields
+### Required handling
 
-- Contribution title
-- Related heritage shop, where applicable
-- Related food item, where applicable
-- Food name
-- Story title
-- Story content
-- Cultural significance
-- Supporting images or videos
-
-### System responsibilities
-
-- Validate mandatory story information.
-- Sanitize long-form text.
-- Allow the story to be linked to a shop or food item.
-- Save it as a draft or submit it for review.
-- Keep shop-information and food-story details separated in the database.
+- Keep the existing Heritage or family story field on the shop submission form.
+- Validate and sanitize long-form shop story text.
+- Store the story/details with the heritage shop contribution record.
+- Do not implement a separate food-story contribution type, form, route, table, or moderation queue.
 
 ---
 
@@ -147,7 +135,7 @@ The user must be able to view and monitor all submitted contributions.
 ### Contribution list information
 
 - Contribution title
-- Contribution type
+- Contribution summary
 - Submission date
 - Last updated date
 - Current status
@@ -257,7 +245,7 @@ Users must receive notifications when:
 The administrator must be able to:
 
 - View all pending submissions
-- Separate shop-information and food-story submissions
+- View heritage shop submissions
 - Search by contribution title or contributor
 - Filter by status
 - Filter by contributor
@@ -281,7 +269,7 @@ The administrator must be able to:
 When the administrator opens a contribution, the system must display:
 
 - Contributor information
-- Contribution type
+- Contribution summary
 - All submitted form details
 - Supporting media
 - Submission date
@@ -310,8 +298,8 @@ The administrator must be able to perform these actions:
 - Validate that required contribution information exists.
 - Change status to `APPROVED`.
 - Record the administrator and review time.
-- Create or hand off the approved shop/story record to the Heritage Shop Tracking module.
-- Link the resulting shop or story through `approved_shop_id` or `approved_story_id`.
+- Create or hand off the approved shop record to the Heritage Shop Tracking module.
+- Link the resulting shop through `approved_shop_id` where supported.
 - Notify the contributor.
 
 ### Reject
@@ -446,9 +434,7 @@ DRAFT
 ## 6.1 User Pages
 
 - My Contributions dashboard
-- Select contribution type page
 - Heritage Shop Submission form
-- Heritage Food Story Submission form
 - Draft list
 - Draft detail/edit page
 - Contribution history/list
@@ -479,27 +465,24 @@ The Community Contribution ERD includes these tables:
 
 1. `contributions`
 2. `contribution_shop_details`
-3. `contribution_food_story_details`
-4. `contribution_media`
-5. `contribution_versions`
-6. `contribution_reviews`
+3. `contribution_media`
+4. `contribution_versions`
+5. `contribution_reviews`
 
 ## Correction request tables
 
-7. `correction_requests`
-8. `correction_evidence`
-9. `correction_reviews`
+6. `correction_requests`
+7. `correction_evidence`
+8. `correction_reviews`
 
 ## Shared table
 
-10. `notifications`
+9. `notifications`
 
 ## Main relationships
 
 - One user can submit many contributions.
-- One contribution uses exactly one detail type:
-  - `SHOP_INFORMATION` → `contribution_shop_details`
-  - `FOOD_STORY` → `contribution_food_story_details`
+- One contribution stores heritage shop information, including heritage story/details fields.
 - One contribution can contain many media records.
 - One contribution can contain many versions.
 - One contribution can contain many review records.
@@ -515,7 +498,6 @@ The Community Contribution ERD includes these tables:
 
 - `Contribution`
 - `ContributionShopDetail`
-- `ContributionFoodStoryDetail`
 - `ContributionMedia`
 - `ContributionVersion`
 - `ContributionReview`
@@ -540,7 +522,6 @@ The Community Contribution ERD includes these tables:
 ## 8.4 Form Request Validation
 
 - `StoreShopContributionRequest`
-- `StoreFoodStoryContributionRequest`
 - `UpdateDraftContributionRequest`
 - `ResubmitContributionRequest`
 - `StoreCorrectionRequest`
@@ -597,8 +578,6 @@ Use database transactions for submission, moderation, approval, and correction u
 
 - [ ] Submit valid heritage shop information.
 - [ ] Reject incomplete heritage shop information.
-- [ ] Submit valid heritage food story.
-- [ ] Reject incomplete food story.
 - [ ] Save contribution as draft.
 - [ ] Edit own draft.
 - [ ] Prevent access to another user's draft.
@@ -658,7 +637,7 @@ Required from the Heritage Shop Tracking module:
 - Existing heritage food items
 - Food categories
 - Published shop profile
-- Creation of a shop/story record after contribution approval
+- Creation of a shop record after contribution approval
 - Updating published shop information after correction approval
 
 ## Notification Component
@@ -695,8 +674,8 @@ Your module only interacts with the Heritage Shop Tracking module when:
 # 13. Recommended Development Order
 
 1. Create migrations and Eloquent models.
-2. Implement contribution types and status rules.
-3. Build Heritage Shop and Food Story forms.
+2. Implement contribution status rules.
+3. Build the Heritage Shop form.
 4. Implement draft management.
 5. Implement media uploads.
 6. Build contribution history and detail pages.
@@ -716,7 +695,7 @@ Your module only interacts with the Heritage Shop Tracking module when:
 
 The Community Contribution module is complete when:
 
-- Users can submit both contribution types.
+- Users can submit heritage shop contributions.
 - Drafts can be saved, edited, deleted, and submitted.
 - Media upload validation works.
 - Users can track statuses and view feedback.

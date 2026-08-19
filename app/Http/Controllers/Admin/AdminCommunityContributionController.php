@@ -177,6 +177,7 @@ class AdminCommunityContributionController extends Controller
                     : $reason;
 
                 $contribution->forceFill([
+                    'status' => HeritageShopContribution::STATUS_DELETED,
                     'admin_feedback' => $comment,
                     'reviewed_by_user_id' => $admin->id,
                     'review_started_at' => $contribution->review_started_at ?? now(),
@@ -187,7 +188,7 @@ class AdminCommunityContributionController extends Controller
                     $admin->id,
                     'deleted',
                     $fromStatus,
-                    null,
+                    HeritageShopContribution::STATUS_DELETED,
                     $comment,
                     ['deletion_reason' => $reason]
                 );
@@ -208,6 +209,8 @@ class AdminCommunityContributionController extends Controller
         });
 
         if ($validated['moderation_action'] === 'delete') {
+            $contribution->user?->notify(new ContributionStatusChanged($contribution));
+
             return redirect()->route('admin.community-contributions.submissions')
                 ->with('status', 'Submission deleted and retained in the database for audit.');
         }
@@ -369,8 +372,9 @@ class AdminCommunityContributionController extends Controller
             HeritageShopContribution::STATUS_APPROVED,
             HeritageShopContribution::STATUS_REJECTED,
             HeritageShopContribution::STATUS_WITHDRAWN,
+            HeritageShopContribution::STATUS_DELETED,
         ];
-        $query = HeritageShopContribution::query()
+        $query = HeritageShopContribution::withTrashed()
             ->with(['user', 'reviewedBy', 'moderationActivities.actor'])
             ->whereIn('status', $historyStatuses)
             ->latest('updated_at');

@@ -37,6 +37,7 @@ class ContributionStatusChanged extends Notification
                 default => 'The status of your heritage shop contribution has changed.',
             },
             'contribution_id' => $this->contribution->id,
+            'contribution_public_id' => $this->contribution->public_id,
             'status' => $status,
         ];
     }

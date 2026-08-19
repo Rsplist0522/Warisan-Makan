@@ -156,8 +156,8 @@
       <section id="contribute" style="margin-top:12px">
         <h2>Community Contribution</h2>
         <div class="card">
-          <p class="muted">Help preserve stories. Share a shop founder's story or add historical notes. Submissions are reviewed before publishing.</p>
-          <a class="btn-primary" href="{{ route('login') }}">Contribute a Story</a>
+          <p class="muted">Help preserve living food heritage by sharing heritage shop information, including founder notes and family history. Submissions are reviewed before publishing.</p>
+          <a class="btn-primary" href="{{ route('login') }}">Contribute Shop Information</a>
         </div>
       </section>
 

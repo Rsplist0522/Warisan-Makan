@@ -11,12 +11,19 @@
     $foodItems = old('food_items', $contribution?->food_items ?: [['name' => '', 'desc' => '']]);
     $existingMedia = $contribution?->media ?? collect();
     $fieldValue = fn (string $name, mixed $fallback = null) => old($name, $contribution?->{$name} ?? $fallback);
+    $submissionToken = old('submission_token', $contribution?->submission_token ?? $formToken ?? (string) \Illuminate\Support\Str::uuid());
+    $isClosed = function (array $schedule): bool {
+        $closed = filter_var($schedule['closed'] ?? false, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? false;
+
+        return $closed && blank($schedule['open'] ?? null) && blank($schedule['close'] ?? null);
+    };
 @endphp
 
 <form class="form-grid" method="POST"
       action="{{ $isEdit ? route('community-contribution.update', $contribution) : route('community-contribution.store') }}"
       enctype="multipart/form-data">
     @csrf
+    <input type="hidden" name="submission_token" value="{{ $submissionToken }}">
     @if ($isEdit)
         @method('PUT')
     @endif
@@ -28,6 +35,7 @@
                 <label class="required" for="contribution_title">Contribution title</label>
                 <input id="contribution_title" name="contribution_title" value="{{ $fieldValue('contribution_title') }}" placeholder="Example: A 70-year-old family nasi kandar shop">
                 @error('contribution_title') <p class="field-error">{{ $message }}</p> @enderror
+                @error('draft') <p class="field-error">{{ $message }}</p> @enderror
             </div>
             <div class="field">
                 <label class="required" for="shop_name">Shop name</label>
@@ -125,7 +133,10 @@
         <div class="soft-card">
             <div class="soft-card-head"><div>Day</div><div>Open</div><div>Close / closed</div></div>
             @foreach ($days as $index => $day)
-                @php $schedule = $hours[$index] ?? ['day' => $day]; @endphp
+                @php
+                    $schedule = $hours[$index] ?? ['day' => $day, 'open' => '08:00', 'close' => '17:00', 'closed' => false];
+                    $closed = $isClosed($schedule);
+                @endphp
                 <div class="soft-card-row">
                     <div class="day-label">{{ $day }}</div>
                     <div>
@@ -134,7 +145,8 @@
                     </div>
                     <div class="close-cell">
                         <input name="operating_hours[{{ $index }}][close]" type="time" value="{{ $schedule['close'] ?? '' }}">
-                        <label title="Closed"><input class="checkbox-input" name="operating_hours[{{ $index }}][closed]" value="1" type="checkbox" {{ ! empty($schedule['closed'] ?? false) ? 'checked' : '' }}> Closed</label>
+                        <input type="hidden" name="operating_hours[{{ $index }}][closed]" value="0">
+                        <label title="Closed"><input class="checkbox-input operating-hours-closed" name="operating_hours[{{ $index }}][closed]" value="1" type="checkbox" @checked($closed)> Closed</label>
                     </div>
                 </div>
             @endforeach
@@ -207,6 +219,7 @@
     </div>
 
     <p class="help-text">Required fields are checked when you submit for review. A draft may be incomplete.</p>
+    <p id="draft-client-error" class="field-error" hidden>Please enter at least one piece of information before saving this draft.</p>
 </form>
 
 <template id="food-item-template">
@@ -248,6 +261,65 @@
 
         const input = document.getElementById('supporting_media');
         const preview = document.getElementById('media-preview');
+        const form = document.querySelector('form.form-grid');
+        const hourRows = document.querySelectorAll('.soft-card-row');
+
+        hourRows.forEach((row) => {
+            const timeInputs = row.querySelectorAll('input[type="time"]');
+            const closedInput = row.querySelector('.operating-hours-closed');
+
+            timeInputs.forEach((timeInput) => {
+                timeInput.addEventListener('input', () => {
+                    if (timeInput.value && closedInput) {
+                        closedInput.checked = false;
+                    }
+                });
+            });
+
+            closedInput?.addEventListener('change', () => {
+                if (! closedInput.checked) {
+                    return;
+                }
+
+                timeInputs.forEach((timeInput) => {
+                    timeInput.value = '';
+                });
+            });
+        });
+
+        form?.addEventListener('submit', (event) => {
+            if (form.dataset.submitted === 'true') {
+                event.preventDefault();
+                return;
+            }
+
+            const action = event.submitter?.value;
+            const title = document.getElementById('contribution_title')?.value.trim();
+            const shopName = document.getElementById('shop_name')?.value.trim();
+            const draftError = document.getElementById('draft-client-error');
+
+            if (action === 'draft' && ! title && ! shopName) {
+                event.preventDefault();
+                if (draftError) {
+                    draftError.hidden = false;
+                    draftError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                return;
+            }
+
+            if (draftError) {
+                draftError.hidden = true;
+            }
+
+            form.dataset.submitted = 'true';
+            setTimeout(() => {
+                form.querySelectorAll('button[type="submit"]').forEach((button) => {
+                    button.disabled = true;
+                    button.setAttribute('aria-disabled', 'true');
+                });
+            }, 0);
+        });
+
         input?.addEventListener('change', () => {
             preview.replaceChildren();
             [...input.files].forEach((file) => {

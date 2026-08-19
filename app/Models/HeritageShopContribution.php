@@ -2,9 +2,12 @@
 
 namespace App\Models;
 
+use DateTimeInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 
 class HeritageShopContribution extends Model
 {
@@ -28,6 +31,7 @@ class HeritageShopContribution extends Model
 
     protected $fillable = [
         'user_id',
+        'submission_token',
         'contribution_title',
         'shop_name',
         'primary_food_category',
@@ -57,6 +61,20 @@ class HeritageShopContribution extends Model
         'approved_at',
         'rejection_reason',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (HeritageShopContribution $contribution): void {
+            if (blank($contribution->public_id)) {
+                $contribution->public_id = (string) Str::uuid();
+            }
+        });
+    }
+
+    public function getRouteKeyName(): string
+    {
+        return 'public_id';
+    }
 
     protected function casts(): array
     {
@@ -131,6 +149,21 @@ class HeritageShopContribution extends Model
             self::STATUS_DELETED => 'Deleted',
             default => str($this->status)->replace('_', ' ')->title()->toString(),
         };
+    }
+
+    public function formatDateTime(?DateTimeInterface $date, string $fallback = 'Not available'): string
+    {
+        if ($date === null) {
+            return $fallback;
+        }
+
+        $localDate = $date instanceof Carbon
+            ? $date->copy()
+            : Carbon::instance($date);
+
+        return $localDate
+            ->timezone(config('app.display_timezone', 'Asia/Kuala_Lumpur'))
+            ->format('d M Y, g:i A');
     }
 
     public function recordVersion(?User $user, string $reason): ContributionVersion

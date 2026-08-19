@@ -245,8 +245,8 @@
     <section class="section">
         <div class="card">
             <h2>Community Contribution</h2>
-            <p>Share a shop story, family recipe memory, or heritage food tip to help preserve Malaysia's living culinary culture.</p>
-            <a class="btn" href="/heritage-shops">Submit a Heritage Story</a>
+            <p>Share heritage shop information, founder notes, and family history to help preserve Malaysia's living culinary culture.</p>
+            <a class="btn" href="/heritage-shops">Share Shop Information</a>
         </div>
     </section>
 

@@ -64,6 +64,7 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/heritage-shops/{heritageShop}/correction-requests', [CorrectionRequestController::class, 'store'])
         ->name('heritage-shops.correction-requests.store');
     Route::get('/community-contributions/{contribution}', [CommunityContributionController::class, 'show'])
+        ->withTrashed()
         ->name('community-contribution.contributions.show');
     Route::post('/community-contributions/{contribution}/withdraw', [CommunityContributionController::class, 'withdraw'])
         ->name('community-contribution.contributions.withdraw');
@@ -76,7 +77,7 @@ Route::middleware('auth')->group(function (): void {
             Route::get('/correction-requests/{correctionRequest}', [AdminCommunityContributionController::class, 'showCorrectionRequest'])->name('correction-requests.show');
             Route::post('/correction-requests/{correctionRequest}/start-review', [AdminCommunityContributionController::class, 'startCorrectionReview'])->name('correction-requests.start-review');
             Route::post('/correction-requests/{correctionRequest}/moderate', [AdminCommunityContributionController::class, 'moderateCorrectionRequest'])->name('correction-requests.moderate');
-            Route::get('/{contribution}', [AdminCommunityContributionController::class, 'show'])->name('show');
+            Route::get('/{contribution}', [AdminCommunityContributionController::class, 'show'])->withTrashed()->name('show');
             Route::post('/{contribution}/start-review', [AdminCommunityContributionController::class, 'startReview'])->name('start-review');
             Route::post('/{contribution}/moderate', [AdminCommunityContributionController::class, 'moderate'])->name('moderate');
     });

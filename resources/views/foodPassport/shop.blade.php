@@ -21,16 +21,24 @@
     .badge-modal[hidden]{display:none}
     .badge-modal{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:20px}
     .badge-modal-backdrop{position:absolute;inset:0;background:rgba(47,37,31,.56);backdrop-filter:blur(4px)}
-    .badge-modal-card{position:relative;width:min(100%,480px);max-height:calc(100vh - 40px);overflow:auto;padding:30px 26px 24px;border-radius:24px;background:#fff;border:1px solid rgba(212,160,23,.3);box-shadow:0 28px 70px rgba(47,37,31,.25);text-align:center}
+    .badge-modal-card{position:relative;width:min(100%,560px);max-height:calc(100vh - 40px);overflow:auto;padding:30px 26px 24px;border-radius:24px;background:#fff;border:1px solid rgba(212,160,23,.3);box-shadow:0 28px 70px rgba(47,37,31,.25);text-align:center}
     .badge-modal-close{position:absolute;top:12px;right:14px;width:34px;height:34px;border:0;border-radius:50%;background:rgba(140,31,31,.08);color:var(--primary);font-size:1.35rem;cursor:pointer}
-    .badge-modal-icon{display:grid;place-items:center;width:76px;height:76px;margin:4px auto 14px;border-radius:24px;background:linear-gradient(135deg,rgba(212,160,23,.24),rgba(140,31,31,.1));color:var(--primary);font-size:2rem;font-weight:800}
     .badge-modal-card h2{margin:0 0 8px;color:var(--primary);font-family:Georgia,serif;font-size:2rem}
     .badge-modal-card p{margin:0;color:var(--muted);line-height:1.6}
-    .badge-modal-badge-name{margin:12px 0 6px!important;color:var(--ink)!important;font-family:Georgia,serif;font-size:1.45rem;font-weight:700}
+    .achievement-card-preview{position:relative;overflow:hidden;min-height:280px;margin-top:18px;padding:24px;border-radius:22px;background:linear-gradient(135deg,#8C1F1F 0%,#4A211C 58%,#2E1815 100%);color:#FBF6EE;text-align:left;box-shadow:0 18px 30px rgba(86,59,48,.18)}
+    .achievement-card-kicker,.achievement-card-footer{position:relative;z-index:1;color:rgba(251,246,238,.72);font-size:.7rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+    .achievement-card-main{position:relative;z-index:1;display:grid;grid-template-columns:86px minmax(0,1fr);gap:16px;align-items:center;margin:30px 0 24px}
+    .achievement-card-icon{display:grid;place-items:center;width:82px;height:82px;border:2px solid rgba(212,160,23,.75);border-radius:26px;background:rgba(251,246,238,.12);color:#F2D37B;font-size:2.4rem;font-weight:800}
+    .achievement-card-title{margin:0 0 6px;color:#F2D37B;font-family:Georgia,serif;font-size:clamp(1.35rem,4vw,2rem)}
+    .achievement-card-description{margin:0;color:rgba(251,246,238,.9)!important;font-size:.88rem}
+    .achievement-card-progress{position:relative;z-index:1;display:inline-flex;margin-bottom:18px;padding:7px 11px;border:1px solid rgba(212,160,23,.38);border-radius:999px;color:#F2D37B;font-size:.78rem;font-weight:800}
     .share-label{margin-top:22px!important;font-size:.78rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
-    .share-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
-    .share-btn{padding:11px 12px;border:1px solid rgba(140,31,31,.14);border-radius:11px;background:rgba(140,31,31,.05);color:var(--primary);font:inherit;font-weight:700;cursor:pointer}
+    .share-actions,.share-download-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
+    .share-download-actions{margin-top:10px}
+    .share-btn,.share-download-btn{padding:11px 12px;border:1px solid rgba(140,31,31,.14);border-radius:11px;background:rgba(140,31,31,.05);color:var(--primary);font:inherit;font-weight:700;cursor:pointer}
+    .share-download-btn{border-color:rgba(212,160,23,.38);background:rgba(212,160,23,.1);font-size:.82rem}
     .share-status{min-height:24px;margin-top:12px!important;font-size:.82rem}
+    .share-note{margin-top:12px!important;color:var(--muted);font-size:.76rem}
     .badge-modal-continue{width:100%;margin-top:16px;background:var(--primary);color:#fff;border:0;padding:11px 14px;border-radius:8px;font-weight:700;cursor:pointer}
     @media(min-width:800px){body{padding:40px}.card{padding:28px}}
   </style>
@@ -61,19 +69,33 @@
     <div class="badge-modal-backdrop" data-close-badge-modal></div>
     <div class="badge-modal-card">
       <button type="button" class="badge-modal-close" data-close-badge-modal aria-label="Close badge announcement">&times;</button>
-      <div id="badgeModalIcon" class="badge-modal-icon">★</div>
-      <h2 id="badgeModalTitle">Congratulations!</h2>
-      <p>You have unlocked a new Heritage Passport badge.</p>
-      <p id="badgeModalBadgeName" class="badge-modal-badge-name">Heritage Explorer</p>
-      <p id="badgeModalBadgeDescription">Keep exploring and sharing the stories behind local food.</p>
-      <p class="share-label">Would you like to share your achievement?</p>
+      <h2 id="badgeModalTitle">Achievement unlocked</h2>
+      <p>Save this moment and share your heritage-food journey.</p>
+      <div class="achievement-card-preview">
+        <div class="achievement-card-kicker">Warisan Makan · Heritage Passport</div>
+        <div class="achievement-card-main">
+          <div id="badgeModalIcon" class="achievement-card-icon">★</div>
+          <div>
+            <h3 id="badgeModalBadgeName" class="achievement-card-title">Heritage Explorer</h3>
+            <p id="badgeModalBadgeDescription" class="achievement-card-description">Keep exploring and sharing the stories behind local food.</p>
+          </div>
+        </div>
+        <div id="badgeModalProgress" class="achievement-card-progress">A new story added to my food journey</div>
+        <div class="achievement-card-footer">Every dish has a story. Discover yours.</div>
+      </div>
+      <p class="share-label">Share your achievement</p>
       <div class="share-actions">
-        <button type="button" class="share-btn" data-share="instagram">Instagram</button>
-        <button type="button" class="share-btn" data-share="facebook">Facebook</button>
-        <button type="button" class="share-btn" data-share="whatsapp">WhatsApp</button>
-        <button type="button" class="share-btn" data-share="copy">Copy message</button>
+        <button type="button" class="share-btn" data-share="instagram">Prepare Instagram Story</button>
+        <button type="button" class="share-btn" data-share="facebook">Prepare Facebook Post</button>
+        <button type="button" class="share-btn" data-share="whatsapp">Share to WhatsApp</button>
+        <button type="button" class="share-btn" data-share="copy">Copy caption</button>
+      </div>
+      <div class="share-download-actions">
+        <button type="button" class="share-download-btn" data-share="download-square">Download square card</button>
+        <button type="button" class="share-download-btn" data-share="download-story">Download story card</button>
       </div>
       <p id="shareStatus" class="share-status" aria-live="polite"></p>
+      <p class="share-note">Instagram and Facebook may ask you to log in and upload the downloaded card. WhatsApp can attach the card automatically on supported devices.</p>
       <button type="button" class="badge-modal-continue" data-close-badge-modal>Continue exploring</button>
     </div>
   </div>
@@ -98,7 +120,9 @@
   const badgeModalIcon = document.getElementById('badgeModalIcon');
   const badgeModalBadgeName = document.getElementById('badgeModalBadgeName');
   const badgeModalBadgeDescription = document.getElementById('badgeModalBadgeDescription');
+  const badgeModalProgress = document.getElementById('badgeModalProgress');
   const shareStatus = document.getElementById('shareStatus');
+  let activeBadgeForShare = null;
   let badgeShareText = '';
   let reloadAfterBadgeModal = false;
 
@@ -108,21 +132,26 @@
       : (v.message || 'We could not complete the check-in. Please try again.');
   }
 
-  function openBadgeModal(unlockedBadges){
+  function openBadgeModal(unlockedBadges, refreshOnClose = false){
     const primaryBadge = unlockedBadges[0];
     const badgeNames = unlockedBadges.map(badge => badge.name).join(', ');
     const additionalBadges = unlockedBadges.length > 1
       ? ' Also unlocked: ' + unlockedBadges.slice(1).map(badge => badge.name).join(', ') + '.'
       : '';
+    const milestone = primaryBadge.threshold || primaryBadge.progress || 'new';
 
+    activeBadgeForShare = primaryBadge;
     badgeModalIcon.textContent = primaryBadge.icon || '★';
     badgeModalBadgeName.textContent = primaryBadge.name;
     badgeModalBadgeDescription.textContent = (primaryBadge.description || 'Keep exploring local food heritage.') + additionalBadges;
-    badgeShareText = 'I just unlocked the ' + badgeNames + ' badge' + (unlockedBadges.length > 1 ? 's' : '') + ' on the Warisan Makan Heritage Passport!';
+    badgeModalProgress.textContent = primaryBadge.threshold || primaryBadge.progress
+      ? 'Milestone reached: ' + milestone + ' heritage visits'
+      : 'A new story added to my food journey';
+    badgeShareText = 'I just earned the ' + badgeNames + ' badge on the Warisan Makan Heritage Passport after discovering ' + milestone + ' heritage food stories. What should I explore next?';
     shareStatus.textContent = '';
     badgeModal.hidden = false;
     document.body.classList.add('modal-open');
-    reloadAfterBadgeModal = true;
+    reloadAfterBadgeModal = refreshOnClose;
   }
 
   function closeBadgeModal(){
@@ -151,30 +180,163 @@
     helper.remove();
   }
 
+  function drawAchievementCard(format){
+    if(!activeBadgeForShare) return null;
+
+    const width = 1080;
+    const height = format === 'story' ? 1920 : 1080;
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext('2d');
+    const badge = activeBadgeForShare;
+
+    context.fillStyle = '#2E1815';
+    context.fillRect(0, 0, width, height);
+    const gradient = context.createLinearGradient(0, 0, width, height);
+    gradient.addColorStop(0, '#8C1F1F');
+    gradient.addColorStop(.58, '#4A211C');
+    gradient.addColorStop(1, '#2E1815');
+    context.fillStyle = gradient;
+    context.fillRect(28, 28, width - 56, height - 56);
+
+    context.strokeStyle = 'rgba(242,211,123,.38)';
+    context.lineWidth = 3;
+    context.beginPath();
+    context.arc(width - 80, 92, 180, 0, Math.PI * 2);
+    context.stroke();
+    context.beginPath();
+    context.arc(56, height - 80, 180, 0, Math.PI * 2);
+    context.stroke();
+
+    context.fillStyle = 'rgba(251,246,238,.78)';
+    context.font = '800 26px Arial, sans-serif';
+    context.fillText('WARISAN MAKAN  ·  HERITAGE PASSPORT', 78, format === 'story' ? 118 : 100);
+
+    const centerY = format === 'story' ? 720 : 490;
+    context.fillStyle = 'rgba(251,246,238,.12)';
+    context.fillRect(78, centerY - 230, width - 156, format === 'story' ? 520 : 440);
+    context.strokeStyle = 'rgba(242,211,123,.75)';
+    context.lineWidth = 5;
+    context.strokeRect(78, centerY - 230, width - 156, format === 'story' ? 520 : 440);
+
+    context.textAlign = 'center';
+    context.fillStyle = '#F2D37B';
+    context.font = '800 110px Arial, sans-serif';
+    context.fillText(badge.icon || '★', width / 2, centerY - 54);
+    context.font = '700 56px Georgia, serif';
+    context.fillText(badge.name, width / 2, centerY + 52);
+    context.fillStyle = 'rgba(251,246,238,.92)';
+    context.font = '30px Arial, sans-serif';
+    context.fillText('A new heritage-food milestone', width / 2, centerY + 130);
+    context.fillStyle = '#F2D37B';
+    context.font = '800 28px Arial, sans-serif';
+    context.fillText('MILESTONE UNLOCKED', width / 2, centerY + 210);
+
+    context.fillStyle = 'rgba(251,246,238,.82)';
+    context.font = '28px Arial, sans-serif';
+    context.fillText('Every dish has a story. Discover yours.', width / 2, height - (format === 'story' ? 150 : 98));
+    context.fillStyle = 'rgba(251,246,238,.58)';
+    context.font = '22px Arial, sans-serif';
+    context.fillText('warisan makan  ·  explore local heritage food', width / 2, height - (format === 'story' ? 100 : 58));
+    context.textAlign = 'start';
+
+    return canvas;
+  }
+
+  function downloadAchievementCard(format){
+    const canvas = drawAchievementCard(format);
+    if(!canvas) return;
+
+    const slug = (activeBadgeForShare.name || 'badge').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    const link = document.createElement('a');
+    link.download = 'warisan-makan-' + slug + '-' + format + '.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    shareStatus.textContent = format === 'story'
+      ? 'Story card downloaded. Upload it to Instagram Story or WhatsApp Status.'
+      : 'Square card downloaded. It is ready for your social feed.';
+  }
+
+  async function shareAchievementFile(format){
+    const canvas = drawAchievementCard(format);
+    if(!canvas || !navigator.share || !navigator.canShare || typeof File === 'undefined') return false;
+
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+    if(!blob) return false;
+
+    const slug = (activeBadgeForShare.name || 'badge').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    const file = new File([blob], 'warisan-makan-' + slug + '-' + format + '.png', { type: 'image/png' });
+    if(!navigator.canShare({ files: [file] })) return false;
+
+    await navigator.share({
+      files: [file],
+      title: activeBadgeForShare.name + ' · Warisan Makan',
+      text: badgeShareText
+    });
+    shareStatus.textContent = 'Achievement card shared successfully.';
+    return true;
+  }
+
   async function shareBadge(channel){
     try{
       if(channel === 'copy'){
         await copyShareText();
-        shareStatus.textContent = 'Badge message copied. You can paste it anywhere.';
+        shareStatus.textContent = 'Caption copied. Add it with your achievement card.';
+        return;
+      }
+      if(channel === 'download-square'){
+        downloadAchievementCard('square');
+        return;
+      }
+      if(channel === 'download-story'){
+        downloadAchievementCard('story');
         return;
       }
       if(channel === 'instagram'){
         await copyShareText();
+        downloadAchievementCard('story');
         window.open('https://www.instagram.com/', '_blank', 'noopener');
-        shareStatus.textContent = 'Message copied. Paste it into your Instagram post or story.';
+        shareStatus.textContent = 'Instagram opened. The story card was downloaded and the caption was copied—upload the PNG after logging in.';
         return;
       }
       if(channel === 'facebook'){
-        window.open('https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(window.location.href) + '&quote=' + encodeURIComponent(badgeShareText), '_blank', 'noopener');
-        shareStatus.textContent = 'Facebook sharing opened in a new tab.';
+        await copyShareText();
+        downloadAchievementCard('square');
+        const url = 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(window.location.href) + '&quote=' + encodeURIComponent(badgeShareText);
+        window.open(url, '_blank', 'noopener');
+        shareStatus.textContent = 'Facebook opened. The square card was downloaded and the caption was copied—attach the PNG if needed.';
         return;
       }
       if(channel === 'whatsapp'){
-        window.open('https://wa.me/?text=' + encodeURIComponent(badgeShareText + ' ' + window.location.href), '_blank', 'noopener');
-        shareStatus.textContent = 'WhatsApp sharing opened in a new tab.';
+        shareStatus.textContent = 'Preparing your WhatsApp achievement card...';
+
+        const isTouchDevice = 'ontouchstart' in window || (window.navigator.maxTouchPoints || 0) > 0;
+        if(isTouchDevice){
+          const shared = await shareAchievementFile('square');
+          if(shared) return;
+        }
+
+        const whatsappUrl = isTouchDevice
+          ? 'https://wa.me/?text=' + encodeURIComponent(badgeShareText)
+          : 'https://web.whatsapp.com/send?text=' + encodeURIComponent(badgeShareText);
+        downloadAchievementCard('square');
+        const whatsappWindow = window.open(whatsappUrl, '_blank', 'noopener');
+        await copyShareText();
+        if(!whatsappWindow){
+          shareStatus.textContent = 'The card was downloaded and the caption was copied, but the browser blocked WhatsApp. Allow pop-ups or open WhatsApp Web manually.';
+        }else{
+          shareStatus.textContent = isTouchDevice
+            ? 'WhatsApp opened. Attach the downloaded card if your device did not include it automatically.'
+            : 'WhatsApp Web opened. The square card was downloaded and the caption was copied—attach the PNG in the chat.';
+        }
       }
     }catch(error){
-      shareStatus.textContent = 'We could not prepare the share message. Please copy it manually.';
+      if(error && error.name === 'AbortError'){
+        shareStatus.textContent = 'Sharing cancelled.';
+        return;
+      }
+      shareStatus.textContent = 'We could not prepare the share card. Please use the download buttons instead.';
     }
   }
 
@@ -201,7 +363,7 @@
       if (res.ok && json.success) {
         const newlyUnlockedBadges = Array.isArray(json.newly_unlocked_badges) ? json.newly_unlocked_badges : [];
         if(newlyUnlockedBadges.length > 0){
-          openBadgeModal(newlyUnlockedBadges);
+          openBadgeModal(newlyUnlockedBadges, true);
         }else{
           window.setTimeout(() => window.location.reload(), 900);
         }

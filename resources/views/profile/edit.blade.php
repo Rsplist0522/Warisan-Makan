@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edit Profile - Warisan Makan</title>
+    <title>{{ __('Edit Profile - Warisan Makan') }}</title>
     @fonts
+    @vite(['resources/js/profile.js'])
     <style>
         :root {
             color-scheme: light;
@@ -27,7 +28,7 @@
         }
 
         a { color: inherit; text-decoration: none; }
-        button, input, textarea { font: inherit; }
+        button, input, textarea, label { font: inherit; }
 
         .page {
             max-width: 820px;
@@ -172,9 +173,86 @@
             color: var(--wm-ink);
         }
 
+        .photo-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .camera-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 118px;
+            min-height: 38px;
+            padding: 0 14px;
+            border: 1px solid var(--wm-border);
+            border-radius: 999px;
+            background: #fff;
+            color: var(--wm-ink);
+            cursor: pointer;
+            font-weight: 700;
+            font-size: .9rem;
+            line-height: 1;
+        }
+
+        .camera-button:hover,
+        .camera-button:focus-visible {
+            border-color: var(--wm-accent);
+            outline: none;
+        }
+
+        .camera-modal[hidden] { display: none; }
+
+        .camera-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 10;
+            display: grid;
+            place-items: center;
+            padding: 20px;
+            background: rgba(58, 35, 24, .62);
+        }
+
+        .camera-dialog {
+            width: min(100%, 560px);
+            padding: 22px;
+            border-radius: 22px;
+            background: var(--wm-panel);
+            box-shadow: 0 22px 60px rgba(40, 22, 12, .25);
+        }
+
+        .camera-dialog h2 { margin: 0 0 14px; font-size: 1.2rem; }
+
+        #cameraVideo {
+            display: block;
+            width: 100%;
+            aspect-ratio: 4 / 3;
+            border-radius: 14px;
+            background: #2d241f;
+            object-fit: cover;
+        }
+
+        .camera-dialog-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 16px;
+        }
+
         .photo-controls small {
             color: var(--wm-muted);
             font-size: .82rem;
+        }
+
+        .photo-controls select {
+            min-height: 42px;
+            padding: 8px 12px;
+            border: 1px solid var(--wm-border);
+            border-radius: 12px;
+            background: #fff;
+            color: var(--wm-ink);
         }
 
         .form-fields {
@@ -241,18 +319,18 @@
     <div class="page">
         <header class="topbar">
             <div>
-                <h1 class="section-heading">Edit your profile</h1>
-                <p class="section-copy">Upload a profile photo, keep your contact details current, and let WarisanMakan remember your preferences.</p>
+                <h1 class="section-heading">{{ __('Edit your profile') }}</h1>
+                <p class="section-copy">{{ __('Upload a profile photo, keep your contact details current, and let WarisanMakan remember your preferences.') }}</p>
             </div>
             <div class="topbar-actions">
-                <a class="button-secondary" href="{{ route('profile.show') }}">View Profile</a>
-                <a class="button" href="{{ route('home') }}">Dashboard</a>
+                <a class="button-secondary" href="{{ route('profile.show') }}">{{ __('View Profile') }}</a>
+                <a class="button" href="{{ route('home') }}">{{ __('Dashboard') }}</a>
             </div>
         </header>
 
         @if ($errors->any())
             <div class="status-alert">
-                <strong>There were some issues with your submission.</strong>
+                <strong>{{ __('There were some issues with your submission.') }}</strong>
                 <ul>
                     @foreach ($errors->all() as $error)
                         <li>{{ $error }}</li>
@@ -274,84 +352,76 @@
                     @endif
                 </div>
                 <div class="photo-controls">
-                    <label for="profile_photo">Profile photo</label>
-                    <input id="profile_photo" name="profile_photo" type="file" accept="image/*">
-                    <small id="photoPreviewNote">Optional. Recommended square image, up to 2MB.</small>
+                    <label for="profile_photo">{{ __('Profile photo') }}</label>
+                    <div class="photo-actions">
+                        <input id="profile_photo" name="profile_photo" type="file" accept="image/*" hidden>
+                        <label class="camera-button" for="profile_photo" tabindex="0">{{ __('Choose File') }}</label>
+                        <button class="camera-button" id="openCamera" type="button">{{ __('Use camera') }}</button>
+                    </div>
+                    <label for="language">{{ __('Language') }}</label>
+                    <select id="language" name="language" aria-describedby="language-help">
+                        <option value="en" @selected(old('language', $user->language ?? 'en') === 'en')>{{ __('English') }}</option>
+                        <option value="ms" @selected(old('language', $user->language ?? 'en') === 'ms')>{{ __('Bahasa Melayu') }}</option>
+                        <option value="zh" @selected(old('language', $user->language ?? 'en') === 'zh')>{{ __('中文 (Chinese)') }}</option>
+                    </select>
+                    <small id="language-help">{{ __('Choose the language for your WarisanMakan experience.') }}</small>
                 </div>
             </div>
 
             <div class="form-fields">
                 <div class="field span-2">
-                    <label for="name">Name</label>
+                    <label for="name">{{ __('Name') }}</label>
                     <input id="name" name="name" type="text" value="{{ old('name', $user->name) }}" required>
                 </div>
 
                 <div class="field span-2">
-                    <label for="email">Email</label>
+                    <label for="email">{{ __('Email') }}</label>
                     <input id="email" name="email" type="email" value="{{ old('email', $user->email) }}" required readonly>
                 </div>
 
                 <div class="field">
-                    <label for="phone">Phone</label>
-                    <input id="phone" name="phone" type="text" value="{{ old('phone', $user->phone) }}">                   
+                    <label for="phone">{{ __('Phone') }}</label>
+                    <input id="phone" name="phone" type="text" value="{{ old('phone', $user->phone) }}">
                 </div>
 
                 <div class="field">
-                    <label for="city">City</label>
+                    <label for="city">{{ __('City') }}</label>
                     <input id="city" name="city" type="text" value="{{ old('city', $user->city) }}">
                 </div>
 
                 <div class="field span-2">
-                    <label for="bio">Bio</label>
+                    <label for="bio">{{ __('Bio') }}</label>
                     <textarea id="bio" name="bio">{{ old('bio', $user->bio) }}</textarea>
                 </div>
             </div>
 
             <div class="form-actions">
-                <button class="button" type="submit">Save changes</button>
-                <a class="button-secondary" href="{{ route('profile.show') }}">Cancel</a>
+                <button class="button" type="submit">{{ __('Save changes') }}</button>
+                <a class="button-secondary" href="{{ route('profile.show') }}">{{ __('Cancel') }}</a>
             </div>
         </form>
     </div>
 
+    <div class="camera-modal" id="cameraModal" role="dialog" aria-modal="true" aria-labelledby="cameraTitle" hidden>
+        <div class="camera-dialog">
+            <h2 id="cameraTitle">{{ __('Take a profile photo') }}</h2>
+            <video id="cameraVideo" autoplay playsinline></video>
+            <p id="cameraMessage" class="section-copy" role="status"></p>
+            <div class="camera-dialog-actions">
+                <button class="button-secondary" id="closeCamera" type="button">{{ __('Cancel') }}</button>
+                <button class="button" id="capturePhoto" type="button">{{ __('Take photo') }}</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        (function () {
-            var input = document.getElementById('profile_photo');
-            var img = document.getElementById('photoPreviewImg');
-            var fallback = document.getElementById('photoPreviewFallback');
-            var note = document.getElementById('photoPreviewNote');
-            var defaultNote = note ? note.textContent : '';
-
-            if (!input || !img) return;
-
-            input.addEventListener('change', function () {
-                var file = input.files && input.files[0];
-
-                if (!file) {
-                    if (note) note.textContent = defaultNote;
-                    return;
-                }
-
-                if (!file.type.startsWith('image/')) {
-                    if (note) note.textContent = 'That file is not an image. Choose an image file.';
-                    input.value = '';
-                    return;
-                }
-
-                var reader = new FileReader();
-                reader.onload = function (e) {
-                    img.src = e.target.result;
-                    img.style.display = 'block';
-                    if (fallback) fallback.style.display = 'none';
-                };
-                reader.readAsDataURL(file);
-
-                if (note) {
-                    var sizeKb = Math.round(file.size / 1024);
-                    note.textContent = file.name + ' selected (' + sizeKb + ' KB). Not saved until you click "Save changes".';
-                }
-            });
-        })();
+        window.profileTranslations = {
+            selected: @json(__(':name selected.', ['name' => ':name'])),
+            notImage: @json(__('That file is not an image. Choose an image file.')),
+            requestingCamera: @json(__('Requesting camera access...')),
+            unsupportedCamera: @json(__('Camera access is not supported by this browser.')),
+            unavailableCamera: @json(__('Camera access was unavailable. Check your browser permission and try again.'))
+        };
     </script>
 </body>
 </html>

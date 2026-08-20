@@ -1,5 +1,7 @@
 ﻿const foodTrailApp = (() => {
     const appData = window.foodTrailApp || {};
+    const translations = appData.translations || {};
+    const t = (key, replacements = {}) => Object.entries(replacements).reduce((message, [name, value]) => message.replace(`:${name}`, value), translations[key] || key);
     const favoritesKey = appData.favoritesKey || 'foodtrails-favorites';
     const likesKey = appData.likedRestaurantsKey || 'foodtrail-liked-restaurants';
 
@@ -88,7 +90,7 @@
         container.innerHTML = '';
 
         if (!state.favorites.length) {
-            container.innerHTML = `<p class="text-sm leading-6 text-[#6B5B4E]">No saved food trails yet. Generate a trail and save it as a favorite.</p>`;
+            container.innerHTML = `<p class="text-sm leading-6 text-[#6B5B4E]">${t('noFavorites')}</p>`;
             return;
         }
 
@@ -101,7 +103,7 @@
                         <p class="text-sm font-semibold text-[#1F1B19]">${item.title}</p>
                         <p class="text-sm text-[#6B5B4E]">${item.location} · ${item.stops} stops</p>
                     </div>
-                    <button data-favorite-id="${item.id}" class="rounded-full bg-[#8A5A24] px-3 py-1 text-xs font-semibold text-white hover:bg-[#9e6d34]">Open</button>
+                    <button data-favorite-id="${item.id}" class="rounded-full bg-[#8A5A24] px-3 py-1 text-xs font-semibold text-white hover:bg-[#9e6d34]">${t('open')}</button>
                 </div>
                 <p class="mt-3 text-sm text-[#7B6B5F]">${item.description}</p>
             `;
@@ -128,7 +130,7 @@
                         <p class="text-sm uppercase tracking-[0.2em] text-[#B08B59]">${item.category}</p>
                         <h3 class="mt-2 text-lg font-semibold text-[#1F1B19]">${item.title}</h3>
                     </div>
-                    <button data-curated-id="${item.id}" class="rounded-full border border-[#D8B58F] bg-white px-3 py-1 text-xs font-semibold text-[#6B553F] hover:bg-[#f8efe5]">Try</button>
+                    <button data-curated-id="${item.id}" class="rounded-full border border-[#D8B58F] bg-white px-3 py-1 text-xs font-semibold text-[#6B553F] hover:bg-[#f8efe5]">${t('try')}</button>
                 </div>
                 <p class="mt-3 text-sm leading-6 text-[#6B5B4E]">${item.subtitle}</p>
                 <p class="mt-4 text-sm text-[#7B6B5F]">${item.summary}</p>
@@ -149,7 +151,7 @@
     const updateResultsCount = () => {
         const countBadge = getElement(selectors.resultsCount);
         if (!countBadge) return;
-        countBadge.innerText = `${state.filteredRestaurants.length} restaurants`;
+        countBadge.innerText = `${state.filteredRestaurants.length} ${t('restaurants')}`;
     };
 
     const renderFilterOptions = () => {
@@ -158,7 +160,7 @@
 
         const categories = ['all', ...new Set(state.activeRestaurants.map((item) => item.category))];
         categoryFilter.innerHTML = categories.map((category) => `
-            <option value="${category}">${category === 'all' ? 'All categories' : category}</option>
+            <option value="${category}">${category === 'all' ? t('allCategories') : category}</option>
         `).join('');
     };
 
@@ -189,7 +191,7 @@
         container.innerHTML = '';
 
         if (!state.filteredRestaurants.length) {
-            container.innerHTML = `<div class="rounded-[28px] border border-[#E9D7BF] bg-[#FEFBF7] p-6 text-sm text-[#6B5B4E]">No restaurants match the selected filters. Try another filter or location.</div>`;
+            container.innerHTML = `<div class="rounded-[28px] border border-[#E9D7BF] bg-[#FEFBF7] p-6 text-sm text-[#6B5B4E]">${t('noResults')}</div>`;
             return;
         }
 
@@ -218,7 +220,7 @@
                         <p class="text-sm leading-6 text-[#6B5B4E]">${restaurant.description}</p>
                         <div class="flex flex-wrap gap-2 text-sm text-[#6B5B4E]">${formatTags(restaurant.tags)}</div>
                         <div class="flex items-center justify-between gap-3">
-                            <button data-add-id="${restaurant.id}" class="rounded-full bg-[#B8874A] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#9c6f33]">${isAdded ? 'Added' : '+ Add'}</button>
+                            <button data-add-id="${restaurant.id}" class="rounded-full bg-[#B8874A] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#9c6f33]">${isAdded ? t('added') : t('add')}</button>
                         </div>
                     </div>
                 </div>
@@ -262,7 +264,7 @@
         });
 
         const markerCount = getElement(selectors.mapMarkerCount);
-        if (markerCount) markerCount.innerText = `${state.filteredRestaurants.length} markers`;
+        if (markerCount) markerCount.innerText = `${state.filteredRestaurants.length} ${t('markers')}`;
     };
 
     const selectRestaurant = (restaurantId) => {
@@ -277,8 +279,8 @@
 
         if (!state.selectedRestaurant) {
             content.innerHTML = `
-                <p class="font-semibold text-[#1F1B19]">Pick a restaurant</p>
-                <p class="mt-2 text-sm leading-6 text-[#6B5B4E]">Select a restaurant from the list to see details, add to your trail, or mark it as visited.</p>
+            <p class="font-semibold text-[#1F1B19]">${t('pickRestaurant')}</p>
+            <p class="mt-2 text-sm leading-6 text-[#6B5B4E]">${t('selectRestaurant')}</p>
             `;
             toggleRestaurantDrawer(false);
             return;
@@ -299,16 +301,16 @@
                     </div>
                     <div class="text-right sm:text-left">
                         <p class="text-sm text-[#6B5B4E]">${state.selectedRestaurant.category} · ${state.selectedRestaurant.price}</p>
-                        <p class="mt-1 text-sm text-[#6B5B4E]">${state.selectedRestaurant.rating} ★ · ${state.selectedRestaurant.reviewCount} reviews</p>
-                        <p class="mt-1 text-sm text-[#6B5B4E]">Wait time: ${state.selectedRestaurant.waitTime}</p>
+                        <p class="mt-1 text-sm text-[#6B5B4B]">${state.selectedRestaurant.rating} ★ · ${t('reviews', { count: state.selectedRestaurant.reviewCount })}</p>
+                        <p class="mt-1 text-sm text-[#6B5B4E]">${t('waitTime', { value: state.selectedRestaurant.waitTime })}</p>
                     </div>
                 </div>
                 <p class="text-sm leading-6 text-[#6B5B4E]">${state.selectedRestaurant.description}</p>
                 <div class="flex flex-wrap gap-2 text-sm text-[#6B5B4E]">${formatTags(state.selectedRestaurant.tags)}</div>
                 <div class="flex flex-wrap gap-3">
-                    <button id="addRouteButton" class="rounded-full ${isAdded ? 'bg-[#A2A296] hover:bg-[#8e8c7c]' : 'bg-[#B8874A] hover:bg-[#9c6f33]'} px-5 py-3 text-sm font-semibold text-white">${isAdded ? 'Remove from trail' : '+ Add to trail'}</button>
-                    <button id="markVisitedButton" class="rounded-full ${visited ? 'bg-[#7DA34D] hover:bg-[#6d8a42]' : 'bg-[#D8B58F] hover:bg-[#c3a76e]'} px-5 py-3 text-sm font-semibold text-[#1F1B19]">${visited ? 'Visited' : 'Mark visited'}</button>
-                    <button id="loveRestaurantButton" class="rounded-full ${isLiked ? 'bg-[#F8D4D0] hover:bg-[#efc2ba]' : 'bg-[#F8E0D4] hover:bg-[#f2d2ba]'} px-5 py-3 text-sm font-semibold text-[#B4542A]">${isLiked ? '♥ Liked' : '♡ Love'}</button>
+                    <button id="addRouteButton" class="rounded-full ${isAdded ? 'bg-[#A2A296] hover:bg-[#8e8c7c]' : 'bg-[#B8874A] hover:bg-[#9c6f33]'} px-5 py-3 text-sm font-semibold text-white">${isAdded ? t('removeFromTrail') : t('addToTrail')}</button>
+                    <button id="markVisitedButton" class="rounded-full ${visited ? 'bg-[#7DA34D] hover:bg-[#6d8a42]' : 'bg-[#D8B58F] hover:bg-[#c3a76e]'} px-5 py-3 text-sm font-semibold text-[#1F1B19]">${visited ? t('visited') : t('markVisited')}</button>
+                    <button id="loveRestaurantButton" class="rounded-full ${isLiked ? 'bg-[#F8D4D0] hover:bg-[#efc2ba]' : 'bg-[#F8E0D4] hover:bg-[#f2d2ba]'} px-5 py-3 text-sm font-semibold text-[#B4542A]">${isLiked ? t('liked') : t('love')}</button>
                 </div>
             </div>
         `;
@@ -376,12 +378,12 @@
         const badge = getElement(selectors.routeCompletion);
         if (!badge) return;
         if (!state.routeRestaurants.length) {
-            badge.innerText = '0% complete';
+            badge.innerText = t('complete').replace('%count%', '0');
             return;
         }
         const visitedCount = state.routeRestaurants.filter((item) => item.visited).length;
         const percent = Math.round((visitedCount / state.routeRestaurants.length) * 100);
-        badge.innerText = `${percent}% complete`;
+        badge.innerText = t('complete').replace('%count%', percent);
     };
 
     const renderRouteSummary = () => {
@@ -390,7 +392,7 @@
         container.innerHTML = '';
 
         if (!state.routeRestaurants.length) {
-            container.innerHTML = `<p class="text-sm text-[#6B5B4B]">Add restaurants to your food trail and get a simple route plan with estimated travel time.</p>`;
+            container.innerHTML = `<p class="text-sm text-[#6B5B4B]">${t('addRestaurants')}</p>`;
             return;
         }
 
@@ -398,7 +400,7 @@
         const summaryHeader = document.createElement('div');
         summaryHeader.className = 'rounded-[24px] bg-[#FFFBF7] p-4 border border-[#E7D7C0]';
         summaryHeader.innerHTML = `
-            <p class="text-sm text-[#6B5B4B]">Total estimated journey time</p>
+            <p class="text-sm text-[#6B5B4B]">${t('estimatedJourney')}</p>
             <p class="mt-1 text-base font-semibold text-[#1F1B19]">${estimatedTime} min</p>
         `;
         container.appendChild(summaryHeader);
@@ -412,9 +414,9 @@
                         <p class="text-sm font-semibold text-[#1F1B19]">${index + 1}. ${item.name}</p>
                         <p class="mt-1 text-xs text-[#6B5B4E]">${item.location} · ${item.distance} km · ${item.price}</p>
                     </div>
-                    <span class="rounded-full ${item.visited ? 'bg-[#D3E9C4] text-[#4A6B31]' : 'bg-[#F7E4C1] text-[#8A5A24]'} px-3 py-1 text-xs font-semibold">${item.visited ? 'Visited' : 'Pending'}</span>
+                    <span class="rounded-full ${item.visited ? 'bg-[#D3E9C4] text-[#4A6B31]' : 'bg-[#F7E4C1] text-[#8A5A24]'} px-3 py-1 text-xs font-semibold">${item.visited ? t('visited') : t('pending')}</span>
                 </div>
-                <p class="mt-3 text-sm text-[#6B5B4E]">Next travel time: ${Math.max(8, Math.round(item.distance * 7))} min</p>
+                <p class="mt-3 text-sm text-[#6B5B4E]">${t('nextTravel', { value: Math.max(8, Math.round(item.distance * 7)) })}</p>
             `;
             container.appendChild(routeItem);
         });
@@ -426,13 +428,13 @@
         const keywordValue = getElement(selectors.searchKeyword)?.value.trim().toLowerCase();
 
         if (!locationValue) {
-            getElement(selectors.selectedTrailSummary).innerText = 'Please enter a location before generating.';
+            getElement(selectors.selectedTrailSummary).innerText = t('enterLocation');
             return;
         }
 
         const allRestaurants = getRestaurantsForLocation(locationValue);
         if (!allRestaurants.length) {
-            getElement(selectors.selectedTrailSummary).innerText = 'No restaurants found for this location. Try another city.';
+            getElement(selectors.selectedTrailSummary).innerText = t('noLocation');
             return;
         }
 
@@ -462,8 +464,8 @@
         updateResultsCount();
 
         getElement(selectors.selectedTrailSummary).innerText = keywordFiltered.length
-            ? `Showing ${keywordFiltered.length} restaurants in ${locationValue}. Use filters to refine the list.`
-            : 'No restaurants match your criteria. Adjust the filters to see more results.';
+            ? t('showing', { count: keywordFiltered.length, location: locationValue })
+            : t('criteria');
     };
 
     const handleResetFilters = () => {
@@ -493,7 +495,7 @@
         getElement(selectors.resetFiltersButton)?.addEventListener('click', handleResetFilters);
         getElement(selectors.searchKeyword)?.addEventListener('input', applyFilters);
         getElement(selectors.clearFavoritesButton)?.addEventListener('click', () => {
-            if (!confirm('Clear all saved favourite trails?')) return;
+            if (!confirm(t('clearFavorites'))) return;
             state.favorites = [];
             saveFavorites();
             renderFavorites();

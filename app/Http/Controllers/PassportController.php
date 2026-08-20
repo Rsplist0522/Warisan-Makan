@@ -55,8 +55,8 @@ class PassportController extends Controller
             $shop = $this->resolveShopFromId($stamp->shop_id, $shops);
             $visitedLocations[$index] = [
                 'shop_id' => $stamp->shop_id,
-                'shop_name' => $shop['name'] ?? 'Heritage Shop',
-                'founder' => $shop['founder'] ?? 'Heritage owner',
+                'shop_name' => $shop['name'] ?? __('Heritage Shop'),
+                'founder' => $shop['founder'] ?? __('Heritage owner'),
                 'stamped_at' => $stamp->stamp_datetime ? $stamp->stamp_datetime->format('d M Y, H:i') : null,
                 'image' => $shop['image'] ?? asset('images/shop1.jpg'),
             ];
@@ -102,12 +102,12 @@ class PassportController extends Controller
                 return $shops->map(function ($shop) {
                     return [
                         'id' => (int) $shop->id,
-                        'name' => $shop->shop_name ?? 'Heritage Shop',
-                        'founder' => $shop->founder_name ?? 'Local founder',
+                        'name' => $shop->shop_name ?? __('Heritage Shop'),
+                        'founder' => $shop->founder_name ?? __('Local founder'),
                         'lat' => (float) ($shop->latitude ?? 3.139),
                         'lng' => (float) ($shop->longitude ?? 101.6869),
-                        'distance' => 'Nearby',
-                        'status' => 'Participating',
+                        'distance' => __('Nearby'),
+                        'status' => __('Participating'),
                         'image' => $this->shopImageForId((int) $shop->id),
                     ];
                 })->values()->all();
@@ -121,8 +121,8 @@ class PassportController extends Controller
                 'founder' => 'Haji Osman (1965)',
                 'lat' => 3.1390,
                 'lng' => 101.6869,
-                'distance' => '0.8 km away',
-                'status' => 'Open today',
+                'distance' => __('0.8 km away'),
+                'status' => __('Open today'),
                 'image' => asset('images/shop1.jpg'),
             ],
             [
@@ -131,8 +131,8 @@ class PassportController extends Controller
                 'founder' => 'Aunty Siti (1978)',
                 'lat' => 3.1420,
                 'lng' => 101.6950,
-                'distance' => '1.5 km away',
-                'status' => 'Popular this week',
+                'distance' => __('1.5 km away'),
+                'status' => __('Popular this week'),
                 'image' => asset('images/shop2.jpg'),
             ],
         ];
@@ -147,8 +147,8 @@ class PassportController extends Controller
         }
 
         return [
-            'name' => 'Heritage Shop',
-            'founder' => 'Local founder',
+            'name' => __('Heritage Shop'),
+            'founder' => __('Local founder'),
             'image' => asset('images/shop1.jpg'),
         ];
     }
@@ -380,11 +380,11 @@ class PassportController extends Controller
         ]);
 
         if (array_key_exists('is_participating', $data) && ! $data['is_participating']) {
-            return response()->json(['error' => 'Shop is not participating'], 422);
+            return response()->json(['error' => __('Shop is not participating')], 422);
         }
 
         if (array_key_exists('is_published', $data) && ! $data['is_published']) {
-            return response()->json(['error' => 'Shop is not published'], 422);
+            return response()->json(['error' => __('Shop is not published')], 422);
         }
 
         $shopId = $data['shop_id'];
@@ -403,14 +403,14 @@ class PassportController extends Controller
                 ->exists();
 
             if ($already) {
-                return response()->json(['error' => 'User already checked in at this shop'], 409);
+                return response()->json(['error' => __('User already checked in at this shop')], 409);
             }
         }
 
         $distance = $this->haversineDistance($userLat, $userLng, $shopLat, $shopLng);
 
         if ($distance > $radius) {
-            return response()->json(['error' => 'User is outside permitted radius', 'distance_m' => $distance], 422);
+            return response()->json(['error' => __('User is outside permitted radius'), 'distance_m' => $distance], 422);
         }
 
         DB::beginTransaction();
@@ -439,7 +439,7 @@ class PassportController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['error' => 'Server error', 'message' => $e->getMessage()], 500);
+            return response()->json(['error' => __('Server error'), 'message' => $e->getMessage()], 500);
         }
     }
 
@@ -463,7 +463,7 @@ class PassportController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Passport demo data reset for this user.',
+            'message' => __('Passport demo data reset for this user.'),
             'user_id' => $user->id,
         ]);
     }
@@ -473,7 +473,7 @@ class PassportController extends Controller
         $user = $request->user();
 
         if (! $user) {
-            return response()->json(['error' => 'Unauthenticated'], 401);
+            return response()->json(['error' => __('Unauthenticated')], 401);
         }
 
         $data = $request->validate([
@@ -489,11 +489,11 @@ class PassportController extends Controller
 
         // Basic server-side participation/published checks when front-end supplies flags
         if (array_key_exists('is_participating', $data) && ! $data['is_participating']) {
-            return response()->json(['error' => 'Shop is not participating'], 422);
+            return response()->json(['error' => __('Shop is not participating')], 422);
         }
 
         if (array_key_exists('is_published', $data) && ! $data['is_published']) {
-            return response()->json(['error' => 'Shop is not published'], 422);
+            return response()->json(['error' => __('Shop is not published')], 422);
         }
 
         $shopId = $data['shop_id'];
@@ -509,14 +509,14 @@ class PassportController extends Controller
                     ->exists();
 
         if ($already) {
-            return response()->json(['error' => 'User already checked in at this shop'], 409);
+            return response()->json(['error' => __('User already checked in at this shop')], 409);
         }
 
         // Calculate distance (meters)
         $distance = $this->haversineDistance($userLat, $userLng, $shopLat, $shopLng);
 
         if ($distance > $radius) {
-            return response()->json(['error' => 'User is outside permitted radius', 'distance_m' => $distance], 422);
+            return response()->json(['error' => __('User is outside permitted radius'), 'distance_m' => $distance], 422);
         }
 
         DB::beginTransaction();
@@ -543,7 +543,7 @@ class PassportController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['error' => 'Server error', 'message' => $e->getMessage()], 500);
+            return response()->json(['error' => __('Server error'), 'message' => $e->getMessage()], 500);
         }
     }
 

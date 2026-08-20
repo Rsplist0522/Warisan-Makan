@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Heritage Shop Listing</title>
+    <title>{{ __('Heritage Shop Listing') }}</title>
     <style>
         :root {
             --red: #8c1f1f;
@@ -136,28 +136,28 @@
 <body>
 <div class="container">
     <div class="hero">
-        <div class="eyebrow">WarisanMakan • Heritage Shop Module</div>
-        <h1>Discover participating heritage food shops</h1>
-        <p>Browse traditional vendors, search by keyword, and explore the stories behind Malaysia's heritage food culture.</p>
+        <div class="eyebrow">{{ __('WarisanMakan • Heritage Shop Module') }}</div>
+        <h1>{{ __('Discover participating heritage food shops') }}</h1>
+        <p>{{ __('Browse traditional vendors, search by keyword, and explore the stories behind Malaysia\'s heritage food culture.') }}</p>
 
         <div class="search-box">
             <form action="{{ route('heritage-shops.index') }}" method="GET">
                 <div>
-                    <label for="search">Search</label><br>
-                    <input id="search" name="search" type="text" value="{{ old('search', $search) }}" placeholder="Search shops">
+                    <label for="search">{{ __('Search') }}</label><br>
+                    <input id="search" name="search" type="text" value="{{ old('search', $search) }}" placeholder="{{ __('Search shops') }}">
                 </div>
                 <div>
-                    <label for="category">Category</label><br>
+                    <label for="category">{{ __('Category') }}</label><br>
                     <select id="category" name="category">
-                        <option value="">All categories</option>
-                        <option value="traditional noodles" {{ strtolower($category) === 'traditional noodles' ? 'selected' : '' }}>Traditional Noodles</option>
-                        <option value="street food" {{ strtolower($category) === 'street food' ? 'selected' : '' }}>Street Food</option>
-                        <option value="desserts" {{ strtolower($category) === 'desserts' ? 'selected' : '' }}>Desserts</option>
-                        <option value="rice dishes" {{ strtolower($category) === 'rice dishes' ? 'selected' : '' }}>Rice Dishes</option>
+                        <option value="">{{ __('All categories') }}</option>
+                        <option value="traditional noodles" {{ strtolower($category) === 'traditional noodles' ? 'selected' : '' }}>{{ __('Traditional Noodles') }}</option>
+                        <option value="street food" {{ strtolower($category) === 'street food' ? 'selected' : '' }}>{{ __('Street Food') }}</option>
+                        <option value="desserts" {{ strtolower($category) === 'desserts' ? 'selected' : '' }}>{{ __('Desserts') }}</option>
+                        <option value="rice dishes" {{ strtolower($category) === 'rice dishes' ? 'selected' : '' }}>{{ __('Rice Dishes') }}</option>
                     </select>
                 </div>
-                <button type="submit">Search</button>
-                <a class="reset-link" href="{{ route('heritage-shops.index') }}">Reset</a>
+                <button type="submit">{{ __('Search') }}</button>
+                <a class="reset-link" href="{{ route('heritage-shops.index') }}">{{ __('Reset') }}</a>
             </form>
         </div>
 

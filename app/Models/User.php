@@ -22,6 +22,7 @@ use Throwable;
     'password',
     'google_id',
     'profile_photo',
+    'language',
     'role',
     'status',
     'deactivated_at',

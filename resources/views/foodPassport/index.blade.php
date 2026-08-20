@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Food Passport</title>
+    <title>{{ __('Food Passport') }}</title>
     <style>
         :root {
             --primary: #8C1F1F;
@@ -543,38 +543,38 @@
                 <span class="brand-mark">W</span>
                 <span>Warisan Makan</span>
             </div>
-            <nav class="nav" aria-label="Main navigation">
-                <a href="#">Map</a>
-                <a href="#">Passport</a>
-                <a href="#">Rewards</a>
-                <span class="chip">Heritage Trail</span>
+            <nav class="nav" aria-label="{{ __('Main navigation') }}">
+                <a href="#">{{ __('Map') }}</a>
+                <a href="#">{{ __('Passport') }}</a>
+                <a href="#">{{ __('Rewards') }}</a>
+                <span class="chip">{{ __('Heritage Trail') }}</span>
             </nav>
         </header>
 
         <main>
-            <section class="hero" aria-label="Heritage passport hero section">
+            <section class="hero" aria-label="{{ __('Heritage passport hero section') }}">
                 <div class="hero-copy">
-                    <p class="eyebrow">Food Passport</p>
-                    <h1>Your Heritage Passport</h1>
-                    <p>Collect stamps from authentic heritage food stops, uncover founder stories, and unlock rewards as you explore the city’s living culinary heritage.</p>
+                    <p class="eyebrow">{{ __('Food Passport') }}</p>
+                    <h1>{{ __('Your Heritage Passport') }}</h1>
+                    <p>{{ __('Collect stamps from authentic heritage food stops, uncover founder stories, and unlock rewards as you explore the city’s living culinary heritage.') }}</p>
 
                     <div class="action-row">
-                        <a href="#check-in" class="btn primary">Check In</a>
-                        <a href="#nearby" class="btn secondary">Nearby Stops</a>
+                        <a href="#check-in" class="btn primary">{{ __('Check In') }}</a>
+                        <a href="#nearby" class="btn secondary">{{ __('Nearby Stops') }}</a>
                     </div>
 
                     <div class="stats-row" aria-label="Passport progress statistics">
                         <div class="stat">
                             <strong>{{ $stats['visited'] ?? 0 }}</strong>
-                            <span>Visited</span>
+                            <span>{{ __('Visited') }}</span>
                         </div>
                         <div class="stat">
                             <strong>{{ $stats['completion'] ?? 0 }}%</strong>
-                            <span>Progress</span>
+                            <span>{{ __('Progress') }}</span>
                         </div>
                         <div class="stat">
                             <strong>{{ $stats['badges'] ?? 0 }}</strong>
-                            <span>Badges</span>
+                            <span>{{ __('Badges') }}</span>
                         </div>
                     </div>
                 </div>
@@ -582,7 +582,7 @@
                 <div class="hero-media" aria-label="Featured heritage shop image">
                     <img src="{{ $shops[0]['image'] }}" alt="{{ $shops[0]['name'] }}">
                     <div class="floating-card">
-                        <span class="label">Featured stop</span>
+                        <span class="label">{{ __('Featured stop') }}</span>
                         <h3>{{ $shops[0]['name'] }}</h3>
                         <p>{{ $shops[0]['founder'] }}</p>
                     </div>
@@ -593,8 +593,8 @@
                 <div class="panel">
                     <div class="panel-inner">
                         <div class="section-header">
-                            <h2>Nearby heritage stop</h2>
-                            <span class="tag">Live</span>
+                            <h2>{{ __('Nearby heritage stop') }}</h2>
+                                <span class="tag">{{ __('Live') }}</span>
                         </div>
 
                         <div class="shop-list" id="shopList">
@@ -609,7 +609,7 @@
                                             <span>{{ $shop['status'] }}</span>
                                         </div>
                                     </div>
-                                    <button type="button" class="mini-action select-shop">Check In</button>
+                                    <button type="button" class="mini-action select-shop">{{ __('Check In') }}</button>
                                 </article>
                             @endforeach
                         </div>
@@ -618,14 +618,14 @@
 
                 <aside class="panel check-in-panel" id="check-in">
                     <div class="section-header">
-                        <h2>Check In</h2>
-                        <span class="tag">GPS</span>
+                        <h2>{{ __('Check In') }}</h2>
+                        <span class="tag">{{ __('GPS') }}</span>
                     </div>
 
                     <div class="selected-shop">
-                        <img id="selectedShopImage" src="{{ $shops[0]['image'] }}" alt="Selected heritage shop">
+                        <img id="selectedShopImage" src="{{ $shops[0]['image'] }}" alt="{{ __('Selected heritage shop') }}">
                         <div>
-                            <p class="label">Selected stop</p>
+                            <p class="label">{{ __('Selected stop') }}</p>
                             <h3 id="selectedShopName">{{ $shops[0]['name'] }}</h3>
                             <p id="selectedShopFounder">{{ $shops[0]['founder'] }}</p>
                         </div>
@@ -633,31 +633,31 @@
 
                     <div class="form-row">
                         <div>
-                            <label for="radius">Radius (m)</label>
+                            <label for="radius">{{ __('Radius (m)') }}</label>
                             <input id="radius" type="number" value="100" min="10" step="10">
                         </div>
                         <div>
-                            <label for="shopId">Shop ID</label>
+                            <label for="shopId">{{ __('Shop ID') }}</label>
                             <input id="shopId" type="number" value="{{ $shops[0]['id'] }}" readonly>
                         </div>
                     </div>
 
                     <div class="button-row">
-                        <button type="button" id="btnCheckIn" class="btn primary">Use my location</button>
-                        <button type="button" id="btnDemoCheckIn" class="btn secondary">Use demo location</button>
-                        <button type="button" id="btnResetDemo" class="btn secondary">Reset demo</button>
-                        <button type="button" id="btnRefresh" class="btn secondary">Refresh</button>
+                        <button type="button" id="btnCheckIn" class="btn primary">{{ __('Use my location') }}</button>
+                        <button type="button" id="btnDemoCheckIn" class="btn secondary">{{ __('Use demo location') }}</button>
+                        <button type="button" id="btnResetDemo" class="btn secondary">{{ __('Reset demo') }}</button>
+                        <button type="button" id="btnRefresh" class="btn secondary">{{ __('Refresh') }}</button>
                     </div>
 
-                    <pre id="result" class="result-box">Ready to check in. Select a shop and allow location access.</pre>
+                    <pre id="result" class="result-box">{{ __('Ready to check in. Select a shop and allow location access.') }}</pre>
                 </aside>
             </section>
 
             <section class="panel" style="margin-top: 26px;">
                 <div class="panel-inner">
                     <div class="section-header">
-                        <h2>Visited locations</h2>
-                        <span class="tag">History</span>
+                        <h2>{{ __('Visited locations') }}</h2>
+                        <span class="tag">{{ __('History') }}</span>
                     </div>
 
                     @if (!empty($visitedLocations))
@@ -669,14 +669,14 @@
                                         <h3>{{ $location['shop_name'] }}</h3>
                                         <p>{{ $location['founder'] }}</p>
                                         <div class="shop-meta">
-                                            <span>{{ $location['stamped_at'] ?? 'Checked in' }}</span>
+                                            <span>{{ $location['stamped_at'] ?? __('Checked in') }}</span>
                                         </div>
                                     </div>
                                 </article>
                             @endforeach
                         </div>
                     @else
-                        <p style="margin: 0; color: var(--muted);">No visited heritage locations yet. Complete a check-in to start building your food passport.</p>
+                        <p style="margin: 0; color: var(--muted);">{{ __('No visited heritage locations yet. Complete a check-in to start building your food passport.') }}</p>
                     @endif
                 </div>
             </section>
@@ -684,28 +684,28 @@
             <section class="panel" style="margin-top: 26px;">
                 <div class="panel-inner">
                     <div class="section-header">
-                        <h2>Passport progress & statistics</h2>
-                        <span class="tag">Live</span>
+                        <h2>{{ __('Passport progress & statistics') }}</h2>
+                        <span class="tag">{{ __('Live') }}</span>
                     </div>
 
                     <div class="stats-row" style="margin-top: 0;">
                         <div class="stat">
                             <strong>{{ $stats['visited'] ?? 0 }}</strong>
-                            <span>Visited</span>
+                            <span>{{ __('Visited') }}</span>
                         </div>
                         <div class="stat">
                             <strong>{{ $stats['completion'] ?? 0 }}%</strong>
-                            <span>Completion</span>
+                            <span>{{ __('Completion') }}</span>
                         </div>
                         <div class="stat">
                             <strong>{{ $stats['stamps'] ?? 0 }}</strong>
-                            <span>Stamps</span>
+                            <span>{{ __('Stamps') }}</span>
                         </div>
                     </div>
 
                     <div style="margin-top: 16px; padding: 14px 16px; border-radius: 14px; background: rgba(140,31,31,0.04); border: 1px solid rgba(140,31,31,0.08);">
                         <div style="display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 8px; color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em;">
-                            <span>Progress</span>
+                            <span>{{ __('Progress') }}</span>
                             <strong style="color: var(--primary);">{{ $stats['visited'] ?? 0 }}/{{ $stats['goal'] ?? 0 }}</strong>
                         </div>
                         <div style="height: 12px; background: rgba(86,59,48,0.08); border-radius: 999px; overflow: hidden;">
@@ -718,8 +718,8 @@
             <section class="panel" style="margin-top: 26px;">
                 <div class="panel-inner">
                     <div class="section-header">
-                        <h2>Passport rewards</h2>
-                        <span class="tag">Unlocked</span>
+                        <h2>{{ __('Passport rewards') }}</h2>
+                        <span class="tag">{{ __('Unlocked') }}</span>
                     </div>
 
                     <div class="badge-grid">
@@ -729,7 +729,7 @@
                                 <h4>{{ $badge['name'] }}</h4>
                                 <p>{{ $badge['description'] }}</p>
                                 <p style="margin-top: 8px; color: {{ $badge['earned'] ? '#3E6C4F' : '#675B54' }}; font-weight: 700;">
-                                    {{ $badge['earned'] ? 'Unlocked' : ($badge['eligible'] ? 'Ready' : 'Need ' . $badge['threshold'] . ' visits') }}
+                                    {{ $badge['earned'] ? __('Unlocked') : ($badge['eligible'] ? __('Ready') : __('Need :count visits', ['count' => $badge['threshold']])) }}
                                 </p>
                             </div>
                         @endforeach
@@ -739,12 +739,23 @@
         </main>
 
         <footer>
-            Discover heritage flavour. Preserve the stories behind every bowl.
+            {{ __('Discover heritage flavour. Preserve the stories behind every bowl.') }}
         </footer>
     </div>
 
     <script>
         const shops = @json($shops);
+        const translations = {
+            ready: @json(__('Ready to check in. Select a shop and allow location access.')),
+            sending: @json(__('Sending check-in request...')),
+            networkError: @json(__('Network or server error: :message')),
+            resetting: @json(__('Resetting demo passport...')),
+            resetFailed: @json(__('Demo reset failed: :message')),
+            geolocationUnsupported: @json(__('Geolocation is not supported by this browser. Using demo mode instead.')),
+            requestingLocation: @json(__('Requesting location for your heritage check-in...')),
+            locationFailed: @json(__('Failed to get location: :message. Using demo coordinates instead.')),
+            success: @json(__('Check-in successful. Your food passport has been updated.')),
+        };
         let activeShop = shops[0];
 
         function setActiveShop(shop) {
@@ -769,12 +780,32 @@
 
         const out = document.getElementById('result');
 
+        function translate(key, replacements = {}) {
+            return Object.entries(replacements).reduce((message, [name, value]) => message.replace(`:${name}`, value), translations[key] || key);
+        }
+
         function setResult(value) {
+            if (value && typeof value === 'object' && value.success) {
+                out.textContent = translations.success;
+                return;
+            }
+            if (value && typeof value === 'object' && (value.error || value.message)) {
+                out.textContent = value.error || value.message;
+                return;
+            }
+            out.textContent = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+        }
+
+        function setTranslatedResult(key, replacements = {}) {
+            out.textContent = translate(key, replacements);
+        }
+
+        function setResultLegacy(value) {
             out.textContent = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
         }
 
         function submitCheckIn(payload) {
-            setResult('Sending check-in request...');
+            setTranslatedResult('sending');
 
             const endpoint = payload.demo_mode ? '/passport/check-in-test' : '/passport/check-in';
 
@@ -794,12 +825,12 @@
                     window.location.reload();
                 }
             }).catch(error => {
-                setResult('Network or server error: ' + error.message);
+                setTranslatedResult('networkError', { message: error.message });
             });
         }
 
         function resetDemoPassport() {
-            setResult('Resetting demo passport...');
+            setTranslatedResult('resetting');
 
             fetch('/passport/demo-reset', {
                 method: 'POST',
@@ -814,12 +845,12 @@
                 setResult(json);
                 window.location.reload();
             }).catch(error => {
-                setResult('Demo reset failed: ' + error.message);
+                setTranslatedResult('resetFailed', { message: error.message });
             });
         }
 
         document.getElementById('btnRefresh').addEventListener('click', () => {
-            setResult('Ready to check in. Select a shop and allow location access.');
+            setTranslatedResult('ready');
         });
 
         document.getElementById('btnResetDemo').addEventListener('click', resetDemoPassport);
@@ -843,12 +874,12 @@
 
         document.getElementById('btnCheckIn').addEventListener('click', function () {
             if (!navigator.geolocation) {
-                setResult('Geolocation is not supported by this browser. Using demo mode instead.');
+                setTranslatedResult('geolocationUnsupported');
                 document.getElementById('btnDemoCheckIn').click();
                 return;
             }
 
-            setResult('Requesting location for your heritage check-in...');
+            setTranslatedResult('requestingLocation');
 
             navigator.geolocation.getCurrentPosition(function (position) {
                 const payload = {
@@ -865,7 +896,7 @@
 
                 submitCheckIn(payload);
             }, function (error) {
-                setResult('Failed to get location: ' + (error.message || error.code) + '. Using demo coordinates instead.');
+                setTranslatedResult('locationFailed', { message: error.message || error.code });
                 document.getElementById('btnDemoCheckIn').click();
             }, { enableHighAccuracy: true, timeout: 10000 });
         });

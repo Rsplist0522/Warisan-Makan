@@ -13,18 +13,16 @@
         <header class="mb-8 rounded-[32px] bg-white p-6 shadow-[0_18px_40px_rgba(62,44,23,0.08)]">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                    <p class="text-sm uppercase tracking-[0.32em] text-[#B8874A]">Heritage food trails</p>
-                    <h1 class="mt-3 text-3xl font-semibold text-[#1F1B19]">Explore and generate your next food trail
+                        <p class="text-sm uppercase tracking-[0.32em] text-[#B8874A]">{{ __('Heritage food trails') }}</p>
+                            <h1 class="mt-3 text-3xl font-semibold text-[#1F1B19]">{{ __('Explore and generate your next food trail') }}
                     </h1>
-                    <p class="mt-3 max-w-2xl text-sm leading-7 text-[#6B5B4B]">Pick a location, filter by category, and
-                        then use the map and vendor cards to navigate your trail step by step.</p>
+                    <p class="mt-3 max-w-2xl text-sm leading-7 text-[#6B5B4B]">{{ __('Pick a location, filter by category, and then use the map and vendor cards to navigate your trail step by step.') }}</p>
                 </div>
                 <div class="flex flex-wrap gap-3">
                     <a href="/"
-                        class="inline-flex items-center rounded-full border border-[#D8B58F] bg-white px-4 py-2 text-sm font-semibold text-[#7A5F3A] shadow-sm hover:bg-[#F6EFE3]">Back
-                        to Home</a>
+                        class="inline-flex items-center rounded-full border border-[#D8B58F] bg-white px-4 py-2 text-sm font-semibold text-[#7A5F3A] shadow-sm hover:bg-[#F6EFE3]">{{ __('Back to Home') }}</a>
                     <a href="/login"
-                        class="inline-flex items-center rounded-full bg-[#B8874A] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#9c6f33]">Login</a>
+                        class="inline-flex items-center rounded-full bg-[#B8874A] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#9c6f33]">{{ __('Login') }}</a>
                 </div>
             </div>
         </header>
@@ -33,21 +31,19 @@
             <div class="rounded-[32px] bg-white p-6 shadow-[0_12px_30px_rgba(46,32,16,0.08)]">
                 <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                     <div class="min-w-0">
-                        <p class="text-sm uppercase tracking-[0.35em] text-[#B8874A]">Search your food trail</p>
-                        <h2 class="mt-3 text-3xl font-semibold text-[#1F1B19]">Start by searching your location</h2>
-                        <p class="mt-3 max-w-2xl text-sm leading-7 text-[#6B5B4B]">Enter a city or heritage district,
-                            choose a category, and generate a curated food trail with restaurant recommendations.</p>
+                        <p class="text-sm uppercase tracking-[0.35em] text-[#B8874A]">{{ __('Search your food trail') }}</p>
+                        <h2 class="mt-3 text-3xl font-semibold text-[#1F1B19]">{{ __('Start by searching your location') }}</h2>
+                        <p class="mt-3 max-w-2xl text-sm leading-7 text-[#6B5B4B]">{{ __('Enter a city or heritage district, choose a category, and generate a curated food trail with restaurant recommendations.') }}</p>
                     </div>
                     <button id="generateTrailButton"
-                        class="rounded-full bg-[#B8874A] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#9c6f33]">Generate
-                        Trail</button>
+                        class="rounded-full bg-[#B8874A] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#9c6f33]">{{ __('Generate Trail') }}</button>
                 </div>
 
                 <div class="mt-6 grid gap-4 lg:grid-cols-[1.8fr_1fr]">
                     <div>
                         <input id="locationInput" list="locations"
                             class="w-full rounded-3xl border border-[#E6D8C4] bg-[#FFFBF6] px-4 py-4 text-sm text-[#1F1B19] shadow-sm outline-none"
-                            placeholder="Search location or heritage district" />
+                            placeholder="{{ __('Search location or heritage district') }}" />
                         <datalist id="locations">
                             <option value="Kuala Lumpur"></option>
                             <option value="Penang"></option>
@@ -59,21 +55,20 @@
                     <div class="grid gap-4 sm:grid-cols-2">
                         <select id="categorySelect"
                             class="rounded-3xl border border-[#E6D8C4] bg-[#FFFBF6] px-4 py-4 text-sm text-[#1F1B19] shadow-sm outline-none">
-                            <option value="all">All food categories</option>
-                            <option value="Street Food">Street Food</option>
-                            <option value="Dessert">Dessert</option>
-                            <option value="Seafood">Seafood</option>
-                            <option value="Snacks">Snacks</option>
+                            <option value="all">{{ __('All food categories') }}</option>
+                            <option value="Street Food">{{ __('Street Food') }}</option>
+                            <option value="Dessert">{{ __('Dessert') }}</option>
+                            <option value="Seafood">{{ __('Seafood') }}</option>
+                            <option value="Snacks">{{ __('Snacks') }}</option>
                         </select>
                         <input id="searchKeyword" type="search"
                             class="rounded-3xl border border-[#E6D8C4] bg-[#FFFBF6] px-4 py-4 text-sm text-[#1F1B19] shadow-sm outline-none"
-                            placeholder="Search restaurant or menu" />
+                            placeholder="{{ __('Search restaurant or menu') }}" />
                     </div>
                 </div>
 
                 <div class="mt-4 rounded-3xl border border-[#E6D8C4] bg-[#FBF6F1] p-4 text-sm text-[#6B5B4B]">
-                    <p id="selectedTrailSummary">Type a location and press Generate Trail to begin your food adventure.
-                    </p>
+                        <p id="selectedTrailSummary">{{ __('Type a location and press Generate Trail to begin your food adventure.') }}</p>
                 </div>
             </div>
 
@@ -81,11 +76,11 @@
                 <div class="rounded-[32px] bg-white p-6 shadow-[0_12px_30px_rgba(46,32,16,0.08)]">
                     <div class="flex items-center justify-between gap-4">
                         <div>
-                            <p class="text-sm uppercase tracking-[0.2em] text-[#B08B59]">Favorites</p>
-                            <h2 class="mt-2 text-xl font-semibold text-[#1F1B19]">Saved food trails</h2>
+                            <p class="text-sm uppercase tracking-[0.2em] text-[#B08B59]">{{ __('Favorites') }}</p>
+                            <h2 class="mt-2 text-xl font-semibold text-[#1F1B19]">{{ __('Saved food trails') }}</h2>
                         </div>
                         <button id="clearFavoritesButton"
-                            class="rounded-full border border-[#D8B58F] bg-white px-4 py-2 text-sm font-semibold text-[#6B553F] transition hover:bg-[#f8efe5]">Clear</button>
+                            class="rounded-full border border-[#D8B58F] bg-white px-4 py-2 text-sm font-semibold text-[#6B553F] transition hover:bg-[#f8efe5]">{{ __('Clear') }}</button>
                     </div>
                     <div id="favoritesList" class="mt-6 space-y-4"></div>
                 </div>
@@ -93,11 +88,11 @@
                 <div class="rounded-[32px] bg-white p-6 shadow-[0_12px_30px_rgba(46,32,16,0.08)]">
                     <div class="flex items-center justify-between gap-4">
                         <div>
-                            <p class="text-sm uppercase tracking-[0.2em] text-[#B08B59]">Curated</p>
-                            <h2 class="mt-2 text-xl font-semibold text-[#1F1B19]">Curated trails</h2>
+                            <p class="text-sm uppercase tracking-[0.2em] text-[#B08B59]">{{ __('Curated') }}</p>
+                            <h2 class="mt-2 text-xl font-semibold text-[#1F1B19]">{{ __('Curated trails') }}</h2>
                         </div>
                         <span
-                            class="rounded-full bg-[#F7E4C1] px-3 py-1 text-sm font-semibold text-[#8A5A24]">Recommended</span>
+                            class="rounded-full bg-[#F7E4C1] px-3 py-1 text-sm font-semibold text-[#8A5A24]">{{ __('Recommended') }}</span>
                     </div>
                     <div id="curatedTrailCards" class="mt-6 space-y-4"></div>
                 </div>
@@ -108,8 +103,8 @@
                     <div class="rounded-[32px] bg-white p-6 shadow-[0_12px_30px_rgba(46,32,16,0.08)]">
                         <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                             <div>
-                                <p class="text-sm uppercase tracking-[0.2em] text-[#B08B59]">Search results</p>
-                                <h2 class="mt-2 text-xl font-semibold text-[#1F1B19]">Restaurant recommendations</h2>
+                                <p class="text-sm uppercase tracking-[0.2em] text-[#B08B59]">{{ __('Search results') }}</p>
+                                <h2 class="mt-2 text-xl font-semibold text-[#1F1B19]">{{ __('Restaurant recommendations') }}</h2>
                             </div>
                             <span id="resultsCount"
                                 class="rounded-full bg-[#F7E4C1] px-3 py-1 text-sm font-semibold text-[#8A5A24]">0
@@ -118,51 +113,49 @@
 
                         <div class="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                             <div>
-                                <label class="mb-2 block text-sm font-semibold text-[#5A5047]">Category</label>
+                                <label class="mb-2 block text-sm font-semibold text-[#5A5047]">{{ __('Category') }}</label>
                                 <select id="categoryFilter"
                                     class="w-full rounded-3xl border border-[#E6D8C4] bg-[#FFFBF6] px-4 py-3 text-sm outline-none shadow-sm">
-                                    <option value="all">All categories</option>
+                                    <option value="all">{{ __('All categories') }}</option>
                                 </select>
                             </div>
                             <div>
-                                <label class="mb-2 block text-sm font-semibold text-[#5A5047]">Distance</label>
+                                <label class="mb-2 block text-sm font-semibold text-[#5A5047]">{{ __('Distance') }}</label>
                                 <select id="distanceFilter"
                                     class="w-full rounded-3xl border border-[#E6D8C4] bg-[#FFFBF6] px-4 py-3 text-sm outline-none shadow-sm">
-                                    <option value="all">Any distance</option>
-                                    <option value="0.5">Under 500m</option>
-                                    <option value="1">Under 1 km</option>
-                                    <option value="2">Under 2 km</option>
-                                    <option value="5">Under 5 km</option>
+                                    <option value="all">{{ __('Any distance') }}</option>
+                                    <option value="0.5">{{ __('Under 500m') }}</option>
+                                    <option value="1">{{ __('Under 1 km') }}</option>
+                                    <option value="2">{{ __('Under 2 km') }}</option>
+                                    <option value="5">{{ __('Under 5 km') }}</option>
                                 </select>
                             </div>
                             <div>
-                                <label class="mb-2 block text-sm font-semibold text-[#5A5047]">Price</label>
+                                <label class="mb-2 block text-sm font-semibold text-[#5A5047]">{{ __('Price') }}</label>
                                 <select id="priceFilter"
                                     class="w-full rounded-3xl border border-[#E6D8C4] bg-[#FFFBF6] px-4 py-3 text-sm outline-none shadow-sm">
-                                    <option value="all">Any price</option>
+                                    <option value="all">{{ __('Any price') }}</option>
                                     <option value="RM 8 - RM 15">RM 8 - RM 15</option>
                                     <option value="RM 16 - RM 30">RM 16 - RM 30</option>
                                     <option value="RM 31 - RM 60">RM 31 - RM 60</option>
                                 </select>
                             </div>
                             <div>
-                                <label class="mb-2 block text-sm font-semibold text-[#5A5047]">Reviews</label>
+                                <label class="mb-2 block text-sm font-semibold text-[#5A5047]">{{ __('Reviews') }}</label>
                                 <select id="reviewFilter"
                                     class="w-full rounded-3xl border border-[#E6D8C4] bg-[#FFFBF6] px-4 py-3 text-sm outline-none shadow-sm">
-                                    <option value="all">Any rating</option>
-                                    <option value="4">4★ and up</option>
-                                    <option value="4.5">4.5★ and up</option>
-                                    <option value="5">5★ only</option>
+                                    <option value="all">{{ __('Any rating') }}</option>
+                                    <option value="4">{{ __('4★ and up') }}</option>
+                                    <option value="4.5">{{ __('4.5★ and up') }}</option>
+                                    <option value="5">{{ __('5★ only') }}</option>
                                 </select>
                             </div>
                         </div>
 
                         <div class="mt-4 flex items-center justify-between gap-3">
                             <button id="resetFiltersButton"
-                                class="rounded-full border border-[#D8B58F] bg-white px-4 py-2 text-sm font-semibold text-[#6B553F] transition hover:bg-[#f8efe5]">Reset
-                                filters</button>
-                            <p class="text-sm text-[#6B5B4B]">Use the filters to narrow your food trail by distance,
-                                price, category and review.</p>
+                                class="rounded-full border border-[#D8B58F] bg-white px-4 py-2 text-sm font-semibold text-[#6B553F] transition hover:bg-[#f8efe5]">{{ __('Reset filters') }}</button>
+                            <p class="text-sm text-[#6B5B4B]">{{ __('Use the filters to narrow your food trail by distance, price, category and review.') }}</p>
                         </div>
                     </div>
 
@@ -173,8 +166,8 @@
                     <div class="rounded-[32px] bg-white p-6 shadow-[0_12px_30px_rgba(46,32,16,0.08)]">
                         <div class="flex items-center justify-between gap-4">
                             <div>
-                                <p class="text-sm uppercase tracking-[0.2em] text-[#B08B59]">Route summary</p>
-                                <h2 class="mt-2 text-xl font-semibold text-[#1F1B19]">Your food trail</h2>
+                                    <p class="text-sm uppercase tracking-[0.2em] text-[#B08B59]">{{ __('Route summary') }}</p>
+                                <h2 class="mt-2 text-xl font-semibold text-[#1F1B19]">{{ __('Your food trail') }}</h2>
                             </div>
                             <span id="routeCompletion"
                                 class="rounded-full bg-[#F7E4C1] px-3 py-1 text-sm font-semibold text-[#8A5A24]">0%
@@ -191,8 +184,8 @@
                     <div class="rounded-[32px] bg-white p-6 shadow-[0_12px_30px_rgba(46,32,16,0.08)]">
                         <div class="flex items-center justify-between gap-4">
                             <div>
-                                <p class="text-sm uppercase tracking-[0.2em] text-[#B08B59]">Map</p>
-                                <h2 class="mt-2 text-xl font-semibold text-[#1F1B19]">Restaurant route</h2>
+                                    <p class="text-sm uppercase tracking-[0.2em] text-[#B08B59]">{{ __('Map') }}</p>
+                                <h2 class="mt-2 text-xl font-semibold text-[#1F1B19]">{{ __('Restaurant route') }}</h2>
                             </div>
                             <span id="mapMarkerCount"
                                 class="rounded-full bg-[#F7E4C1] px-3 py-1 text-sm font-semibold text-[#8A5A24]">0
@@ -216,11 +209,11 @@
                             class="rounded-[32px] bg-white p-6 shadow-[0_12px_30px_rgba(46,32,16,0.08)]">
                             <div class="flex items-center justify-between gap-4">
                                 <div>
-                                    <p class="text-sm uppercase tracking-[0.2em] text-[#B08B59]">Restaurant details</p>
-                                    <h2 class="mt-2 text-xl font-semibold text-[#1F1B19]">Selected restaurant</h2>
+                                    <p class="text-sm uppercase tracking-[0.2em] text-[#B08B59]">{{ __('Restaurant details') }}</p>
+                                    <h2 class="mt-2 text-xl font-semibold text-[#1F1B19]">{{ __('Selected restaurant') }}</h2>
                                 </div>
                                 <button id="closeRestaurantDrawer"
-                                    class="inline-flex items-center rounded-full border border-[#D8B58F] bg-white px-4 py-2 text-sm font-semibold text-[#6B553F] transition hover:bg-[#f8efe5]">Close</button>
+                                        class="inline-flex items-center rounded-full border border-[#D8B58F] bg-white px-4 py-2 text-sm font-semibold text-[#6B553F] transition hover:bg-[#f8efe5]">{{ __('Close') }}</button>
                             </div>
                             <div id="restaurantDetailsContent" class="mt-6 text-sm text-[#6B5B4B]"></div>
                         </div>
@@ -232,6 +225,15 @@
 
     <script>
         window.foodTrailApp = {
+            translations: {
+                noFavorites: @json(__('No saved food trails yet. Generate a trail and save it as a favorite.')), open: @json(__('Open')), try: @json(__('Try')), allCategories: @json(__('All categories')),
+                restaurants: @json(__('restaurants')), markers: @json(__('markers')), pickRestaurant: @json(__('Pick a restaurant')),
+                selectRestaurant: @json(__('Select a restaurant from the list to see details, add to your trail, or mark it as visited.')),
+                noResults: @json(__('No restaurants match the selected filters. Try another filter or location.')), added: @json(__('Added')), add: @json('+ Add'), waitTime: @json(__('Wait time: :value')),
+                reviews: @json(__(':count reviews')), removeFromTrail: @json(__('Remove from trail')), addToTrail: @json(__('+ Add to trail')), visited: @json(__('Visited')), markVisited: @json(__('Mark visited')), liked: @json(__('♥ Liked')), love: @json(__('♡ Love')),
+                complete: @json(__('%count% complete')), addRestaurants: @json(__('Add restaurants to your food trail and get a simple route plan with estimated travel time.')), estimatedJourney: @json(__('Total estimated journey time')), pending: @json(__('Pending')), nextTravel: @json(__('Next travel time: :value min')),
+                enterLocation: @json(__('Please enter a location before generating.')), noLocation: @json(__('No restaurants found for this location. Try another city.')), showing: @json(__('Showing :count restaurants in :location. Use filters to refine the list.')), criteria: @json(__('No restaurants match your criteria. Adjust the filters to see more results.')), clearFavorites: @json(__('Clear all saved favourite trails?'))
+            },
             locations: [
                 'Kuala Lumpur',
                 'Penang',

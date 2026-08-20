@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -24,19 +24,19 @@
   <div class="card">
     <div class="check-overlay">
       <div id="shopImage" class="shop-image" style="background-image:url('{{ $shop->image }}')"></div>
-      <button id="imgCheckBtn" class="check-btn">Check In</button>
+      <button id="imgCheckBtn" class="check-btn">{{ __('Check In') }}</button>
     </div>
 
     <div>
       <div id="shopName" class="shop-title">{{ $shop->name }}</div>
       <div class="shop-sub">{{ $shop->founder }}</div>
-      <div class="info muted">Tap the shop name or the image's "Check In" button to start location verification. You don't need to type anything.</div>
+      <div class="info muted">{{ __('Tap the shop name or the image\'s "Check In" button to start location verification. You don\'t need to type anything.') }}</div>
 
       <div style="margin-top:12px">
-        <button id="nameCheckBtn" class="check-btn" style="position:static">Check In</button>
+        <button id="nameCheckBtn" class="check-btn" style="position:static">{{ __('Check In') }}</button>
       </div>
 
-      <div id="result" class="result">No check-in attempted.</div>
+      <div id="result" class="result">{{ __('No check-in attempted.') }}</div>
     </div>
   </div>
 
@@ -55,13 +55,29 @@
   const imgBtn = document.getElementById('imgCheckBtn');
   const nameBtn = document.getElementById('nameCheckBtn');
 
-  function setResult(v){ resultEl.textContent = typeof v === 'string' ? v : JSON.stringify(v, null, 2); }
+  const translations = @json([
+    'inactive' => __('Shop is not active for check-in.'),
+    'unsupported' => __('Geolocation not supported by your browser.'),
+    'requesting' => __('Requesting device location...'),
+    'sending' => __('Sending check-in...'),
+    'networkError' => __('Network or server error: :message'),
+    'locationError' => __('Failed to get device location: :message'),
+  ]);
+
+  function translate(key, replacements = {}){
+    return Object.entries(replacements).reduce((message, [name, value]) => message.replace(`:${name}`, value), translations[key] || key);
+  }
+
+  function setResult(v){
+    if(v && typeof v === 'object' && (v.error || v.message)){ resultEl.textContent = v.error || v.message; return; }
+    resultEl.textContent = typeof v === 'string' ? v : JSON.stringify(v, null, 2);
+  }
 
   async function doCheckIn(){
-    if(!shop.participating || !shop.published){ setResult('Shop is not active for check-in.'); return; }
-    if(!navigator.geolocation){ setResult('Geolocation not supported by your browser.'); return; }
+    if(!shop.participating || !shop.published){ setResult(translate('inactive')); return; }
+    if(!navigator.geolocation){ setResult(translate('unsupported')); return; }
 
-    setResult('Requesting device location...');
+    setResult(translate('requesting'));
     navigator.geolocation.getCurrentPosition(async pos=>{
       const payload = {
         shop_id: shop.id,
@@ -74,7 +90,7 @@
         is_published: shop.published
       };
 
-      setResult('Sending check-in...');
+      setResult(translate('sending'));
       try{
         const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
         const res = await fetch('/passport/check-in-test', {
@@ -89,10 +105,10 @@
         const json = await res.json();
         setResult(json);
       }catch(err){
-        setResult('Network or server error: ' + err.message);
+        setResult(translate('networkError', { message: err.message }));
       }
 
-    }, err=>{ setResult('Failed to get device location: ' + (err.message || err.code)); }, { enableHighAccuracy:true, timeout:10000 });
+    }, err=>{ setResult(translate('locationError', { message: err.message || err.code })); }, { enableHighAccuracy:true, timeout:10000 });
   }
 
   imgBtn.addEventListener('click', doCheckIn);

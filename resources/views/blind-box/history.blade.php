@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Blind Box History</title>
+    <title>{{ __('Blind Box History') }}</title>
     <style>
         :root {
             --red-dark: #691616;
@@ -31,19 +31,19 @@
 <body>
 <div class="page">
     <section class="hero">
-        <h1>Blind Box History</h1>
-        <p>All of your surprise discoveries are recorded here so the heritage trail stays memorable.</p>
+        <h1>{{ __('Blind Box History') }}</h1>
+        <p>{{ __('All of your surprise discoveries are recorded here so the heritage trail stays memorable.') }}</p>
         <div class="button-row">
-            <a class="btn btn-secondary" href="/blind-box">Back to Blind Box</a>
-            <a class="btn btn-secondary" href="/heritage-shops">Browse Heritage Shops</a>
-            <a class="btn btn-secondary" href="/foodtrails">Start a Food Trail</a>
+            <a class="btn btn-secondary" href="/blind-box">{{ __('Back to Blind Box') }}</a>
+            <a class="btn btn-secondary" href="/heritage-shops">{{ __('Browse Heritage Shops') }}</a>
+            <a class="btn btn-secondary" href="/foodtrails">{{ __('Start a Food Trail') }}</a>
         </div>
     </section>
 
     <section class="section">
-        <h2>Recent draws</h2>
+        <h2>{{ __('Recent draws') }}</h2>
         @if(empty($drawHistory))
-            <p>No draws yet. Open the blind box to discover a heritage shop and save that surprise in your browser history.</p>
+            <p>{{ __('No draws yet. Open the blind box to discover a heritage shop and save that surprise in your browser history.') }}</p>
         @else
             <div class="history-grid">
                 @foreach($drawHistory as $draw)

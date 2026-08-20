@@ -59,13 +59,13 @@
     <section class="hero">
         <div class="hero-grid">
             <div>
-                <span class="eyebrow">WarisanMakan • Heritage Discovery PWA</span>
-                <h1>Preserve Malaysia’s culinary heritage through every bite.</h1>
-                <p class="lead">Discover forgotten food stories, celebrate traditional vendors, and let every visit feel like a small cultural expedition.</p>
+                <span class="eyebrow">{{ __('WarisanMakan • Heritage Discovery PWA') }}</span>
+                <h1>{{ __('Preserve Malaysia’s culinary heritage through every bite.') }}</h1>
+                <p class="lead">{{ __('Discover forgotten food stories, celebrate traditional vendors, and let every visit feel like a small cultural expedition.') }}</p>
                 <div class="button-row">
-                    <a class="btn btn-primary" href="#blind-box">Explore Blind Box</a>
-                    <a class="btn btn-secondary" href="/">Go to main page</a>
-                    <a class="btn btn-secondary" href="{{ route('blind-box.history') }}">View draw history</a>
+                    <a class="btn btn-primary" href="#blind-box">{{ __('Explore Blind Box') }}</a>
+                    <a class="btn btn-secondary" href="/">{{ __('Go to main page') }}</a>
+                    <a class="btn btn-secondary" href="{{ route('blind-box.history') }}">{{ __('View draw history') }}</a>
                 </div>
             </div>
 
@@ -80,8 +80,8 @@
     </section>
 
     <section id="discover" class="section">
-        <h2>Heritage Shop Discovery</h2>
-        <p class="lead">Browse featured vendors with founder stories and generations of flavour.</p>
+        <h2>{{ __('Heritage Shop Discovery') }}</h2>
+        <p class="lead">{{ __('Browse featured vendors with founder stories and generations of flavour.') }}</p>
 
         <div class="shop-grid">
             @forelse($shops as $shop)
@@ -98,17 +98,17 @@
     </section>
 
     <section id="blind-box" class="section">
-        <h2>Blind Box Recommendation</h2>
-        <p class="lead">Tap the box for a surprise heritage shop recommendation inspired by the spirit of discovery.</p>
+        <h2>{{ __('Blind Box Recommendation') }}</h2>
+        <p class="lead">{{ __('Tap the box for a surprise heritage shop recommendation inspired by the spirit of discovery.') }}</p>
 
         <div class="blind-box-card">
 
             @if(count($categories) > 1)
                 <div class="filter-row" style="margin-bottom:12px;">
                     <form action="{{ url('/blind-box') }}" method="GET">
-                        <label for="shopCategory">Filter blind box:</label>
+                        <label for="shopCategory">{{ __('Filter blind box:') }}</label>
                         <select id="shopCategory" name="category" onchange="this.form.submit()">
-                            <option value="">All categories</option>
+                            <option value="">{{ __('All categories') }}</option>
                             @foreach($categories as $category)
                                 <option value="{{ $category }}" @selected($selectedCategory === $category)>{{ $category }}</option>
                             @endforeach
@@ -118,20 +118,20 @@
             @endif
 
             <div id="box" class="box" data-category="{{ $selectedCategory }}" @if($alreadyDrew) data-disabled="1" @endif>
-                {{ $alreadyDrew ? 'Already opened' : 'Open the box' }}
+                {{ $alreadyDrew ? __('Already opened') : __('Open the box') }}
             </div>
 
             <div id="result" class="result @if(!empty($currentDraw)) show @endif">
                 @if(!empty($currentDraw))
                     <img class="result-image" src="{{ $currentDraw['image'] ?? '' }}" alt="{{ $currentDraw['shop_name'] ?? 'Surprise' }}">
-                    <h3>Surprise discovery unlocked</h3>
+                    <h3>{{ __('Surprise discovery unlocked') }}</h3>
                     <p><strong>{{ $currentDraw['shop_name'] ?? '' }}</strong></p>
                     <p>{{ $currentDraw['description'] ?? '' }}</p>
                     <p><strong>Category:</strong> {{ $currentDraw['category'] ?? 'Heritage' }} • <strong>State:</strong> {{ $currentDraw['state'] ?? '' }} • <strong>Since:</strong> {{ $currentDraw['year'] ?? '' }}</p>
 
                     <div class="button-row" style="margin-top:12px;">
-                        <a class="btn btn-secondary" href="/foodtrails">Explore Food Trails</a>
-                        <a class="btn btn-secondary" href="/heritage-shops">Browse Heritage Shops</a>
+                        <a class="btn btn-secondary" href="/foodtrails">{{ __('Explore Food Trails') }}</a>
+                        <a class="btn btn-secondary" href="/heritage-shops">{{ __('Browse Heritage Shops') }}</a>
                     </div>
 
                     <p class="muted" style="margin-top:12px;">You opened this Blind Box during the current <strong>{{ ucfirst($period) }}</strong>. Come back next period to try again.</p>

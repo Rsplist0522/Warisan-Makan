@@ -32,7 +32,10 @@ class ProfileController extends Controller
             'city' => 'nullable|string|max:80',
             'bio' => 'nullable|string|max:700',
             'profile_photo' => 'nullable|image|max:2048',
+            'language' => 'nullable|in:en,ms,zh',
         ]);
+
+        $data['language'] = $data['language'] ?? $user->language ?? 'en';
 
         if ($request->hasFile('profile_photo')) {
             $disk = config('filesystems.media_disk', 'public');
@@ -40,7 +43,7 @@ class ProfileController extends Controller
 
             if ($path === false) {
                 return back()
-                    ->withErrors(['profile_photo' => 'The profile photo could not be uploaded. Please try again.'])
+                    ->withErrors(['profile_photo' => __('The profile photo could not be uploaded. Please try again.')])
                     ->withInput();
             }
 
@@ -54,6 +57,6 @@ class ProfileController extends Controller
         $user->fill($data);
         $user->save();
 
-        return redirect()->route('profile.show')->with('success', 'Profile updated successfully.');
+        return redirect()->route('profile.show')->with('success', __('Profile updated successfully.'));
     }
 }

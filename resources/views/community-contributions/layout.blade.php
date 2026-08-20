@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@yield('title', 'Community Contribution') - Warisan Makan</title>
+    <title>@yield('title', __('Community Contribution')) - Warisan Makan</title>
     @fonts
     <style>
         :root {
@@ -295,14 +295,14 @@
     <header class="topbar">
         <div class="topbar-inner">
             <a class="brand" href="{{ route('home') }}">Warisan Makan</a>
-            <nav class="nav-links" aria-label="Community contribution navigation">
-                <a class="nav-link {{ request()->routeIs('community-contribution.create', 'community-contribution.edit') ? 'active' : '' }}" href="{{ route('community-contribution.create') }}">Submit shop</a>
-                <a class="nav-link {{ request()->routeIs('community-contribution.drafts*') ? 'active' : '' }}" href="{{ route('community-contribution.drafts') }}">Drafts</a>
-                <a class="nav-link {{ request()->routeIs('community-contribution.contributions*') ? 'active' : '' }}" href="{{ route('community-contribution.contributions') }}">My contributions</a>
-                <a class="nav-link {{ request()->routeIs('community-contribution.correction-requests*') ? 'active' : '' }}" href="{{ route('community-contribution.correction-requests') }}">My correction requests</a>
+            <nav class="nav-links" aria-label="{{ __('Community contribution navigation') }}">
+                <a class="nav-link {{ request()->routeIs('community-contribution.create', 'community-contribution.edit') ? 'active' : '' }}" href="{{ route('community-contribution.create') }}">{{ __('Submit shop') }}</a>
+                <a class="nav-link {{ request()->routeIs('community-contribution.drafts*') ? 'active' : '' }}" href="{{ route('community-contribution.drafts') }}">{{ __('Drafts') }}</a>
+                <a class="nav-link {{ request()->routeIs('community-contribution.contributions*') ? 'active' : '' }}" href="{{ route('community-contribution.contributions') }}">{{ __('My contributions') }}</a>
+                <a class="nav-link {{ request()->routeIs('community-contribution.correction-requests*') ? 'active' : '' }}" href="{{ route('community-contribution.correction-requests') }}">{{ __('My correction requests') }}</a>
                 <form class="inline-form" method="POST" action="{{ route('logout') }}">
                     @csrf
-                    <button class="logout-button" type="submit">Log out</button>
+                    <button class="logout-button" type="submit">{{ __('Log out') }}</button>
                 </form>
             </nav>
         </div>
@@ -315,7 +315,7 @@
 
         @if ($errors->any())
             <div class="status-banner error" role="alert">
-                <strong>Please fix the following:</strong>
+                <strong>{{ __('Please fix the following:') }}</strong>
                 <ul>
                     @foreach ($errors->all() as $error)
                         <li>{{ $error }}</li>

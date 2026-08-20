@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests;
 
+use App\Models\HeritageShop;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Fluent;
 use Illuminate\Validation\Rule;
 
 class StoreHeritageShopRequest extends FormRequest
@@ -12,8 +14,18 @@ class StoreHeritageShopRequest extends FormRequest
         return $this->user()?->isAdmin() === true;
     }
 
+    public function withValidator($validator): void
+    {
+        $validator->sometimes(
+            ['heritage_story', 'address', 'city'],
+            ['required', 'string'],
+            fn (Fluent $input): bool => $input->publish_status === HeritageShop::STATUS_PUBLISHED,
+        );
+    }
+
     public function rules(): array
     {
+
         return [
             'shop_name' => ['required', 'string', 'max:255'],
             'primary_food_category' => ['nullable', 'string', 'max:255'],
@@ -24,7 +36,8 @@ class StoreHeritageShopRequest extends FormRequest
             'current_owner_details' => ['nullable', 'string', 'max:5000'],
             'heritage_story' => ['nullable', 'string', 'max:10000'],
             'operating_hours' => ['nullable', 'string', 'max:2000'],
-            'food_items' => ['nullable', 'array'],
+            'food_items' => ['nullable', 'array', 'max:50'],
+
             'food_items.*.name' => ['nullable', 'string', 'max:255'],
             'food_items.*.price' => ['nullable', 'string', 'max:255'],
             'food_items.*.desc' => ['nullable', 'string', 'max:1000'],
@@ -34,16 +47,25 @@ class StoreHeritageShopRequest extends FormRequest
             'state' => ['nullable', 'string', 'max:100'],
             'postal_code' => ['nullable', 'string', 'max:20'],
             'source_url' => ['nullable', 'url', 'max:500'],
-            'publish_status' => ['nullable', Rule::in(['draft', 'approved'])],
+            'publish_status' => ['nullable', Rule::in(HeritageShop::ADMIN_STATUSES)],
+
             'images' => ['nullable', 'array', 'max:10'],
-            'images.*' => ['file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'images.*' => ['file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:1024'],
+            'replace_images' => ['nullable', 'array'],
+            'replace_images.*' => ['file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:1024'],
+
             'existing_images' => ['nullable', 'array'],
             'existing_images.*' => ['integer'],
             'remove_images' => ['nullable', 'array'],
             'remove_images.*' => ['integer'],
             'menu_items_json' => ['nullable', 'string'],
             'crawler_images' => ['nullable', 'array'],
-            'crawler_images.*' => ['string', 'max:500'],
+            'crawler_images.*' => [
+                'string',
+                'max:500',
+                'starts_with:heritage-shops/',
+            ],
+
         ];
     }
 }

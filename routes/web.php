@@ -176,4 +176,8 @@ Route::get('/start_trail', function () {
 });
 
 Route::get('/heritage-shops', [HeritageShopController::class, 'index'])->name('heritage-shops.index');
+Route::get('/heritage-shops/{heritageShop}/images/{image}', [HeritageShopController::class, 'image'])
+    ->whereNumber('heritageShop')
+    ->whereNumber('image')
+    ->name('heritage-shops.images.show');
 Route::get('/heritage-shops/{id}', [HeritageShopController::class, 'show'])->whereNumber('id')->name('heritage-shops.show');

@@ -4,18 +4,37 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\HeritageShop;
+use App\Models\ShopImage;
+use App\Services\HeritageShopImageService;
+use App\Services\ShopCrawlerService;
+use App\Models\User;
+
 
 class HeritageShopController extends Controller
 {
+    public function __construct(
+        private HeritageShopImageService $imageService,
+        private ShopCrawlerService $crawlerService,
+    )
+    {
+    }
+
     // Satisfies FR 2.1.1 and FR 2.1.2
     public function index(Request $request)
     {
-        $search = trim((string) $request->input('search', ''));
-        $category = trim((string) $request->input('category', ''));
+        $search = mb_substr(trim((string) $request->input('search', '')), 0, 100);
+        $category = mb_substr(trim((string) $request->input('category', '')), 0, 100);
+        $state = mb_substr(trim((string) $request->input('state', '')), 0, 100);
+        $requestedSort = (string) $request->input('sort', 'name_asc');
+        $sort = in_array($requestedSort, ['name_asc', 'name_desc', 'newest', 'oldest'], true)
+            ? $requestedSort
+            : 'name_asc';
 
-        $shops = HeritageShop::query()
-            ->when($search, function ($query) use ($search) {
-                $query->where(function ($query) use ($search) {
+        $shopsQuery = HeritageShop::query()
+            ->published()
+            ->with('images')
+            ->when($search, function ($query) use ($search): void {
+                $query->where(function ($query) use ($search): void {
                     $query->where('shop_name', 'like', "%{$search}%")
                         ->orWhere('address', 'like', "%{$search}%")
                         ->orWhere('city', 'like', "%{$search}%")
@@ -24,13 +43,34 @@ class HeritageShopController extends Controller
                         ->orWhere('primary_food_category', 'like', "%{$search}%");
                 });
             })
-            ->when($category, function ($query) use ($category) {
-                $query->where('primary_food_category', 'like', "%{$category}%");
-            })
-            ->orderBy('shop_name')
-            ->get();
+            ->when($category, fn ($query) => $query->where('primary_food_category', 'like', "%{$category}%"))
+            ->when($state, fn ($query) => $query->where('state', 'like', "%{$state}%"));
 
-        return view('heritage.shops', compact('shops', 'search', 'category'));
+        match ($sort) {
+            'name_desc' => $shopsQuery->orderByDesc('shop_name'),
+            'newest' => $shopsQuery->latest(),
+            'oldest' => $shopsQuery->oldest(),
+            default => $shopsQuery->orderBy('shop_name'),
+        };
+
+        $shops = $shopsQuery->paginate(12)->withQueryString();
+        $categories = HeritageShop::query()
+            ->published()
+            ->whereNotNull('primary_food_category')
+            ->where('primary_food_category', '!=', '')
+            ->distinct()
+            ->orderBy('primary_food_category')
+            ->pluck('primary_food_category');
+        $states = HeritageShop::query()
+            ->published()
+            ->whereNotNull('state')
+            ->where('state', '!=', '')
+            ->distinct()
+            ->orderBy('state')
+            ->pluck('state');
+
+        return view('heritage.shops', compact('shops', 'search', 'category', 'state', 'sort', 'categories', 'states'))
+            ->with('imageService', $this->imageService);
     }
 
     private function allShops(): array
@@ -113,17 +153,35 @@ class HeritageShopController extends Controller
         }));
     }
 
+    public function image(HeritageShop $heritageShop, ShopImage $image)
+    {
+        abort_unless($image->shop_id === $heritageShop->id, 404);
+        $currentUser = request()->user();
+        
+        abort_unless(
+            $heritageShop->isPubliclyVisible()
+            || ($currentUser instanceof User && $currentUser->isAdmin()),
+            404,
+        );
+        return $this->imageService->response($image);
+    }
+
     // Show a single shop detail by DB id
     public function show(string $id)
     {
-        $shop = HeritageShop::query()->with('images')->findOrFail($id);
-        $shops = HeritageShop::query()->with('images')->orderBy('shop_name')->get();
+        $shop = HeritageShop::query()->published()->with('images')->findOrFail($id);
+        $shops = HeritageShop::query()->published()->with('images')->orderBy('shop_name')->get();
         $menuItems = $this->resolveMenuItems($shop);
 
         $search = '';
         $category = '';
+        $state = '';
+        $sort = 'name_asc';
+        $categories = collect();
+        $states = collect();
 
-        return view('heritage.shops', compact('shop', 'shops', 'search', 'category', 'menuItems'));
+        return view('heritage.shops', compact('shop', 'shops', 'search', 'category', 'state', 'sort', 'categories', 'states', 'menuItems'))
+            ->with('imageService', $this->imageService);
     }
 
     private function resolveMenuItems(HeritageShop $shop): array
@@ -132,47 +190,31 @@ class HeritageShopController extends Controller
             return $shop->food_items;
         }
 
-        $category = strtolower((string) ($shop->primary_food_category ?? ''));
-        $name = strtolower((string) ($shop->shop_name ?? ''));
+        if ($shop->source_url) {
+            try {
+                $crawled = $this->crawlerService->crawl($shop->source_url);
+                $crawledMenu = $crawled['food_items'] ?? $crawled['menu'] ?? [];
 
-        $fallbackMenus = [
-            'nasi' => [
-                ['name' => 'Nasi Kandar', 'price' => 'RM 18.00', 'desc' => 'Fragrant rice served with curries, vegetables and a choice of classic house sides.'],
-                ['name' => 'Ayam Goreng', 'price' => 'RM 14.00', 'desc' => 'Crisp fried chicken with a heritage spice blend.'],
-                ['name' => 'Teh Tarik', 'price' => 'RM 4.50', 'desc' => 'Pulled milk tea, a staple pairing for the meal.'],
-            ],
-            'kopitiam' => [
-                ['name' => 'Kaya Toast', 'price' => 'RM 7.50', 'desc' => 'Classic toasted bread with coconut jam and butter.'],
-                ['name' => 'Hainanese Chicken Chop', 'price' => 'RM 22.00', 'desc' => 'Traditional chicken chop with a rich house gravy.'],
-                ['name' => 'Ipoh White Coffee', 'price' => 'RM 6.00', 'desc' => 'Smooth local coffee known for its light, aromatic finish.'],
-            ],
-            'dessert' => [
-                ['name' => 'Kuih Lapis', 'price' => 'RM 8.00', 'desc' => 'Layered steamed cake with a soft, fragrant texture.'],
-                ['name' => 'Cendol', 'price' => 'RM 7.00', 'desc' => 'Shaved ice dessert with coconut milk and palm sugar.'],
-                ['name' => 'Gula Melaka Pancake', 'price' => 'RM 9.50', 'desc' => 'A sweet local favourite with toasted caramel notes.'],
-            ],
-            'cantonese' => [
-                ['name' => 'Pipa Duck', 'price' => 'RM 38.00', 'desc' => 'A signature Cantonese roast with a deep, savoury flavour.'],
-                ['name' => 'Eight Treasure Duck', 'price' => 'RM 46.00', 'desc' => 'Festive banquet-style dish with a layered heritage profile.'],
-                ['name' => 'Wok-Fried Greens', 'price' => 'RM 16.00', 'desc' => 'Traditional vegetable preparation with garlic and oyster sauce.'],
-            ],
-            'satay' => [
-                ['name' => 'Chicken Satay', 'price' => 'RM 16.00', 'desc' => 'Charcoal-grilled skewers with a classic peanut dip.'],
-                ['name' => 'Beef Satay', 'price' => 'RM 18.00', 'desc' => 'Tender beef skewers with aromatic spice and smoky char.'],
-                ['name' => 'Nasi Impit', 'price' => 'RM 5.00', 'desc' => 'Compressed rice cakes served with satay and sauce.'],
-            ],
-        ];
-
-        foreach ($fallbackMenus as $keyword => $items) {
-            if (str_contains($category, $keyword) || str_contains($name, $keyword)) {
-                return $items;
+                if (is_array($crawledMenu) && count($crawledMenu)) {
+                    return collect($crawledMenu)
+                        ->filter(fn ($item) => is_array($item) && filled($item['name'] ?? null))
+                        ->map(fn (array $item): array => [
+                            'name' => (string) ($item['name'] ?? 'House special'),
+                            'price' => $item['price'] ?? null,
+                            'desc' => $item['desc'] ?? $item['description'] ?? null,
+                        ])
+                        ->values()
+                        ->all();
+                }
+            } catch (\Throwable) {
+                // A temporary source failure must not prevent the saved
+                // Heritage profile from remaining viewable.
             }
         }
 
-        return [
-            ['name' => 'Signature Heritage Dish', 'price' => 'RM 20.00', 'desc' => 'A house-special plate highlighting the shop’s long-running recipes.'],
-            ['name' => 'Chef’s Recommendation', 'price' => 'RM 24.00', 'desc' => 'A prepared favourite chosen for tradition, flavour, and local character.'],
-            ['name' => 'House Beverage', 'price' => 'RM 5.50', 'desc' => 'A classic accompaniment that complements the meal experience.'],
-        ];
+        // Do not invent dishes from a category or shop name. The public page
+        // should display menu highlights only when the data was stored or
+        // returned by the configured source crawler.
+        return [];
     }
 }

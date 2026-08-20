@@ -226,7 +226,7 @@ class HeritageShopAdminTest extends TestCase
             'primary_food_category' => 'Malay',
             'heritage_story' => 'A family-run restaurant preserving classic recipes.',
             'source_url' => 'https://example.com/heritage-shop',
-            'publish_status' => 'approved',
+            'publish_status' => HeritageShop::STATUS_PUBLISHED,
         ]);
 
         $this->get(route('heritage-shops.show', ['id' => $shop->id]))

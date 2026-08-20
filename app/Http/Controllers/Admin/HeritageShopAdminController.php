@@ -7,24 +7,78 @@ use App\Http\Requests\CrawlHeritageShopRequest;
 use App\Http\Requests\StoreHeritageShopRequest;
 use App\Models\HeritageShop;
 use App\Models\ShopImage;
+use App\Services\HeritageShopImageService;
 use App\Services\ShopCrawlerService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+
 use Illuminate\View\View;
 use RuntimeException;
 
 class HeritageShopAdminController extends Controller
 {
-    public function index(): View
+    public function __construct(private HeritageShopImageService $imageService)
     {
-        $shops = HeritageShop::query()->latest()->get();
+    }
 
-        return view('admin.heritage-shops.index', compact('shops'));
+    public function index(Request $request): View
+    {
+        $search = trim($request->string('search')->toString());
+        $category = trim($request->string('category')->toString());
+        $state = trim($request->string('state')->toString());
+        $sort = $request->string('sort')->toString();
+
+        $shopsQuery = HeritageShop::query()
+            ->with('images')
+            ->when($search !== '', function ($query) use ($search): void {
+                $query->where(function ($query) use ($search): void {
+                    $query->where('shop_name', 'like', "%{$search}%")
+                        ->orWhere('address', 'like', "%{$search}%")
+                        ->orWhere('city', 'like', "%{$search}%")
+                        ->orWhere('state', 'like', "%{$search}%")
+                        ->orWhere('primary_food_category', 'like', "%{$search}%")
+                        ->orWhere('heritage_story', 'like', "%{$search}%");
+                });
+            })
+            ->when($category !== '', fn ($query) => $query->where('primary_food_category', 'like', "%{$category}%"))
+            ->when($state !== '', fn ($query) => $query->where('state', 'like', "%{$state}%"));
+
+        match ($sort) {
+            'name_desc' => $shopsQuery->orderByDesc('shop_name'),
+            'newest' => $shopsQuery->latest(),
+            'oldest' => $shopsQuery->oldest(),
+            default => $shopsQuery->orderBy('shop_name'),
+        };
+
+        $shops = $shopsQuery->paginate(12)->withQueryString();
+        $categories = HeritageShop::query()
+            ->whereNotNull('primary_food_category')
+            ->where('primary_food_category', '!=', '')
+            ->distinct()
+            ->orderBy('primary_food_category')
+            ->pluck('primary_food_category');
+        $states = HeritageShop::query()
+            ->whereNotNull('state')
+            ->where('state', '!=', '')
+            ->distinct()
+            ->orderBy('state')
+            ->pluck('state');
+
+        return view('admin.heritage-shops.index', compact('shops', 'categories', 'states', 'search', 'category', 'state', 'sort'))
+            ->with('imageService', $this->imageService);
+    }
+
+    public function image(HeritageShop $heritageShop, ShopImage $image)
+    {
+        abort_unless($image->shop_id === $heritageShop->id, 404);
+
+        return $this->imageService->response($image);
     }
 
     public function create(): View
@@ -32,6 +86,7 @@ class HeritageShopAdminController extends Controller
         return view('admin.heritage-shops.form', [
             'shop' => new HeritageShop(),
             'mode' => 'create',
+            'imageService' => $this->imageService,
         ]);
     }
 
@@ -43,8 +98,8 @@ class HeritageShopAdminController extends Controller
             $shop = HeritageShop::query()->create($data);
             $this->attachUploadedImages($shop, $request->file('images', []));
             $this->attachStoredCrawlerImages($shop, $request->input('crawler_images', []));
-            $this->removeRequestedImageIds($request->input('remove_images', []));
-            $this->replaceRequestedImages($shop, $request->allFiles(), $request->input('replace_images', []));
+            $this->removeRequestedImageIds($shop, $request->input('remove_images', []));
+            $this->replaceRequestedImages($shop, $request->file('replace_images', []));
 
             return $shop;
         });
@@ -60,6 +115,7 @@ class HeritageShopAdminController extends Controller
         return view('admin.heritage-shops.form', [
             'shop' => $heritageShop,
             'mode' => 'edit',
+            'imageService' => $this->imageService,
         ]);
     }
 
@@ -71,8 +127,8 @@ class HeritageShopAdminController extends Controller
             $heritageShop->fill($data)->save();
             $this->attachUploadedImages($heritageShop, $request->file('images', []));
             $this->attachStoredCrawlerImages($heritageShop, $request->input('crawler_images', []));
-            $this->removeRequestedImageIds($request->input('remove_images', []));
-            $this->replaceRequestedImages($heritageShop, $request->allFiles(), $request->input('replace_images', []));
+            $this->removeRequestedImageIds($heritageShop, $request->input('remove_images', []));
+            $this->replaceRequestedImages($heritageShop, $request->file('replace_images', []));
 
             return $heritageShop;
         });
@@ -163,12 +219,7 @@ class HeritageShopAdminController extends Controller
                 continue;
             }
 
-            $disk = Storage::disk(config('filesystems.media_disk') ?: 'public');
-            $relativePath = $disk->putFile('heritage-shops', $file);
-
-            if ($relativePath === false || blank($relativePath)) {
-                throw new RuntimeException('One of the uploaded images could not be saved.');
-            }
+            $relativePath = $this->imageService->store($file);
 
             $shop->images()->create([
                 'path' => $relativePath,
@@ -184,15 +235,23 @@ class HeritageShopAdminController extends Controller
                 continue;
             }
 
-            $normalizedPath = str_starts_with($path, 'http') ? $this->persistCrawledImage($path) : $path;
+            if (
+                ! str_starts_with($path, HeritageShopImageService::DIRECTORY.'/crawler/')
+                || str_contains($path, '..')
+                || ! Storage::disk(HeritageShopImageService::DISK)->exists($path)
+            ) {
+                continue;
+            }
+
             $shop->images()->create([
-                'path' => $normalizedPath,
+                'path' => $path,
                 'is_primary' => $shop->images()->count() === 0,
             ]);
+
         }
     }
 
-    private function replaceRequestedImages(HeritageShop $shop, array $files, array $replacements): void
+    private function replaceRequestedImages(HeritageShop $shop, array $replacements): void
     {
         foreach ($replacements as $imageId => $replacementFile) {
             if (! is_numeric($imageId) || ! $replacementFile instanceof UploadedFile || ! $replacementFile->isValid()) {
@@ -204,27 +263,34 @@ class HeritageShopAdminController extends Controller
                 continue;
             }
 
-            Storage::disk(config('filesystems.media_disk') ?: 'public')->delete($image->path);
+            $wasPrimary = (bool) $image->is_primary;
+            $this->imageService->delete($image->path);
             $image->forceDelete();
-            $disk = Storage::disk(config('filesystems.media_disk') ?: 'public');
-            $path = $disk->putFile('heritage-shops', $replacementFile);
+            $path = $this->imageService->store($replacementFile);
             $shop->images()->create([
                 'path' => $path,
-                'is_primary' => $shop->images()->count() === 0,
+                'is_primary' => $wasPrimary || $shop->images()->count() === 0,
             ]);
+
         }
     }
 
-    private function removeRequestedImageIds(array $imageIds): void
+    private function removeRequestedImageIds(HeritageShop $shop, array $imageIds): void
     {
         foreach ($imageIds as $imageId) {
-            $image = ShopImage::query()->find((int) $imageId);
+            $image = $shop->images()->find((int) $imageId);
             if (! $image) {
                 continue;
             }
 
-            Storage::disk(config('filesystems.media_disk') ?: 'public')->delete($image->path);
+            $wasPrimary = (bool) $image->is_primary;
+            $this->imageService->delete($image->path);
             $image->delete();
+
+            if ($wasPrimary) {
+                $shop->images()->where('id', '!=', $image->id)->orderBy('id')->first()?->update(['is_primary' => true]);
+            }
+
         }
     }
 
@@ -260,7 +326,7 @@ class HeritageShopAdminController extends Controller
 
         file_put_contents($tempPath, $response->body());
         $uploadedFile = new \Illuminate\Http\File($tempPath);
-        $relativePath = Storage::disk(config('filesystems.media_disk') ?: 'public')->putFile('heritage-shops/crawler', $uploadedFile);
+        $relativePath = $this->imageService->store($uploadedFile, 'heritage-shops/crawler');
 
         @unlink($tempPath);
 

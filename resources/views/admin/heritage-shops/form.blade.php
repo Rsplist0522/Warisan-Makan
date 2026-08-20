@@ -72,8 +72,10 @@
                     <h2>Shop profile</h2>
                     <div class="filters four" style="margin-top:16px;">
                         <div class="field">
-                            <label for="shop_name">Shop name</label>
-                            <input id="shop_name" name="shop_name" type="text" value="{{ $shopName }}">
+                                                        <label for="shop_name">Shop name <span aria-hidden="true">*</span></label>
+                            <input id="shop_name" name="shop_name" type="text" value="{{ $shopName }}" required maxlength="255" aria-describedby="shop-name-help">
+                            <p class="help-text" id="shop-name-help">Required. Use the official public name of the heritage business.</p>
+
                         </div>
                         <div class="field">
                             <label for="primary_food_category">Primary category</label>
@@ -153,8 +155,12 @@
                 <section class="panel">
                     <h2>Images</h2>
                     <div class="field" style="margin-top:16px;">
-                        <label for="images">Upload gallery images</label>
-                        <input id="images" name="images[]" type="file" accept="image/jpeg,image/png,image/webp" multiple>
+                                                                                <label for="images">Upload gallery images</label>
+
+                            <input id="images" name="images[]" type="file" accept="image/jpeg,image/png,image/webp" multiple data-max-bytes="1048576">
+                            <p class="help-text" id="image-upload-help">JPG, PNG, or WebP only. Each new image must be no larger than 1 MB (1024 KB).</p>
+                            <div id="image-upload-error" class="status-banner error" style="display:none; margin:0; padding:10px 12px;"></div>
+
                     </div>
                     <div id="upload-preview" style="display:grid; gap:10px; margin-top:14px;"></div>
 
@@ -164,7 +170,8 @@
                             <div style="display:grid; gap:12px;">
                                 @foreach ($shop->images as $image)
                                     <div style="padding:10px; border:1px solid var(--line); border-radius:12px; background:#fff;">
-                                        <img src="{{ Storage::disk(config('filesystems.media_disk', 'public'))->url($image->path) }}" alt="Shop gallery image" style="width:100%; height:150px; object-fit:cover; border-radius:8px; margin-bottom:8px;">
+                                                                                <img src="{{ $imageService->url($image) }}" alt="Shop gallery image" style="width:100%; height:150px; object-fit:cover; border-radius:8px; margin-bottom:8px;" onerror="this.replaceWith(Object.assign(document.createElement('div'), {textContent:'Image unavailable', className:'muted'}))">
+
                                         <div class="actions" style="margin-top:8px;">
                                             <label class="button secondary small" style="cursor:pointer;">
                                                 <input type="checkbox" name="remove_images[]" value="{{ $image->id }}" style="margin-right:6px;"> Remove
@@ -186,11 +193,19 @@
                     <div class="field" style="margin-top:16px;">
                         <label for="publish_status">Status</label>
                         <select id="publish_status" name="publish_status">
-                            <option value="draft" {{ old('publish_status', $shop->publish_status ?? 'draft') === 'draft' ? 'selected' : '' }}>Draft</option>
-                            <option value="approved" {{ old('publish_status', $shop->publish_status ?? 'draft') === 'approved' ? 'selected' : '' }}>Approved</option>
+                                                        @php($selectedStatus = old('publish_status', $shop->publish_status ?? 'draft'))
+                            <option value="draft" @selected($selectedStatus === 'draft')>Draft</option>
+                            <option value="published" @selected($selectedStatus === 'published')>Published</option>
+                            <option value="archived" @selected($selectedStatus === 'archived')>Archived</option>
+                            @if ($selectedStatus === 'approved')
+                                <option value="approved" selected>Approved (legacy)</option>
+                            @endif
+
                         </select>
-                    </div>
+                                        </div>
+                    <p class="help-text" style="margin-top:10px;">Only <strong>Published</strong> records appear in public discovery. Draft and Archived records remain admin-only. Existing Approved records are kept visible for compatibility.</p>
                     <div class="actions" style="margin-top:16px;">
+
                         <button class="button primary" type="submit">{{ $mode === 'create' ? 'Save shop' : 'Update shop' }}</button>
                     </div>
                 </section>
@@ -277,7 +292,10 @@
         const crawlButton = document.getElementById('crawl-button');
         const crawlStatus = document.getElementById('crawl-status');
         const crawlUrlInput = document.getElementById('crawl_url');
-        const uploadInput = document.getElementById('images');
+                const uploadInput = document.getElementById('images');
+        const imageUploadError = document.getElementById('image-upload-error');
+        const maxImageBytes = 1024 * 1024;
+
         const menuItemsContainer = document.getElementById('menu-items-container');
         const addMenuItemButton = document.getElementById('add-menu-item');
         const initialMenuItems = @json($shopFoodItems ?? [['name' => '', 'price' => '', 'desc' => '']]);
@@ -500,10 +518,20 @@
             }
         });
 
-        if (uploadInput) {
+                if (uploadInput) {
             uploadInput.addEventListener('change', () => {
                 const preview = document.getElementById('upload-preview');
                 preview.innerHTML = '';
+                imageUploadError.style.display = 'none';
+                const oversizedFiles = Array.from(uploadInput.files).filter((file) => file.size > maxImageBytes);
+
+                if (oversizedFiles.length) {
+                    imageUploadError.textContent = 'The image must not be larger than 1 MB.';
+                    imageUploadError.style.display = 'block';
+                    uploadInput.value = '';
+                    return;
+                }
+
                 Array.from(uploadInput.files).forEach((file) => {
                     const wrapper = document.createElement('div');
                     wrapper.style.border = '1px solid var(--line)';
@@ -523,5 +551,19 @@
                 });
             });
         }
+
+        document.querySelectorAll('input[name^="replace_images["]').forEach((input) => {
+            input.addEventListener('change', () => {
+                const file = input.files?.[0];
+                if (file && file.size > maxImageBytes) {
+                    imageUploadError.textContent = 'The image must not be larger than 1 MB.';
+                    imageUploadError.style.display = 'block';
+                    input.value = '';
+                } else {
+                    imageUploadError.style.display = 'none';
+                }
+            });
+        });
+
     </script>
 @endsection

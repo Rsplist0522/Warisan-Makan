@@ -218,7 +218,7 @@ class CommunityContributionTest extends TestCase
         $this->assertDatabaseHas('heritage_shops', [
             'source_contribution_id' => $contribution->id,
             'primary_food_category' => 'Hainanese cuisine',
-            'publish_status' => 'approved',
+            'publish_status' => HeritageShop::STATUS_PUBLISHED,
             'shop_name' => 'Capital Café',
         ]);
         $this->assertSame(1, HeritageShop::count());
@@ -236,7 +236,7 @@ class CommunityContributionTest extends TestCase
         $shop = HeritageShop::create([
             'shop_name' => 'Capital Cafe',
             'contact_number' => '+60 3-1111 1111',
-            'publish_status' => 'approved',
+            'publish_status' => HeritageShop::STATUS_PUBLISHED,
         ]);
 
         $this->actingAs($user)
@@ -293,7 +293,7 @@ class CommunityContributionTest extends TestCase
         $admin = User::factory()->create(['role' => 'admin']);
         $shop = HeritageShop::create([
             'shop_name' => 'Capital Cafe',
-            'publish_status' => 'approved',
+            'publish_status' => HeritageShop::STATUS_PUBLISHED,
         ]);
         $correctionRequest = CorrectionRequest::create([
             'user_id' => $user->id,

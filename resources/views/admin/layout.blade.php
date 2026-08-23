@@ -172,6 +172,9 @@
 
             <p class="nav-label">Modules</p>
             <nav class="nav" aria-label="Administrator modules">
+                <a class="nav-item {{ request()->routeIs('admin.heritage-shops.*') ? 'active' : '' }}" href="{{ route('admin.heritage-shops.index') }}">
+                    <span>Heritage Shops</span>
+                </a>
                 <a class="nav-item {{ $communityContributionActive ? 'active' : '' }}" href="{{ route('admin.community-contributions.submissions') }}">
                     <span>Community Contribution</span>
                 </a>

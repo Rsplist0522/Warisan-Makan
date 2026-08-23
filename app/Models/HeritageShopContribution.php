@@ -226,7 +226,7 @@ class HeritageShopContribution extends Model
             'postal_code' => $this->postal_code,
             'latitude' => $this->latitude,
             'longitude' => $this->longitude,
-            'publish_status' => 'approved',
+            'publish_status' => HeritageShop::STATUS_PUBLISHED,
         ]);
 
         $existingKeys = $shop->media()->pluck('r2_object_key')->all();

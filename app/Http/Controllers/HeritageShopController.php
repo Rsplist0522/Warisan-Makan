@@ -4,18 +4,37 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\HeritageShop;
+use App\Models\ShopImage;
+use App\Services\HeritageShopImageService;
+use App\Services\ShopCrawlerService;
+use App\Models\User;
+
 
 class HeritageShopController extends Controller
 {
+    public function __construct(
+        private HeritageShopImageService $imageService,
+        private ShopCrawlerService $crawlerService,
+    )
+    {
+    }
+
     // Satisfies FR 2.1.1 and FR 2.1.2
     public function index(Request $request)
     {
-        $search = trim((string) $request->input('search', ''));
-        $category = trim((string) $request->input('category', ''));
+        $search = mb_substr(trim((string) $request->input('search', '')), 0, 100);
+        $category = mb_substr(trim((string) $request->input('category', '')), 0, 100);
+        $state = mb_substr(trim((string) $request->input('state', '')), 0, 100);
+        $requestedSort = (string) $request->input('sort', 'name_asc');
+        $sort = in_array($requestedSort, ['name_asc', 'name_desc', 'newest', 'oldest'], true)
+            ? $requestedSort
+            : 'name_asc';
 
-        $shops = HeritageShop::query()
-            ->when($search, function ($query) use ($search) {
-                $query->where(function ($query) use ($search) {
+        $shopsQuery = HeritageShop::query()
+            ->published()
+            ->with('images')
+            ->when($search, function ($query) use ($search): void {
+                $query->where(function ($query) use ($search): void {
                     $query->where('shop_name', 'like', "%{$search}%")
                         ->orWhere('address', 'like', "%{$search}%")
                         ->orWhere('city', 'like', "%{$search}%")
@@ -24,13 +43,34 @@ class HeritageShopController extends Controller
                         ->orWhere('primary_food_category', 'like', "%{$search}%");
                 });
             })
-            ->when($category, function ($query) use ($category) {
-                $query->where('primary_food_category', 'like', "%{$category}%");
-            })
-            ->orderBy('shop_name')
-            ->get();
+            ->when($category, fn ($query) => $query->where('primary_food_category', 'like', "%{$category}%"))
+            ->when($state, fn ($query) => $query->where('state', 'like', "%{$state}%"));
 
-        return view('heritage.shops', compact('shops', 'search', 'category'));
+        match ($sort) {
+            'name_desc' => $shopsQuery->orderByDesc('shop_name'),
+            'newest' => $shopsQuery->latest(),
+            'oldest' => $shopsQuery->oldest(),
+            default => $shopsQuery->orderBy('shop_name'),
+        };
+
+        $shops = $shopsQuery->paginate(12)->withQueryString();
+        $categories = HeritageShop::query()
+            ->published()
+            ->whereNotNull('primary_food_category')
+            ->where('primary_food_category', '!=', '')
+            ->distinct()
+            ->orderBy('primary_food_category')
+            ->pluck('primary_food_category');
+        $states = HeritageShop::query()
+            ->published()
+            ->whereNotNull('state')
+            ->where('state', '!=', '')
+            ->distinct()
+            ->orderBy('state')
+            ->pluck('state');
+
+        return view('heritage.shops', compact('shops', 'search', 'category', 'state', 'sort', 'categories', 'states'))
+            ->with('imageService', $this->imageService);
     }
 
     private function allShops(): array
@@ -113,17 +153,68 @@ class HeritageShopController extends Controller
         }));
     }
 
+    public function image(HeritageShop $heritageShop, ShopImage $image)
+    {
+        abort_unless($image->shop_id === $heritageShop->id, 404);
+        $currentUser = request()->user();
+        
+        abort_unless(
+            $heritageShop->isPubliclyVisible()
+            || ($currentUser instanceof User && $currentUser->isAdmin()),
+            404,
+        );
+        return $this->imageService->response($image);
+    }
+
     // Show a single shop detail by DB id
     public function show(string $id)
     {
-        $shop = HeritageShop::findOrFail($id);
-        $shops = HeritageShop::orderBy('shop_name')->get();
+        $shop = HeritageShop::query()->published()->with('images')->findOrFail($id);
+        $shops = HeritageShop::query()->published()->with('images')->orderBy('shop_name')->get();
+        $menuItems = $this->resolveMenuItems($shop);
 
-        // Provide listing-related variables so the merged view's search form
-        // and listing logic do not trigger undefined variable errors.
         $search = '';
         $category = '';
+        $state = '';
+        $sort = 'name_asc';
+        $categories = collect();
+        $states = collect();
 
-        return view('heritage.shops', compact('shop', 'shops', 'search', 'category'));
+        return view('heritage.shops', compact('shop', 'shops', 'search', 'category', 'state', 'sort', 'categories', 'states', 'menuItems'))
+            ->with('imageService', $this->imageService);
+    }
+
+    private function resolveMenuItems(HeritageShop $shop): array
+    {
+        if (! empty($shop->food_items) && is_array($shop->food_items)) {
+            return $shop->food_items;
+        }
+
+        if ($shop->source_url) {
+            try {
+                $crawled = $this->crawlerService->crawl($shop->source_url);
+                $crawledMenu = $crawled['food_items'] ?? $crawled['menu'] ?? [];
+
+                if (is_array($crawledMenu) && count($crawledMenu)) {
+                    return collect($crawledMenu)
+                        ->filter(fn ($item) => is_array($item) && filled($item['name'] ?? null))
+                        ->map(fn (array $item): array => [
+                            'name' => (string) ($item['name'] ?? 'House special'),
+                            'price' => $item['price'] ?? null,
+                            'desc' => $item['desc'] ?? $item['description'] ?? null,
+                        ])
+                        ->values()
+                        ->all();
+                }
+            } catch (\Throwable) {
+                // A temporary source failure must not prevent the saved
+                // Heritage profile from remaining viewable.
+            }
+        }
+
+        // Do not invent dishes from a category or shop name. The public page
+        // should display menu highlights only when the data was stored or
+        // returned by the configured source crawler.
+        return [];
     }
 }

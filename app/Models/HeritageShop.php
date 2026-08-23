@@ -9,6 +9,39 @@ class HeritageShop extends Model
 {
     use HasFactory;
 
+    public const STATUS_DRAFT = 'draft';
+
+    public const STATUS_PUBLISHED = 'published';
+
+    public const STATUS_ARCHIVED = 'archived';
+
+    /**
+     * Legacy records may still contain `approved`, but it is not a public
+     * publication state. The status migration converts those records.
+     */
+    public const STATUS_APPROVED_LEGACY = 'approved';
+
+    public const PUBLIC_STATUSES = [
+        self::STATUS_PUBLISHED,
+    ];
+
+    public const ADMIN_STATUSES = [
+        self::STATUS_DRAFT,
+        self::STATUS_PUBLISHED,
+        self::STATUS_ARCHIVED,
+        self::STATUS_APPROVED_LEGACY,
+    ];
+
+    public function scopePublished($query)
+    {
+        return $query->whereIn($this->getTable().'.publish_status', self::PUBLIC_STATUSES);
+    }
+
+    public function isPubliclyVisible(): bool
+    {
+        return in_array($this->publish_status, self::PUBLIC_STATUSES, true);
+    }
+
     protected $table = 'heritage_shops';
 
     protected $fillable = [
@@ -54,6 +87,11 @@ class HeritageShop extends Model
     public function correctionRequests()
     {
         return $this->hasMany(CorrectionRequest::class);
+    }
+
+    public function images()
+    {
+        return $this->hasMany(ShopImage::class, 'shop_id')->orderBy('is_primary', 'desc')->orderBy('id');
     }
 
     public function media()

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminCommunityContributionController;
+use App\Http\Controllers\Admin\HeritageShopAdminController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BlindBoxController;
 use App\Http\Controllers\CommunityContributionController;
@@ -89,6 +90,15 @@ Route::prefix('admin')
     ->group(function () {
         Route::view('/', 'admin.dashboard')->name('dashboard');
 
+        Route::prefix('heritage-shops')->name('heritage-shops.')->group(function () {
+            Route::get('/', [HeritageShopAdminController::class, 'index'])->name('index');
+            Route::get('/create', [HeritageShopAdminController::class, 'create'])->name('create');
+            Route::post('/', [HeritageShopAdminController::class, 'store'])->name('store');
+            Route::get('/{heritageShop}/edit', [HeritageShopAdminController::class, 'edit'])->name('edit');
+            Route::put('/{heritageShop}', [HeritageShopAdminController::class, 'update'])->name('update');
+            Route::post('/crawl', [HeritageShopAdminController::class, 'crawl'])->name('crawl');
+        });
+
         Route::get('/modules/{moduleSlug}', function (string $moduleSlug) {
             $modules = [
                 'heritage-registry' => [
@@ -167,4 +177,8 @@ Route::get('/start_trail', function () {
 });
 
 Route::get('/heritage-shops', [HeritageShopController::class, 'index'])->name('heritage-shops.index');
+Route::get('/heritage-shops/{heritageShop}/images/{image}', [HeritageShopController::class, 'image'])
+    ->whereNumber('heritageShop')
+    ->whereNumber('image')
+    ->name('heritage-shops.images.show');
 Route::get('/heritage-shops/{id}', [HeritageShopController::class, 'show'])->whereNumber('id')->name('heritage-shops.show');

@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use App\Models\HeritageShopContribution;
 use Illuminate\Bus\Queueable;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 class ContributionStatusChanged extends Notification
@@ -14,7 +15,60 @@ class ContributionStatusChanged extends Notification
 
     public function via(object $notifiable): array
     {
+        if (in_array($this->contribution->status, [
+            HeritageShopContribution::STATUS_APPROVED,
+            HeritageShopContribution::STATUS_REJECTED,
+            HeritageShopContribution::STATUS_REVISION_REQUIRED,
+        ], true)) {
+            return ['database', 'mail'];
+        }
+
         return ['database'];
+    }
+
+    public function toMail(object $notifiable): MailMessage
+    {
+        $status = $this->contribution->status;
+        $title = $this->contributionTitle();
+        $mail = (new MailMessage)
+            ->subject($this->mailSubject())
+            ->greeting('Hello '.$notifiable->name.',');
+
+        if ($status === HeritageShopContribution::STATUS_APPROVED) {
+            return $mail
+                ->line('Your contribution "'.$title.'" has been approved.')
+                ->line('You can now view the approved contribution in WarisanMakan.')
+                ->action('View Contribution', $this->contributionUrl())
+                ->line('Thank you for contributing to WarisanMakan.');
+        }
+
+        if ($status === HeritageShopContribution::STATUS_REJECTED) {
+            $mail
+                ->line('Your contribution "'.$title.'" was not approved.');
+
+            if (filled($this->feedback())) {
+                $mail
+                    ->line('Reason / Administrator Feedback:')
+                    ->line($this->feedback());
+            }
+
+            return $mail
+                ->action('View Contribution', $this->contributionUrl())
+                ->line('Thank you for contributing to WarisanMakan.');
+        }
+
+        $mail
+            ->line('Your contribution "'.$title.'" requires revision before it can be approved.');
+
+        if (filled($this->feedback())) {
+            $mail
+                ->line('Administrator Feedback:')
+                ->line($this->feedback());
+        }
+
+        return $mail
+            ->action('Review and Resubmit Contribution', $this->revisionUrl())
+            ->line('Please update the requested information and resubmit your contribution.');
     }
 
     public function toArray(object $notifiable): array
@@ -38,7 +92,40 @@ class ContributionStatusChanged extends Notification
             },
             'contribution_id' => $this->contribution->id,
             'contribution_public_id' => $this->contribution->public_id,
+            'url' => $this->contributionUrl(),
             'status' => $status,
         ];
+    }
+
+    private function mailSubject(): string
+    {
+        return match ($this->contribution->status) {
+            HeritageShopContribution::STATUS_APPROVED => 'WarisanMakan Contribution Approved',
+            HeritageShopContribution::STATUS_REJECTED => 'WarisanMakan Contribution Update - Rejected',
+            HeritageShopContribution::STATUS_REVISION_REQUIRED => 'WarisanMakan Contribution Requires Revision',
+            default => 'WarisanMakan Contribution Update',
+        };
+    }
+
+    private function contributionTitle(): string
+    {
+        return $this->contribution->contribution_title
+            ?: $this->contribution->shop_name
+            ?: 'heritage shop contribution';
+    }
+
+    private function contributionUrl(): string
+    {
+        return route('community-contribution.contributions.show', $this->contribution);
+    }
+
+    private function revisionUrl(): string
+    {
+        return route('community-contribution.edit', $this->contribution);
+    }
+
+    private function feedback(): ?string
+    {
+        return $this->contribution->admin_feedback ?: $this->contribution->rejection_reason;
     }
 }

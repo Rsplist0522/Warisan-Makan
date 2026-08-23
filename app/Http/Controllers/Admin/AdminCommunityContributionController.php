@@ -12,8 +12,10 @@ use App\Notifications\CorrectionRequestStatusChanged;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Throwable;
 
 class AdminCommunityContributionController extends Controller
 {
@@ -209,14 +211,14 @@ class AdminCommunityContributionController extends Controller
         });
 
         if ($validated['moderation_action'] === 'delete') {
-            $contribution->user?->notify(new ContributionStatusChanged($contribution));
+            $this->notifyContributorOfStatusChange($contribution);
 
             return redirect()->route('admin.community-contributions.submissions')
                 ->with('status', 'Submission deleted and retained in the database for audit.');
         }
 
         $contribution->refresh();
-        $contribution->user?->notify(new ContributionStatusChanged($contribution));
+        $this->notifyContributorOfStatusChange($contribution);
 
         return redirect()->route('admin.community-contributions.show', $contribution)
             ->with('status', 'Moderation outcome saved and the contributor was notified.');
@@ -424,6 +426,24 @@ class AdminCommunityContributionController extends Controller
             'comment' => $comment,
             'metadata' => $metadata,
         ]);
+    }
+
+    private function notifyContributorOfStatusChange(HeritageShopContribution $contribution): void
+    {
+        if ($contribution->user === null) {
+            return;
+        }
+
+        try {
+            $contribution->user->notify(new ContributionStatusChanged($contribution));
+        } catch (Throwable $exception) {
+            Log::warning('Contribution status notification could not be delivered.', [
+                'contribution_public_id' => $contribution->public_id,
+                'contribution_status' => $contribution->status,
+                'notifiable_user_id' => $contribution->user_id,
+                'exception' => $exception::class,
+            ]);
+        }
     }
 
     private function recordCorrectionActivity(

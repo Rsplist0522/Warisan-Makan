@@ -6,9 +6,11 @@ use App\Models\CorrectionRequest;
 use App\Models\HeritageShop;
 use App\Models\HeritageShopContribution;
 use App\Models\User;
+use App\Notifications\ContributionStatusChanged;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -569,6 +571,197 @@ class CommunityContributionTest extends TestCase
         $this->assertDatabaseHas('notifications', [
             'notifiable_id' => $user->id,
         ]);
+    }
+
+    public function test_approval_notification_uses_database_and_mail_channels(): void
+    {
+        Notification::fake();
+
+        $user = User::factory()->create();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $contribution = HeritageShopContribution::create([
+            ...$this->modelContributionData(),
+            'user_id' => $user->id,
+            'status' => HeritageShopContribution::STATUS_UNDER_REVIEW,
+            'reviewed_by_user_id' => $admin->id,
+            'review_started_at' => now(),
+            'submitted_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.community-contributions.moderate', $contribution), [
+                'moderation_action' => 'approve',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $contribution->refresh();
+        $this->assertSame(HeritageShopContribution::STATUS_APPROVED, $contribution->status);
+
+        Notification::assertSentTo($user, ContributionStatusChanged::class, function (ContributionStatusChanged $notification, array $channels) use ($user, $contribution): bool {
+            $mail = $notification->toMail($user);
+
+            return $channels === ['database', 'mail']
+                && $mail->subject === 'WarisanMakan Contribution Approved'
+                && $mail->actionText === 'View Contribution'
+                && parse_url($mail->actionUrl, PHP_URL_PATH) === "/community-contributions/{$contribution->public_id}";
+        });
+    }
+
+    public function test_rejection_notification_uses_mail_and_includes_feedback(): void
+    {
+        Notification::fake();
+
+        $user = User::factory()->create();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $contribution = HeritageShopContribution::create([
+            ...$this->modelContributionData(),
+            'user_id' => $user->id,
+            'status' => HeritageShopContribution::STATUS_UNDER_REVIEW,
+            'reviewed_by_user_id' => $admin->id,
+            'review_started_at' => now(),
+            'submitted_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.community-contributions.moderate', $contribution), [
+                'moderation_action' => 'reject',
+                'feedback' => 'The submitted details duplicate another shop record.',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $contribution->refresh();
+        $this->assertSame(HeritageShopContribution::STATUS_REJECTED, $contribution->status);
+
+        Notification::assertSentTo($user, ContributionStatusChanged::class, function (ContributionStatusChanged $notification, array $channels) use ($user): bool {
+            $mail = $notification->toMail($user);
+
+            return $channels === ['database', 'mail']
+                && $mail->subject === 'WarisanMakan Contribution Update - Rejected'
+                && in_array('Reason / Administrator Feedback:', $mail->introLines, true)
+                && in_array('The submitted details duplicate another shop record.', $mail->introLines, true);
+        });
+    }
+
+    public function test_revision_required_notification_uses_mail_and_links_to_public_edit_route(): void
+    {
+        Notification::fake();
+
+        $user = User::factory()->create();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $contribution = HeritageShopContribution::create([
+            ...$this->modelContributionData(),
+            'user_id' => $user->id,
+            'status' => HeritageShopContribution::STATUS_PENDING_REVIEW,
+            'submitted_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.community-contributions.start-review', $contribution))
+            ->assertSessionHasNoErrors();
+
+        $this->actingAs($admin)
+            ->post(route('admin.community-contributions.moderate', $contribution), [
+                'moderation_action' => 'request_revision',
+                'feedback' => 'Please add clearer information about the founder.',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $contribution->refresh();
+        $this->assertSame(HeritageShopContribution::STATUS_REVISION_REQUIRED, $contribution->status);
+
+        Notification::assertSentTo($user, ContributionStatusChanged::class, function (ContributionStatusChanged $notification, array $channels) use ($user, $contribution): bool {
+            $mail = $notification->toMail($user);
+
+            return $channels === ['database', 'mail']
+                && $mail->subject === 'WarisanMakan Contribution Requires Revision'
+                && $mail->actionText === 'Review and Resubmit Contribution'
+                && parse_url($mail->actionUrl, PHP_URL_PATH) === "/community-contributions/{$contribution->public_id}/edit"
+                && in_array('Administrator Feedback:', $mail->introLines, true)
+                && in_array('Please add clearer information about the founder.', $mail->introLines, true);
+        });
+    }
+
+    public function test_moderation_notification_is_sent_only_to_contribution_owner(): void
+    {
+        Notification::fake();
+
+        $owner = User::factory()->create();
+        $otherUser = User::factory()->create();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $contribution = HeritageShopContribution::create([
+            ...$this->modelContributionData(),
+            'user_id' => $owner->id,
+            'status' => HeritageShopContribution::STATUS_UNDER_REVIEW,
+            'reviewed_by_user_id' => $admin->id,
+            'review_started_at' => now(),
+            'submitted_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.community-contributions.moderate', $contribution), [
+                'moderation_action' => 'approve',
+            ])
+            ->assertSessionHasNoErrors();
+
+        Notification::assertSentTo($owner, ContributionStatusChanged::class);
+        Notification::assertNotSentTo($otherUser, ContributionStatusChanged::class);
+    }
+
+    public function test_moderation_email_url_uses_public_id_not_numeric_id(): void
+    {
+        Notification::fake();
+
+        $user = User::factory()->create();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $contribution = HeritageShopContribution::create([
+            ...$this->modelContributionData(),
+            'user_id' => $user->id,
+            'status' => HeritageShopContribution::STATUS_UNDER_REVIEW,
+            'reviewed_by_user_id' => $admin->id,
+            'review_started_at' => now(),
+            'submitted_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.community-contributions.moderate', $contribution), [
+                'moderation_action' => 'approve',
+            ])
+            ->assertSessionHasNoErrors();
+
+        Notification::assertSentTo($user, ContributionStatusChanged::class, function (ContributionStatusChanged $notification) use ($user, $contribution): bool {
+            $path = parse_url($notification->toMail($user)->actionUrl, PHP_URL_PATH);
+
+            return $path === "/community-contributions/{$contribution->public_id}"
+                && $path !== "/community-contributions/{$contribution->id}";
+        });
+    }
+
+    public function test_one_moderation_action_creates_one_notification_without_duplicates(): void
+    {
+        Notification::fake();
+
+        $user = User::factory()->create();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $contribution = HeritageShopContribution::create([
+            ...$this->modelContributionData(),
+            'user_id' => $user->id,
+            'status' => HeritageShopContribution::STATUS_UNDER_REVIEW,
+            'reviewed_by_user_id' => $admin->id,
+            'review_started_at' => now(),
+            'submitted_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.community-contributions.moderate', $contribution), [
+                'moderation_action' => 'approve',
+            ])
+            ->assertSessionHasNoErrors();
+
+        Notification::assertSentToTimes($user, ContributionStatusChanged::class, 1);
+        Notification::assertSentTo($user, ContributionStatusChanged::class, function (ContributionStatusChanged $notification, array $channels): bool {
+            return array_count_values($channels)['database'] === 1
+                && array_count_values($channels)['mail'] === 1;
+        });
     }
 
     public function test_opening_revision_notification_marks_it_read_and_removes_it_from_unread_list(): void

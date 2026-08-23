@@ -10,6 +10,7 @@ export default defineConfig({
                 'resources/css/app.css',
                 'resources/js/app.js',
                 'resources/js/food-trails.js',
+                'resources/js/profile.js',
             ],
             refresh: true,
             fonts: [

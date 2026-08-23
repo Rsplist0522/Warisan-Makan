@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AdminCommunityContributionController;
 use App\Http\Controllers\Admin\BlindBoxController as AdminBlindBoxController;
 use App\Http\Controllers\Admin\HeritageShopAdminController;
+use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BlindBoxController;
 use App\Http\Controllers\ChatController;
@@ -24,7 +25,7 @@ Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->n
 
 Route::view('/landing', 'landing')->name('landing');
 
-Route::middleware('auth')->group(function (): void {
+Route::middleware(['auth', 'active_user'])->group(function (): void {
     Route::middleware('regular_user')->group(function (): void {
         Route::get('/', function () {
             return view('user-home', ['userName' => auth()->user()->name]);
@@ -91,6 +92,9 @@ Route::prefix('admin')
     ->middleware('admin')
     ->group(function () {
         Route::view('/', 'admin.dashboard')->name('dashboard');
+
+        Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');
+        Route::post('/users/{user}/toggle-status', [UserManagementController::class, 'toggleStatus'])->name('users.toggle-status');
 
         Route::prefix('heritage-shops')->name('heritage-shops.')->group(function () {
             Route::get('/', [HeritageShopAdminController::class, 'index'])->name('index');

@@ -169,7 +169,7 @@
     </section>
 
     <section id="discover" class="section">
-        <h2>Heritage Shop Discovery</h2>
+        <h2>{{ __('Heritage Shop Discovery') }}</h2>
         <p class="lead">All heritage shops currently in the Blind Box pool — the surprise pick comes from this list.</p>
 
         @if(empty($shops))

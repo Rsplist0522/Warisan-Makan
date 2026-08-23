@@ -1,9 +1,11 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminCommunityContributionController;
+use App\Http\Controllers\Admin\BlindBoxController as AdminBlindBoxController;
 use App\Http\Controllers\Admin\HeritageShopAdminController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BlindBoxController;
+use App\Http\Controllers\ChatController;
 use App\Http\Controllers\CommunityContributionController;
 use App\Http\Controllers\CorrectionRequestController;
 use App\Http\Controllers\HeritageShopController;
@@ -99,6 +101,14 @@ Route::prefix('admin')
             Route::post('/crawl', [HeritageShopAdminController::class, 'crawl'])->name('crawl');
         });
 
+        Route::prefix('blind-box-items')->name('blind-box-items.')->group(function (): void {
+            Route::get('/', [AdminBlindBoxController::class, 'index'])->name('index');
+            Route::get('/{shop}/edit', [AdminBlindBoxController::class, 'edit'])->whereNumber('shop')->name('edit');
+            Route::post('/available/{sourceShop}', [AdminBlindBoxController::class, 'add'])->whereNumber('sourceShop')->name('add');
+            Route::put('/{shop}', [AdminBlindBoxController::class, 'update'])->whereNumber('shop')->name('update');
+            Route::patch('/{shop}/toggle', [AdminBlindBoxController::class, 'toggle'])->whereNumber('shop')->name('toggle');
+        });
+
         Route::get('/modules/{moduleSlug}', function (string $moduleSlug) {
             $modules = [
                 'heritage-registry' => [
@@ -138,7 +148,7 @@ Route::prefix('admin')
 // Blind Box routes
 Route::get('/blind-box', [BlindBoxController::class, 'index'])->middleware('auth')->name('blind-box.index');
 Route::post('/blind-box/draw', [BlindBoxController::class, 'draw'])->name('blind-box.draw');
-Route::get('/blind-box/history', [BlindBoxController::class, 'history'])->name('blind-box.history');
+Route::post('/chat', [ChatController::class, 'respond'])->name('chat.respond');
 
 // Module-only shop check-in page (public for development)
 Route::get('/foodPassport/shop/{id}', [PassportController::class, 'showShop'])

@@ -153,6 +153,7 @@
 <body>
     @php
         $communityContributionActive = request()->routeIs('admin.community-contributions.*');
+        $blindBoxActive = request()->routeIs('admin.blind-box-items.*');
         $placeholderModules = [
             'heritage-registry' => 'Heritage Registry',
             'food-map' => 'Food Map',
@@ -186,6 +187,10 @@
                         <a class="nav-item {{ request()->routeIs('admin.community-contributions.history') ? 'active' : '' }}" href="{{ route('admin.community-contributions.history') }}">Admin History</a>
                     </div>
                 @endif
+
+                <a class="nav-item {{ $blindBoxActive ? 'active' : '' }}" href="{{ route('admin.blind-box-items.index') }}">
+                    <span>Blind Box</span>
+                </a>
 
                 @foreach ($placeholderModules as $slug => $name)
                     <a class="nav-item placeholder {{ request()->routeIs('admin.modules.show') && request()->route('moduleSlug') === $slug ? 'active' : '' }}" href="{{ route('admin.modules.show', $slug) }}">

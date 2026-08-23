@@ -12,11 +12,27 @@ class BlindBoxLandingPageTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->actingAs(User::factory()->create(['role' => 'user']));
+    }
+
     public function test_blind_box_page_is_publicly_accessible(): void
     {
         $response = $this->get('/blind-box');
 
-        $response->assertRedirect('/login');
+        $response->assertStatus(200);
+        $response->assertSee('Blind Box Recommendation');
+    }
+
+    public function test_period_banner_is_displayed(): void
+    {
+        $response = $this->get('/blind-box');
+
+        $response->assertStatus(200);
+        $response->assertSee('One surprise draw per period');
     }
 
     public function test_draw_endpoint_returns_a_surprise_shop(): void
@@ -26,7 +42,11 @@ class BlindBoxLandingPageTest extends TestCase
         $response->assertStatus(200);
         $response->assertJsonStructure([
             'shop' => ['name', 'description', 'category', 'state', 'year', 'image'],
+            'period',
         ]);
+
+        $category = $response->json('shop.category');
+        $this->assertContains($category, ['Main Dishes', 'Desserts', 'Drinks']);
     }
 
     public function test_second_draw_in_same_period_is_limited(): void
@@ -37,12 +57,22 @@ class BlindBoxLandingPageTest extends TestCase
             ->assertJsonStructure(['error']);
     }
 
-    public function test_history_page_is_accessible(): void
+    public function test_state_filter_narrows_the_shop_list(): void
     {
-        $response = $this->get('/blind-box/history');
+        $response = $this->get('/blind-box?state=Penang');
 
         $response->assertStatus(200);
-        $response->assertSee('Blind Box History');
+        $response->assertSee('Nasi Lemak Seri Warisan');
+        $response->assertDontSee('Kampung Kuih Mak Cik');
+    }
+
+    public function test_category_filter_narrows_the_shop_list(): void
+    {
+        $response = $this->get('/blind-box?category=Desserts');
+
+        $response->assertStatus(200);
+        $response->assertSee('Kampung Kuih Mak Cik');
+        $response->assertDontSee('Nasi Lemak Seri Warisan');
     }
 
     public function test_food_passport_page_uses_brand_style_and_check_in_ui(): void

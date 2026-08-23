@@ -45,6 +45,7 @@ return [
     // The crawler uses Groq's OpenAI-compatible chat-completions API.  The
     // OPENAI_* fallbacks retain compatibility with existing deployments.
     'groq' => [
+        'key' => env('GROQ_API_KEY', env('OPENAI_API_KEY')),
         'api_key' => env('GROQ_API_KEY', env('OPENAI_API_KEY')),
         'model' => env('GROQ_MODEL', env('OPENAI_MODEL', 'llama-3.3-70b-versatile')),
         'enhancement_enabled' => env('AI_CRAWLER_ENHANCEMENT_ENABLED', true),

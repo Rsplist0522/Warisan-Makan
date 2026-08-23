@@ -9,7 +9,9 @@ use App\Models\User;
 use App\Models\UserBadge;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
 class PassportController extends Controller
@@ -24,6 +26,7 @@ class PassportController extends Controller
             'stats' => $passportData['stats'],
             'visitedLocations' => $passportData['visitedLocations'],
             'badges' => $passportData['badges'],
+            'leaderboard' => $passportData['leaderboard'],
         ]);
     }
 
@@ -32,7 +35,7 @@ class PassportController extends Controller
         $shops = $this->getActiveShops();
         $totalShops = count($shops);
 
-        $visitedLocations = [];
+        $visitedLocations = collect();
         $visitedCount = 0;
 
         if ($user) {
@@ -51,20 +54,39 @@ class PassportController extends Controller
             $visitedCount = count($uniqueByShop);
         }
 
-        foreach ($visitedLocations as $index => $stamp) {
-            $shop = $this->resolveShopFromId($stamp->shop_id, $shops);
-            $visitedLocations[$index] = [
-                'shop_id' => $stamp->shop_id,
-                'shop_name' => $shop['name'] ?? 'Heritage Shop',
-                'founder' => $shop['founder'] ?? 'Heritage owner',
-                'stamped_at' => $stamp->stamp_datetime ? $stamp->stamp_datetime->format('d M Y, H:i') : null,
-                'image' => $shop['image'] ?? asset('images/shop1.jpg'),
-            ];
-        }
+        $visitedShopIds = collect($visitedLocations)->pluck('shop_id')->all();
+        $visitedShopLookup = HeritageShop::query()
+            ->whereIn('id', $visitedShopIds)
+            ->with(['images' => function ($query) {
+                $query->where('is_primary', true)->orderBy('id');
+            }])
+            ->get()
+            ->keyBy('id');
 
-        if (empty($visitedLocations) && $user) {
-            $visitedLocations = [];
-        }
+        $visitedLocations = collect($visitedLocations)->map(function ($stamp) use ($visitedShopLookup) {
+            $shop = $visitedShopLookup->get($stamp->shop_id);
+
+            if (! $shop) {
+                return null;
+            }
+
+            return [
+                'shop_id' => $stamp->shop_id,
+                'shop_name' => $shop->shop_name,
+                'founder' => $shop->founder_name ?? 'Local founder',
+                'stamped_at' => $stamp->stamp_datetime ? $stamp->stamp_datetime->format('d M Y, H:i') : null,
+                'image' => $this->shopImage($shop),
+            ];
+        })->filter()->values();
+
+        $currentPage = LengthAwarePaginator::resolveCurrentPage('visited_page');
+        $visitedLocations = new LengthAwarePaginator(
+            $visitedLocations->forPage($currentPage, 5)->values(),
+            $visitedLocations->count(),
+            5,
+            $currentPage,
+            ['path' => LengthAwarePaginator::resolveCurrentPath(), 'pageName' => 'visited_page']
+        );
 
         $completion = $totalShops > 0 ? (int) round(($visitedCount / $totalShops) * 100) : 0;
         $badgeList = $this->badgeSummary($user);
@@ -77,12 +99,91 @@ class PassportController extends Controller
             'stamps' => $user ? PassportStamp::where('user_id', $user->id)->count() : 0,
         ];
 
-        return [
+                    return [
             'shops' => $shops,
             'stats' => $stats,
             'visitedLocations' => $visitedLocations,
             'badges' => $badgeList,
+            'leaderboard' => $this->buildLeaderboard(),
         ];
+    }
+
+    private function buildLeaderboard(): LengthAwarePaginator
+    {
+        $currentPage = LengthAwarePaginator::resolveCurrentPage('leaderboard_page');
+        $emptyLeaderboard = collect();
+
+        if (! Schema::hasTable('users') || ! Schema::hasTable('passport_stamps')) {
+            return new LengthAwarePaginator(
+                $emptyLeaderboard,
+                0,
+                5,
+                $currentPage,
+                ['path' => LengthAwarePaginator::resolveCurrentPath(), 'pageName' => 'leaderboard_page']
+            );
+        }
+
+        $userTable = (new User())->getTable();
+        $stampTable = (new PassportStamp())->getTable();
+
+        $rows = User::query()
+            ->select(["{$userTable}.id", "{$userTable}.name"])
+            ->selectSub(
+                PassportStamp::query()
+                    ->selectRaw('COUNT(*)')
+                    ->whereColumn("{$stampTable}.user_id", "{$userTable}.id"),
+                'check_ins'
+            )
+            ->selectSub(
+                PassportStamp::query()
+                    ->selectRaw('MAX(stamp_datetime)')
+                    ->whereColumn("{$stampTable}.user_id", "{$userTable}.id"),
+                'last_check_in_at'
+            )
+            ->whereExists(function ($subquery) use ($userTable, $stampTable) {
+                $subquery->selectRaw('1')
+                    ->from($stampTable)
+                    ->whereColumn("{$stampTable}.user_id", "{$userTable}.id");
+            })
+            ->get()
+            ->map(function ($row) {
+                $leaderboardUser = User::find((int) $row->id);
+                $row->badges_received = $leaderboardUser
+                    ? $this->earnedBadgeCountForUser($leaderboardUser)
+                    : 0;
+                $row->check_ins = (int) $row->check_ins;
+                $row->last_check_in_label = $row->last_check_in_at
+                    ? Carbon::parse($row->last_check_in_at)->format('d M Y, H:i')
+                    : 'No check-in yet';
+
+                return $row;
+            })
+            ->sort(function ($first, $second) {
+                if ($first->badges_received !== $second->badges_received) {
+                    return $second->badges_received <=> $first->badges_received;
+                }
+
+                if ($first->check_ins !== $second->check_ins) {
+                    return $second->check_ins <=> $first->check_ins;
+                }
+
+                return strcmp((string) $second->last_check_in_at, (string) $first->last_check_in_at);
+            })
+            ->take(10)
+            ->values()
+            ->map(function ($row, $index) {
+                $row->rank = $index + 1;
+
+                return $row;
+            });
+
+        return new LengthAwarePaginator(
+            $rows->forPage($currentPage, 5)->values(),
+            $rows->count(),
+            5,
+            $currentPage,
+            ['path' => LengthAwarePaginator::resolveCurrentPath(), 'pageName' => 'leaderboard_page']
+        );
     }
 
     private function getActiveShops(): array
@@ -91,76 +192,41 @@ class PassportController extends Controller
             $shops = HeritageShop::query()
                 ->when(true, function ($query) {
                     return $query->where(function ($inner) {
-                        $inner->where('publish_status', 'published')
+                        $inner->whereIn('publish_status', ['approved', 'published', 'Published'])
                             ->orWhere('publish_status', 'Published')
                             ->orWhereNull('publish_status');
                     });
                 })
+                    ->whereNotNull('latitude')
+                        ->whereNotNull('longitude')
+                ->with(['images' => function ($query) {
+                    $query->where('is_primary', true)->orderBy('id');
+                }])
+                ->orderBy('shop_name')
                 ->get();
 
-            if ($shops->isNotEmpty()) {
-                return $shops->map(function ($shop) {
-                    return [
-                        'id' => (int) $shop->id,
-                        'name' => $shop->shop_name ?? 'Heritage Shop',
-                        'founder' => $shop->founder_name ?? 'Local founder',
-                        'lat' => (float) ($shop->latitude ?? 3.139),
-                        'lng' => (float) ($shop->longitude ?? 101.6869),
-                        'distance' => 'Nearby',
-                        'status' => 'Participating',
-                        'image' => $this->shopImageForId((int) $shop->id),
-                    ];
-                })->values()->all();
-            }
+            return $shops->map(function ($shop) {
+                return [
+                    'id' => (int) $shop->id,
+                    'name' => $shop->shop_name ?? 'Heritage Shop',
+                    'founder' => $shop->founder_name ?? 'Local founder',
+                    'lat' => $shop->latitude,
+                    'lng' => $shop->longitude,
+                    'distance' => 'Nearby',
+                    'status' => 'Participating',
+                    'image' => $this->shopImage($shop),
+                ];
+            })->values()->all();
         }
 
-        return [
-            [
-                'id' => 1,
-                'name' => 'Kedai Kopi Haji',
-                'founder' => 'Haji Osman (1965)',
-                'lat' => 3.1390,
-                'lng' => 101.6869,
-                'distance' => '0.8 km away',
-                'status' => 'Open today',
-                'image' => asset('images/shop1.jpg'),
-            ],
-            [
-                'id' => 2,
-                'name' => 'Mee Udang Tok',
-                'founder' => 'Aunty Siti (1978)',
-                'lat' => 3.1420,
-                'lng' => 101.6950,
-                'distance' => '1.5 km away',
-                'status' => 'Popular this week',
-                'image' => asset('images/shop2.jpg'),
-            ],
-        ];
+        return [];
     }
 
-    private function resolveShopFromId($shopId, array $shops): array
+    private function shopImage(HeritageShop $shop): ?string
     {
-        foreach ($shops as $shop) {
-            if ((int) $shop['id'] === (int) $shopId) {
-                return $shop;
-            }
-        }
+        $path = optional($shop->images->first())->path;
 
-        return [
-            'name' => 'Heritage Shop',
-            'founder' => 'Local founder',
-            'image' => asset('images/shop1.jpg'),
-        ];
-    }
-
-    private function shopImageForId(int $shopId): string
-    {
-        $images = [
-            1 => asset('images/shop1.jpg'),
-            2 => asset('images/shop2.jpg'),
-        ];
-
-        return $images[$shopId] ?? asset('images/shop1.jpg');
+        return $path ? (str_starts_with($path, '/') || str_starts_with($path, 'http') ? $path : asset('storage/' . ltrim($path, '/'))) : null;
     }
 
     private function badgeSummary(?User $user): array
@@ -176,30 +242,37 @@ class PassportController extends Controller
             [
                 'id' => 2,
                 'name' => 'Trail Explorer',
-                'description' => 'Check in to three heritage shops',
+                'description' => 'Check in to eight heritage shops',
                 'icon' => '▣',
-                'threshold' => 3,
+                'threshold' => 8,
             ],
             [
                 'id' => 3,
                 'name' => 'Kopitiam Collector',
-                'description' => 'Unlock five heritage stops',
+                'description' => 'Unlock fifthteen heritage stops',
                 'icon' => '★',
-                'threshold' => 5,
+                'threshold' => 15,
             ],
             [
                 'id' => 4,
                 'name' => 'Night Market Hunter',
-                'description' => 'Visit seven iconic food spots',
+                'description' => 'Visit twenty five iconic food spots',
                 'icon' => '✧',
-                'threshold' => 7,
+                'threshold' => 25,
             ],
             [
                 'id' => 5,
                 'name' => 'Heritage Legend',
-                'description' => 'Complete ten memorable heritage visits',
+                'description' => 'Complete forty memorable heritage visits',
                 'icon' => '◎',
-                'threshold' => 10,
+                'threshold' => 40,
+            ],
+            [
+                'id' => 6,
+                'name' => 'Heritage Ambassador',
+                'description' => 'Complete fifty heritage visits and help keep local food stories alive',
+                'icon' => '♛',
+                'threshold' => 50,
             ],
         ];
 
@@ -249,9 +322,9 @@ class PassportController extends Controller
         $visitedCount = $user ? PassportStamp::where('user_id', $user->id)->distinct('shop_id')->count('shop_id') : 0;
         $awardedBadgeIds = $user ? UserBadge::where('user_id', $user->id)->pluck('badge_id')->all() : [];
 
-        return $records->map(function ($badge) use ($visitedCount, $awardedBadgeIds) {
-            $earned = in_array((int) $badge->badge_id, $awardedBadgeIds, true);
+        $badgeList = $records->map(function ($badge) use ($visitedCount, $awardedBadgeIds) {
             $eligible = $visitedCount >= (int) $badge->criteria_value;
+            $earned = $eligible || in_array((int) $badge->badge_id, $awardedBadgeIds, true);
 
             return [
                 'id' => (int) $badge->badge_id,
@@ -264,6 +337,35 @@ class PassportController extends Controller
                 'progress' => min($visitedCount, (int) $badge->criteria_value) . '/' . (int) $badge->criteria_value,
             ];
         })->values()->all();
+
+        $hasHeritageAmbassador = collect($badgeList)->contains(
+            fn ($badge) => $badge['id'] === 6 || $badge['name'] === 'Heritage Ambassador'
+        );
+
+        if (! $hasHeritageAmbassador) {
+            $ambassador = $fallback[5];
+            $earned = $visitedCount >= (int) $ambassador['threshold'];
+            $badgeList[] = [
+                'id' => (int) $ambassador['id'],
+                'name' => $ambassador['name'],
+                'description' => $ambassador['description'],
+                'icon' => $ambassador['icon'],
+                'threshold' => (int) $ambassador['threshold'],
+                'earned' => $earned,
+                'eligible' => $earned,
+                'progress' => min($visitedCount, (int) $ambassador['threshold']) . '/' . (int) $ambassador['threshold'],
+            ];
+        }
+
+        return $badgeList;
+    }
+
+    private function earnedBadgeCountForUser(User $user): int
+    {
+        return count(array_filter(
+            $this->badgeSummary($user),
+            fn ($badge) => $badge['earned']
+        ));
     }
 
     private function awardBadgesForUser(int $userId): array
@@ -310,162 +412,31 @@ class PassportController extends Controller
         return $awarded;
     }
 
-    /**
-     * Show a module-only shop check-in page. Uses local dummy data until
-     * the Heritage Shop module is available.
-     */
     public function showShop($id)
     {
-        $shops = [
-            1 => [
-                'id' => 1,
-                'name' => 'Kedai Kopi Haji',
-                'founder' => 'Haji Osman (1965)',
-                'lat' => 3.1390,
-                'lng' => 101.6869,
-                'participating' => true,
-                'published' => true,
-                'image' => '/images/shop1.jpg'
-            ],
-            2 => [
-                'id' => 2,
-                'name' => 'Mee Udang Tok',
-                'founder' => 'Aunty Siti (1978)',
-                'lat' => 3.1420,
-                'lng' => 101.6950,
-                'participating' => true,
-                'published' => true,
-                'image' => '/images/shop2.jpg'
-            ],
+        $heritageShop = HeritageShop::query()
+            ->whereKey($id)
+            ->where(function ($query) {
+                $query->whereIn('publish_status', ['approved', 'published', 'Published'])
+                    ->orWhereNull('publish_status');
+            })
+            ->with(['images' => function ($query) {
+                $query->where('is_primary', true)->orderBy('id');
+            }])
+            ->firstOrFail();
+
+        $shop = (object) [
+            'id' => $heritageShop->id,
+            'name' => $heritageShop->shop_name,
+            'founder' => $heritageShop->founder_name,
+            'lat' => $heritageShop->latitude,
+            'lng' => $heritageShop->longitude,
+            'participating' => true,
+            'published' => true,
+            'image' => $this->shopImage($heritageShop),
         ];
 
-        if (! array_key_exists($id, $shops)) {
-            abort(404);
-        }
-
-        $shop = (object) $shops[$id];
-
         return view('foodPassport.shop', ['shop' => $shop]);
-    }
-
-    /**
-     * Public test check-in that simulates a logged-in user for local development.
-     */
-    public function checkInTest(Request $request)
-    {
-        $user = $request->user();
-
-        if (! $user && $request->filled('user_id')) {
-            $user = User::find($request->input('user_id'));
-        }
-
-        if (! $user) {
-            $user = User::firstOrCreate(
-                ['email' => 'dev+test@local'],
-                ['name' => 'Dev Tester']
-            );
-        }
-
-        $data = $request->validate([
-            'shop_id' => 'required|integer',
-            'shop_latitude' => 'required|numeric',
-            'shop_longitude' => 'required|numeric',
-            'user_latitude' => 'required|numeric',
-            'user_longitude' => 'required|numeric',
-            'radius_meters' => 'sometimes|numeric',
-            'is_participating' => 'sometimes|boolean',
-            'is_published' => 'sometimes|boolean',
-            'demo_mode' => 'sometimes|boolean',
-            'allow_repeat' => 'sometimes|boolean',
-        ]);
-
-        if (array_key_exists('is_participating', $data) && ! $data['is_participating']) {
-            return response()->json(['error' => 'Shop is not participating'], 422);
-        }
-
-        if (array_key_exists('is_published', $data) && ! $data['is_published']) {
-            return response()->json(['error' => 'Shop is not published'], 422);
-        }
-
-        $shopId = $data['shop_id'];
-        $shopLat = (float) $data['shop_latitude'];
-        $shopLng = (float) $data['shop_longitude'];
-        $userLat = (float) $data['user_latitude'];
-        $userLng = (float) $data['user_longitude'];
-        $radius = isset($data['radius_meters']) ? (float) $data['radius_meters'] : 100.0; // default 100m
-
-        $demoMode = (bool) ($data['demo_mode'] ?? false);
-        $allowRepeat = (bool) ($data['allow_repeat'] ?? false);
-
-        if (! $demoMode && ! $allowRepeat) {
-            $already = PassportStamp::where('user_id', $user->id)
-                ->where('shop_id', $shopId)
-                ->exists();
-
-            if ($already) {
-                return response()->json(['error' => 'User already checked in at this shop'], 409);
-            }
-        }
-
-        $distance = $this->haversineDistance($userLat, $userLng, $shopLat, $shopLng);
-
-        if ($distance > $radius) {
-            return response()->json(['error' => 'User is outside permitted radius', 'distance_m' => $distance], 422);
-        }
-
-        DB::beginTransaction();
-
-        try {
-            $stamp = new PassportStamp();
-            $stamp->user_id = $user->id;
-            $stamp->shop_id = $shopId;
-            $stamp->stamp_datetime = Carbon::now();
-            $stamp->gps_latitude = $userLat;
-            $stamp->gps_longitude = $userLng;
-            $stamp->save();
-
-            $awarded = $this->awardBadgesForUser((int) $user->id);
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'stamp_id' => $stamp->stamp_id,
-                'distance_m' => $distance,
-                'awarded_badges' => $awarded,
-                'demo_mode' => $demoMode,
-                'user_id' => $user->id,
-            ], 201);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json(['error' => 'Server error', 'message' => $e->getMessage()], 500);
-        }
-    }
-
-    public function resetDemoData(Request $request)
-    {
-        $user = $request->user();
-
-        if (! $user && $request->filled('user_id')) {
-            $user = User::find($request->input('user_id'));
-        }
-
-        if (! $user) {
-            $user = User::firstOrCreate(
-                ['email' => 'dev+test@local'],
-                ['name' => 'Dev Tester']
-            );
-        }
-
-        PassportStamp::where('user_id', $user->id)->delete();
-        UserBadge::where('user_id', $user->id)->delete();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Passport demo data reset for this user.',
-            'user_id' => $user->id,
-        ]);
     }
 
     public function checkIn(Request $request)
@@ -473,51 +444,65 @@ class PassportController extends Controller
         $user = $request->user();
 
         if (! $user) {
-            return response()->json(['error' => 'Unauthenticated'], 401);
+            return response()->json([
+                'success' => false,
+                'message' => 'Please sign in before checking in to your heritage passport.',
+            ], 401);
         }
 
         $data = $request->validate([
             'shop_id' => 'required|integer',
-            'shop_latitude' => 'required|numeric',
-            'shop_longitude' => 'required|numeric',
             'user_latitude' => 'required|numeric',
             'user_longitude' => 'required|numeric',
-            'radius_meters' => 'sometimes|numeric',
-            'is_participating' => 'sometimes|boolean',
-            'is_published' => 'sometimes|boolean',
+            'demo_mode' => 'sometimes|boolean',
         ]);
 
-        // Basic server-side participation/published checks when front-end supplies flags
-        if (array_key_exists('is_participating', $data) && ! $data['is_participating']) {
-            return response()->json(['error' => 'Shop is not participating'], 422);
+        $shop = HeritageShop::query()
+            ->whereKey($data['shop_id'])
+            ->where(function ($query) {
+                $query->whereIn('publish_status', ['approved', 'published', 'Published'])
+                    ->orWhereNull('publish_status');
+            })
+            ->first();
+
+        if (! $shop || $shop->latitude === null || $shop->longitude === null) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This shop is not available for check-in right now.',
+            ], 422);
         }
 
-        if (array_key_exists('is_published', $data) && ! $data['is_published']) {
-            return response()->json(['error' => 'Shop is not published'], 422);
-        }
-
-        $shopId = $data['shop_id'];
-        $shopLat = (float) $data['shop_latitude'];
-        $shopLng = (float) $data['shop_longitude'];
+        $shopId = (int) $shop->id;
+        $shopLat = (float) $shop->latitude;
+        $shopLng = (float) $shop->longitude;
         $userLat = (float) $data['user_latitude'];
         $userLng = (float) $data['user_longitude'];
-        $radius = isset($data['radius_meters']) ? (float) $data['radius_meters'] : 100.0; // default 100m
+        $radius = 100.0;
+        $demoMode = (bool) ($data['demo_mode'] ?? false);
 
         // Prevent duplicate check-ins
         $already = PassportStamp::where('user_id', $user->id)
-                    ->where('shop_id', $shopId)
-                    ->exists();
+            ->where('shop_id', $shopId)
+            ->exists();
 
         if ($already) {
-            return response()->json(['error' => 'User already checked in at this shop'], 409);
+            return response()->json([
+                'success' => false,
+                'message' => 'You have already checked in at this shop. Reset the demo to start again.',
+            ], 409);
         }
 
         // Calculate distance (meters)
         $distance = $this->haversineDistance($userLat, $userLng, $shopLat, $shopLng);
 
         if ($distance > $radius) {
-            return response()->json(['error' => 'User is outside permitted radius', 'distance_m' => $distance], 422);
+            return response()->json([
+                'success' => false,
+                'message' => 'You need to be within ' . round($radius) . ' metres of this shop to check in.',
+            ], 422);
         }
+
+        $badgesBeforeCheckIn = $this->badgeSummary($user);
 
         DB::beginTransaction();
 
@@ -530,21 +515,68 @@ class PassportController extends Controller
             $stamp->gps_longitude = $userLng;
             $stamp->save();
 
-            $awarded = $this->awardBadgesForUser((int) $user->id);
+            $this->awardBadgesForUser((int) $user->id);
 
             DB::commit();
 
+            $badgesBeforeLookup = collect($badgesBeforeCheckIn)->keyBy('id');
+            $newlyUnlockedBadges = collect($this->badgeSummary($user))
+                ->filter(function ($badge) use ($badgesBeforeLookup) {
+                    $previousBadge = $badgesBeforeLookup->get($badge['id']);
+
+                    return $badge['earned'] && ! ($previousBadge['earned'] ?? false);
+                })
+                ->values();
+
+            $message = $demoMode
+                ? 'Demo check-in successful! Your passport has been updated.'
+                : 'Check-in successful! Your passport has been updated.';
+
+            if ($newlyUnlockedBadges->isNotEmpty()) {
+                $message .= ' Congratulations! You unlocked ' . $newlyUnlockedBadges->pluck('name')->join(', ') . '.';
+            }
+
             return response()->json([
                 'success' => true,
-                'stamp_id' => $stamp->stamp_id,
-                'distance_m' => $distance,
-                'awarded_badges' => $awarded,
+                'message' => $message,
+                'demo_mode' => $demoMode,
+                'newly_unlocked_badges' => $newlyUnlockedBadges->all(),
+                'badge_count' => $this->earnedBadgeCountForUser($user),
             ], 201);
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['error' => 'Server error', 'message' => $e->getMessage()], 500);
+            Log::error('Passport check-in failed.', [
+                'user_id' => $user->id,
+                'shop_id' => $shopId,
+                'exception' => $e,
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'We could not complete your check-in right now. Please try again.',
+            ], 500);
         }
+    }
+
+    public function resetDemoData(Request $request)
+    {
+        $user = $request->user();
+
+        if (! $user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please sign in before resetting the demo passport.',
+            ], 401);
+        }
+
+        PassportStamp::where('user_id', $user->id)->delete();
+        UserBadge::where('user_id', $user->id)->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Demo passport reset. You can start the demonstration again.',
+        ]);
     }
 
     /**

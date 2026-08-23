@@ -46,6 +46,8 @@ class StoreHeritageShopRequest extends FormRequest
             'city' => ['nullable', 'string', 'max:100'],
             'state' => ['nullable', 'string', 'max:100'],
             'postal_code' => ['nullable', 'string', 'max:20'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'source_url' => ['nullable', 'url', 'max:500'],
             'publish_status' => ['nullable', Rule::in(HeritageShop::ADMIN_STATUSES)],
 

@@ -124,6 +124,14 @@
                             <input id="postal_code" name="postal_code" type="text" value="{{ $shopPostal }}">
                         </div>
                         <div class="field">
+                            <label for="latitude">Latitude</label>
+                            <input id="latitude" name="latitude" type="number" step="any" min="-90" max="90" value="{{ old('latitude', $shop->latitude ?? '') }}">
+                        </div>
+                        <div class="field">
+                            <label for="longitude">Longitude</label>
+                            <input id="longitude" name="longitude" type="number" step="any" min="-180" max="180" value="{{ old('longitude', $shop->longitude ?? '') }}">
+                        </div>
+                        <div class="field">
                             <label for="founder_name">Founder</label>
                             <input id="founder_name" name="founder_name" type="text" value="{{ old('founder_name', $shop->founder_name ?? '') }}">
                         </div>

@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ isset($shop) ? $shop->shop_name.' - Heritage Shop' : 'Heritage Shops' }} - Warisan Makan</title>
     @fonts
     <style>
@@ -71,7 +72,9 @@
         .topbar p { margin: 3px 0 0; color: var(--wm-muted); font-size: .82rem; }
         .topbar-link { display: inline-flex; align-items: center; min-height: 38px; padding: 0 14px; border: 1px solid var(--wm-line); border-radius: 999px; color: var(--wm-accent); background: #fff; font-size: .82rem; font-weight: 800; text-decoration: none; }
         .content { width: min(1180px, 100%); margin: 0 auto; padding: 34px; }
-        .page-header { display: flex; justify-content: space-between; align-items: end; gap: 20px; margin-bottom: 24px; padding: 30px; border-radius: 14px; color: #fffaf4; background: linear-gradient(125deg, #96352c, #54201b); box-shadow: 0 20px 50px rgba(91, 29, 29, .18); }
+        .page-header { position: relative; overflow: hidden; display: flex; justify-content: space-between; align-items: end; gap: 20px; margin-bottom: 24px; padding: 30px; border-radius: 18px; color: #fffaf4; background: linear-gradient(125deg, #96352c, #54201b); box-shadow: 0 20px 50px rgba(91, 29, 29, .18); }
+        .page-header::after { content: ''; position: absolute; width: 240px; height: 240px; right: -68px; top: -100px; border: 1px solid rgba(255,255,255,.16); border-radius: 50%; box-shadow: 0 0 0 22px rgba(255,255,255,.04), 0 0 0 46px rgba(255,255,255,.025); pointer-events: none; }
+        .page-header > * { position: relative; z-index: 1; }
         .eyebrow { margin: 0 0 8px; color: #e7bf74; font-size: .72rem; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
         .page-header h1 { margin: 0; font-size: clamp(2rem, 5vw, 3.2rem); line-height: 1; }
         .page-header p:last-child { max-width: 720px; margin: 11px 0 0; color: rgba(255, 250, 244, .74); line-height: 1.6; }
@@ -89,7 +92,8 @@
         .filter-actions { display: flex; gap: 8px; align-items: end; }
         .result-summary { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 0 0 14px; color: var(--wm-muted); font-size: .86rem; }
         .shop-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
-        .shop-card { overflow: hidden; display: flex; flex-direction: column; min-width: 0; }
+        .shop-card { overflow: hidden; display: flex; flex-direction: column; min-width: 0; transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
+        .shop-card:hover { transform: translateY(-4px); border-color: rgba(163, 58, 45, .25); box-shadow: 0 20px 42px rgba(77, 48, 34, .12); }
         .image-frame { position: relative; min-height: 190px; background: #f1e5d7; }
         .image-frame img { display: block; width: 100%; height: 190px; object-fit: cover; }
         .image-placeholder { min-height: 190px; display: grid; place-items: center; padding: 20px; color: var(--wm-muted); background: linear-gradient(135deg, #efe0cf, #fff8ef); font-size: .82rem; font-weight: 800; text-align: center; }
@@ -129,6 +133,34 @@
         .menu-card h3 { margin: 0 0 5px; color: var(--wm-accent); font-size: 1rem; }
         .menu-card p { margin: 0; color: var(--wm-muted); font-size: .88rem; line-height: 1.5; }
         .menu-price { display: inline-flex; margin-bottom: 9px; padding: 5px 9px; border-radius: 999px; color: #3f2a0d; background: rgba(200, 148, 50, .2); font-size: .74rem; font-weight: 850; }
+                .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+        .ai-guide-panel { position: relative; overflow: hidden; margin-top: 22px;
+ padding: 22px; border: 1px solid rgba(163, 58, 45, .2); border-radius: 16px; color: var(--wm-ink); background: linear-gradient(135deg, rgba(255, 247, 236, .98), rgba(255, 253, 249, .98)); box-shadow: 0 16px 38px rgba(91, 29, 29, .08); }
+        .ai-guide-panel::after { content: '✦'; position: absolute; right: 20px; top: 10px; color: rgba(200, 148, 50, .28); font-family: Georgia, serif; font-size: 5rem; line-height: 1; pointer-events: none; }
+        .ai-guide-head, .ai-guide-form, .ai-guide-answer { position: relative; z-index: 1; }
+        .ai-guide-head { display: flex; justify-content: space-between; gap: 18px; align-items: start; }
+        .ai-guide-kicker { display: inline-flex; align-items: center; gap: 7px; margin-bottom: 8px; color: var(--wm-accent); font-size: .7rem; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
+        .ai-guide-kicker::before { content: '✦'; color: var(--wm-gold); font-size: 1rem; }
+        .ai-guide-head h2 { margin: 0 0 7px; color: var(--wm-accent); font-family: Georgia, serif; font-size: 1.45rem; }
+        .ai-guide-head p { max-width: 640px; margin: 0; color: var(--wm-muted); line-height: 1.55; }
+        .ai-guide-badge { display: inline-flex; align-items: center; min-height: 30px; padding: 0 10px; border: 1px solid rgba(61, 111, 85, .2); border-radius: 999px; color: var(--wm-green); background: rgba(61, 111, 85, .08); font-size: .7rem; font-weight: 900; white-space: nowrap; }
+        .ai-guide-quick { display: flex; flex-wrap: wrap; gap: 8px; margin: 17px 0 13px; }
+        .ai-guide-chip { min-height: 34px; padding: 0 11px; border: 1px solid var(--wm-line); border-radius: 999px; color: var(--wm-accent); background: rgba(255,255,255,.8); font-size: .78rem; font-weight: 800; cursor: pointer; }
+        .ai-guide-chip:hover, .ai-guide-chip:focus-visible { border-color: rgba(163, 58, 45, .4); background: #fff; box-shadow: 0 0 0 4px rgba(163, 58, 45, .08); outline: none; }
+        .ai-guide-form { display: flex; gap: 10px; align-items: stretch; }
+        .ai-guide-form input { min-height: 46px; flex: 1; border: 1px solid var(--wm-line); border-radius: 11px; padding: 0 14px; color: var(--wm-ink); background: #fff; outline: none; }
+        .ai-guide-form input:focus { border-color: rgba(163, 58, 45, .45); box-shadow: 0 0 0 4px rgba(163, 58, 45, .1); }
+        .ai-guide-form button { min-height: 46px; padding: 0 17px; border: 0; border-radius: 11px; color: #3f2a0d; background: var(--wm-gold); font-weight: 900; cursor: pointer; }
+        .ai-guide-form button:disabled { opacity: .65; cursor: wait; }
+        .ai-guide-status { min-height: 20px; margin-top: 10px; color: var(--wm-muted); font-size: .8rem; }
+        .ai-guide-status.error { color: #a33a2d; }
+        .ai-guide-answer { display: none; margin-top: 14px; padding: 16px; border: 1px solid rgba(61, 111, 85, .18); border-radius: 12px; background: rgba(255,255,255,.76); }
+        .ai-guide-answer.visible { display: block; animation: guide-in .25s ease-out; }
+        .ai-guide-answer p { margin: 0; line-height: 1.6; }
+        .ai-guide-highlights { display: flex; flex-wrap: wrap; gap: 7px; margin: 12px 0 0; padding: 0; list-style: none; }
+        .ai-guide-highlights li { padding: 5px 9px; border-radius: 999px; color: var(--wm-green); background: rgba(61,111,85,.09); font-size: .74rem; font-weight: 800; }
+        .ai-guide-source { margin-top: 11px; color: var(--wm-muted); font-size: .72rem; }
+        @keyframes guide-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
         @media (max-width: 1080px) { .filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .filter-actions { grid-column: 1 / -1; } .shop-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
         @media (max-width: 850px) { .shell { grid-template-columns: 1fr; } .sidebar { position: static; height: auto; } .nav { grid-template-columns: repeat(2, minmax(0, 1fr)); } .sidebar-footer { margin-top: 24px; } .topbar, .content { padding-inline: 20px; } .detail-grid { grid-template-columns: 1fr; } }
         @media (max-width: 620px) { .nav, .filter-grid, .shop-grid { grid-template-columns: 1fr; } .topbar, .page-header, .detail-heading { display: grid; } .content { padding: 22px 16px 34px; } .page-header, .detail-panel { padding: 22px; } .header-pill { justify-self: start; } .filter-actions { grid-column: auto; flex-direction: column; align-items: stretch; } .filter-actions .button { width: 100%; } }
@@ -246,6 +278,33 @@
                                 </section>
                             </div>
                         </div>
+
+                        <section class="ai-guide-panel" aria-labelledby="ai-guide-title" data-ai-guide>
+                            <div class="ai-guide-head">
+                                <div>
+                                    <span class="ai-guide-kicker">Heritage AI guide</span>
+                                    <h2 id="ai-guide-title">Ask the story behind this place</h2>
+                                    <p>Ask about the recorded history, location, operating information, or menu highlights. Answers are grounded in this verified profile.</p>
+                                </div>
+                                <span class="ai-guide-badge">Grounded answers</span>
+                            </div>
+                            <div class="ai-guide-quick" aria-label="Suggested Heritage AI questions">
+                                <button class="ai-guide-chip" type="button" data-ai-question="What is special about this shop's heritage story?">Why is it special?</button>
+                                <button class="ai-guide-chip" type="button" data-ai-question="What menu highlights are recorded for this shop?">What should I notice?</button>
+                                <button class="ai-guide-chip" type="button" data-ai-question="Where is this shop and what operating information is recorded?">Plan a visit</button>
+                            </div>
+                            <form class="ai-guide-form" data-ai-form>
+                                <label class="sr-only" for="ai-guide-question">Ask the Heritage AI guide</label>
+                                <input id="ai-guide-question" name="question" maxlength="500" placeholder="Ask a question about this heritage shop…" autocomplete="off" required>
+                                <button type="submit">Ask the guide</button>
+                            </form>
+                            <div class="ai-guide-status" data-ai-status aria-live="polite"></div>
+                            <div class="ai-guide-answer" data-ai-answer aria-live="polite">
+                                <p data-ai-answer-text></p>
+                                <ul class="ai-guide-highlights" data-ai-highlights></ul>
+                                <p class="ai-guide-source" data-ai-source></p>
+                            </div>
+                        </section>
 
                         @if (!empty($menuItems) && is_array($menuItems))
                             <section class="info-section" style="margin-top:22px;">
@@ -371,5 +430,67 @@
             </main>
         </section>
     </div>
+    @if (isset($shop))
+        <script>
+            (() => {
+                const root = document.querySelector('[data-ai-guide]');
+                if (!root) return;
+                const form = root.querySelector('[data-ai-form]');
+                const input = root.querySelector('#ai-guide-question');
+                const submit = form.querySelector('button[type="submit"]');
+                const status = root.querySelector('[data-ai-status]');
+                const answer = root.querySelector('[data-ai-answer]');
+                const answerText = root.querySelector('[data-ai-answer-text]');
+                const highlights = root.querySelector('[data-ai-highlights]');
+                const source = root.querySelector('[data-ai-source]');
+                const endpoint = @json(route('heritage-shops.ai-guide', ['heritageShop' => $shop->id]));
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+                async function askGuide(question) {
+                    const trimmed = String(question || '').trim();
+                    if (!trimmed) return;
+                    submit.disabled = true;
+                    status.className = 'ai-guide-status';
+                    status.textContent = 'The guide is checking the verified profile…';
+                    answer.classList.remove('visible');
+                    try {
+                        const response = await fetch(endpoint, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+                            body: JSON.stringify({ question: trimmed }),
+                        });
+                        const payload = await response.json();
+                        if (!response.ok) throw new Error(payload.message || 'The guide is unavailable right now.');
+                        answerText.textContent = payload.answer || 'No grounded answer was available.';
+                        highlights.replaceChildren();
+                        (Array.isArray(payload.highlights) ? payload.highlights : []).forEach((item) => {
+                            const li = document.createElement('li');
+                            li.textContent = item;
+                            highlights.appendChild(li);
+                        });
+                        source.textContent = payload.source_note || 'Grounded in the verified profile shown on this page.';
+                        answer.classList.add('visible');
+                        status.textContent = payload.status === 'fallback' ? 'AI is taking a break; the saved verified facts are still available.' : 'Answer grounded in this HeritageShop profile.';
+                    } catch (error) {
+                        status.className = 'ai-guide-status error';
+                        status.textContent = error.message || 'The guide is unavailable right now.';
+                    } finally {
+                        submit.disabled = false;
+                    }
+                }
+
+                form.addEventListener('submit', (event) => {
+                    event.preventDefault();
+                    askGuide(input.value);
+                });
+                root.querySelectorAll('[data-ai-question]').forEach((button) => {
+                    button.addEventListener('click', () => {
+                        input.value = button.dataset.aiQuestion || '';
+                        askGuide(input.value);
+                    });
+                });
+            })();
+        </script>
+    @endif
 </body>
 </html>

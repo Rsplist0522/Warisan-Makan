@@ -189,4 +189,8 @@ Route::get('/heritage-shops/{heritageShop}/images/{image}', [HeritageShopControl
     ->whereNumber('heritageShop')
     ->whereNumber('image')
     ->name('heritage-shops.images.show');
+Route::post('/heritage-shops/{heritageShop}/ai-guide', [HeritageShopController::class, 'aiGuide'])
+    ->middleware('throttle:30,1')
+    ->whereNumber('heritageShop')
+    ->name('heritage-shops.ai-guide');
 Route::get('/heritage-shops/{id}', [HeritageShopController::class, 'show'])->whereNumber('id')->name('heritage-shops.show');

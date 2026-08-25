@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\HeritageShop;
 use App\Models\ShopImage;
+use App\Services\HeritageShopAiGuideService;
 use App\Services\HeritageShopImageService;
 use App\Services\ShopCrawlerService;
 use App\Models\User;
@@ -151,6 +152,17 @@ class HeritageShopController extends Controller
 
             return $matchesSearch && $matchesCategory;
         }));
+    }
+
+    public function aiGuide(Request $request, HeritageShop $heritageShop, HeritageShopAiGuideService $aiGuide): \Illuminate\Http\JsonResponse
+    {
+        abort_unless($heritageShop->isPubliclyVisible(), 404);
+
+        $validated = $request->validate([
+            'question' => ['required', 'string', 'max:500'],
+        ]);
+
+        return response()->json($aiGuide->answer($heritageShop, $validated['question']));
     }
 
     public function image(HeritageShop $heritageShop, ShopImage $image)

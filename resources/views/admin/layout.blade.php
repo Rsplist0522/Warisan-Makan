@@ -154,6 +154,7 @@
     @php
         $communityContributionActive = request()->routeIs('admin.community-contributions.*');
         $blindBoxActive = request()->routeIs('admin.blind-box-items.*');
+        $badgesActive = request()->routeIs('admin.badges.*');
         $placeholderModules = [
             'heritage-registry' => 'Heritage Registry',
             'food-map' => 'Food Map',
@@ -174,6 +175,9 @@
             <nav class="nav" aria-label="Administrator modules">
                 <a class="nav-item {{ request()->routeIs('admin.users.*') ? 'active' : '' }}" href="{{ route('admin.users.index') }}">
                     <span>Users &amp; Roles</span>
+                </a>
+                <a class="nav-item {{ $badgesActive ? 'active' : '' }}" href="{{ route('admin.badges.index') }}">
+                    <span>Achievement Badges</span>
                 </a>
                 <a class="nav-item {{ request()->routeIs('admin.heritage-shops.*') ? 'active' : '' }}" href="{{ route('admin.heritage-shops.index') }}">
                     <span>Heritage Shops</span>

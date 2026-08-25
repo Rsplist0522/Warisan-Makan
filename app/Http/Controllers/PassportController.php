@@ -7,6 +7,7 @@ use App\Models\HeritageShop;
 use App\Models\PassportStamp;
 use App\Models\User;
 use App\Models\UserBadge;
+use App\Services\HeritageShopImageService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -16,6 +17,10 @@ use Illuminate\Support\Facades\Schema;
 
 class PassportController extends Controller
 {
+    public function __construct(private HeritageShopImageService $imageService)
+    {
+    }
+
     public function index(Request $request)
     {
         $user = $request->user();
@@ -23,6 +28,7 @@ class PassportController extends Controller
 
         return view('foodPassport.index', [
             'shops' => $passportData['shops'],
+            'availableShops' => $passportData['availableShops'],
             'stats' => $passportData['stats'],
             'visitedLocations' => $passportData['visitedLocations'],
             'badges' => $passportData['badges'],
@@ -34,6 +40,16 @@ class PassportController extends Controller
     {
         $shops = $this->getActiveShops();
         $totalShops = count($shops);
+
+        $shopsPage = LengthAwarePaginator::resolveCurrentPage('shops_page');
+        $availableShops = new LengthAwarePaginator(
+            collect($shops)->forPage($shopsPage, 3)->values()->all(),
+            $totalShops,
+            3,
+            $shopsPage,
+            ['path' => LengthAwarePaginator::resolveCurrentPath(), 'pageName' => 'shops_page']
+        );
+        $shopsForView = $availableShops->items();
 
         $visitedLocations = collect();
         $visitedCount = 0;
@@ -57,27 +73,21 @@ class PassportController extends Controller
         $visitedShopIds = collect($visitedLocations)->pluck('shop_id')->all();
         $visitedShopLookup = HeritageShop::query()
             ->whereIn('id', $visitedShopIds)
-            ->with(['images' => function ($query) {
-                $query->where('is_primary', true)->orderBy('id');
-            }])
+            ->with('images')
             ->get()
             ->keyBy('id');
 
         $visitedLocations = collect($visitedLocations)->map(function ($stamp) use ($visitedShopLookup) {
             $shop = $visitedShopLookup->get($stamp->shop_id);
 
-            if (! $shop) {
-                return null;
-            }
-
             return [
                 'shop_id' => $stamp->shop_id,
-                'shop_name' => $shop->shop_name,
-                'founder' => $shop->founder_name ?? 'Local founder',
+                'shop_name' => $shop ? $shop->shop_name : 'Heritage shop #' . $stamp->shop_id,
+                'founder' => $shop ? ($shop->founder_name ?? 'Local founder') : 'Shop details unavailable',
                 'stamped_at' => $stamp->stamp_datetime ? $stamp->stamp_datetime->format('d M Y, H:i') : null,
-                'image' => $this->shopImage($shop),
+                'image' => $shop ? $this->shopImage($shop) : null,
             ];
-        })->filter()->values();
+        })->values();
 
         $currentPage = LengthAwarePaginator::resolveCurrentPage('visited_page');
         $visitedLocations = new LengthAwarePaginator(
@@ -100,7 +110,8 @@ class PassportController extends Controller
         ];
 
                     return [
-            'shops' => $shops,
+            'shops' => $shopsForView,
+            'availableShops' => $availableShops,
             'stats' => $stats,
             'visitedLocations' => $visitedLocations,
             'badges' => $badgeList,
@@ -199,9 +210,7 @@ class PassportController extends Controller
                 })
                     ->whereNotNull('latitude')
                         ->whereNotNull('longitude')
-                ->with(['images' => function ($query) {
-                    $query->where('is_primary', true)->orderBy('id');
-                }])
+                ->with('images')
                 ->orderBy('shop_name')
                 ->get();
 
@@ -224,9 +233,9 @@ class PassportController extends Controller
 
     private function shopImage(HeritageShop $shop): ?string
     {
-        $path = optional($shop->images->first())->path;
+        $image = $shop->images->first();
 
-        return $path ? (str_starts_with($path, '/') || str_starts_with($path, 'http') ? $path : asset('storage/' . ltrim($path, '/'))) : null;
+        return $image ? $this->imageService->url($image) : null;
     }
 
     private function badgeSummary(?User $user): array
@@ -242,28 +251,28 @@ class PassportController extends Controller
             [
                 'id' => 2,
                 'name' => 'Trail Explorer',
-                'description' => 'Check in to eight heritage shops',
+                'description' => 'Check in to three heritage shops',
                 'icon' => '▣',
                 'threshold' => 8,
             ],
             [
                 'id' => 3,
                 'name' => 'Kopitiam Collector',
-                'description' => 'Unlock fifthteen heritage stops',
+                'description' => 'Unlock five heritage stops',
                 'icon' => '★',
                 'threshold' => 15,
             ],
             [
                 'id' => 4,
                 'name' => 'Night Market Hunter',
-                'description' => 'Visit twenty five iconic food spots',
+                'description' => 'Visit seven iconic food spots',
                 'icon' => '✧',
                 'threshold' => 25,
             ],
             [
                 'id' => 5,
                 'name' => 'Heritage Legend',
-                'description' => 'Complete forty memorable heritage visits',
+                'description' => 'Complete ten memorable heritage visits',
                 'icon' => '◎',
                 'threshold' => 40,
             ],

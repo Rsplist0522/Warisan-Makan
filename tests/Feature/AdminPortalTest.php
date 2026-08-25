@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Models\Badge;
+use App\Models\UserBadge;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
@@ -128,6 +130,75 @@ class AdminPortalTest extends TestCase
 
         $this->assertSame('active', $user->fresh()->status);
         $this->assertNull($user->fresh()->deactivated_at);
+    }
+
+    public function test_admin_can_create_edit_and_toggle_an_unawarded_badge(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)
+            ->post(route('admin.badges.store'), [
+                'badge_name' => 'First Story',
+                'description' => 'Visit one heritage shop',
+                'icon' => '★',
+                'criteria_type' => 'visits',
+                'criteria_value' => 1,
+                'points' => 10,
+                'is_active' => 1,
+            ])
+            ->assertRedirect();
+
+        $badge = Badge::where('badge_name', 'First Story')->firstOrFail();
+        $this->assertTrue((bool) $badge->is_active);
+
+        $this->actingAs($admin)
+            ->put(route('admin.badges.update', $badge), [
+                'badge_name' => 'First Heritage Story',
+                'description' => 'Visit one heritage shop',
+                'icon' => '✦',
+                'criteria_type' => 'visits',
+                'criteria_value' => 1,
+                'points' => 15,
+                'is_active' => 1,
+            ])
+            ->assertRedirect(route('admin.badges.edit', $badge));
+
+        $this->assertSame('First Heritage Story', $badge->fresh()->badge_name);
+
+        $this->actingAs($admin)
+            ->patch(route('admin.badges.toggle', $badge))
+            ->assertRedirect(route('admin.badges.index'))
+            ->assertSessionHas('status', 'Badge deactivated successfully.');
+
+        $this->assertFalse((bool) $badge->fresh()->is_active);
+
+        $this->actingAs($admin)
+            ->patch(route('admin.badges.toggle', $badge))
+            ->assertSessionHas('status', 'Badge activated successfully.');
+
+        $this->assertTrue((bool) $badge->fresh()->is_active);
+    }
+
+    public function test_admin_cannot_deactivate_an_awarded_badge(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $user = User::factory()->create(['role' => 'user']);
+        $badge = Badge::create([
+            'badge_name' => 'Awarded Badge',
+            'description' => 'Already earned',
+            'criteria_type' => 'visits',
+            'criteria_value' => 1,
+            'points' => 10,
+            'is_active' => true,
+        ]);
+        UserBadge::create(['user_id' => $user->id, 'badge_id' => $badge->badge_id, 'earned_at' => now()]);
+
+        $this->actingAs($admin)
+            ->patch(route('admin.badges.toggle', $badge))
+            ->assertRedirect(route('admin.badges.index'))
+            ->assertSessionHasErrors(['badge' => 'Deactivation failed. Badge has already been awarded to users']);
+
+        $this->assertTrue((bool) $badge->fresh()->is_active);
     }
 
     public function test_blocked_user_cannot_access_member_routes(): void

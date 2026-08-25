@@ -8,6 +8,7 @@ use App\Http\Requests\StoreHeritageShopRequest;
 use App\Models\HeritageShop;
 use App\Models\ShopImage;
 use App\Services\HeritageShopImageService;
+use App\Services\HeritageShopUrlGuard;
 use App\Services\ShopCrawlerService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -23,7 +24,10 @@ use RuntimeException;
 
 class HeritageShopAdminController extends Controller
 {
-    public function __construct(private HeritageShopImageService $imageService)
+    public function __construct(
+        private HeritageShopImageService $imageService,
+        private HeritageShopUrlGuard $urlGuard,
+    )
     {
     }
 
@@ -238,9 +242,9 @@ class HeritageShopAdminController extends Controller
             }
 
             if (
-                ! str_starts_with($path, HeritageShopImageService::DIRECTORY.'/crawler/')
+                ! str_starts_with($path, $this->imageService->directory().'/crawler/')
                 || str_contains($path, '..')
-                || ! Storage::disk(HeritageShopImageService::DISK)->exists($path)
+                || ! $this->imageService->exists($path)
             ) {
                 continue;
             }
@@ -298,8 +302,10 @@ class HeritageShopAdminController extends Controller
 
     private function persistCrawledImage(string $imageUrl): string
     {
-        if (! filter_var($imageUrl, FILTER_VALIDATE_URL)) {
-            throw new RuntimeException('The crawler returned an invalid image URL.');
+        try {
+            $this->urlGuard->assertAllowed($imageUrl);
+        } catch (RuntimeException $exception) {
+            throw new RuntimeException('The crawler returned an unsafe image URL.', 0, $exception);
         }
 
         $response = Http::timeout(20)->accept('image/*')->get($imageUrl);
@@ -307,7 +313,7 @@ class HeritageShopAdminController extends Controller
             throw new RuntimeException('The crawler image could not be downloaded.');
         }
 
-        $contentType = $response->header('Content-Type');
+        $contentType = strtolower(trim(explode(';', (string) $response->header('Content-Type'))[0]));
         $allowedTypes = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
         $extension = $allowedTypes[$contentType] ?? null;
 
@@ -315,8 +321,13 @@ class HeritageShopAdminController extends Controller
             throw new RuntimeException('Crawler image type is unsupported. Use JPG, PNG, or WebP.');
         }
 
+        $body = $response->body();
+        if ($body === '' || @getimagesizefromstring($body) === false) {
+            throw new RuntimeException('The crawler returned invalid image data.');
+        }
+
         $sizeInKb = $response->header('Content-Length');
-        $sizeBytes = is_numeric($sizeInKb) ? ((int) $sizeInKb) : strlen($response->body());
+        $sizeBytes = is_numeric($sizeInKb) ? ((int) $sizeInKb) : strlen($body);
         if ($sizeBytes > 5 * 1024 * 1024) {
             throw new RuntimeException('Crawler image exceeds the 5MB limit.');
         }
@@ -326,11 +337,17 @@ class HeritageShopAdminController extends Controller
             throw new RuntimeException('The crawler image temporary file could not be created.');
         }
 
-        file_put_contents($tempPath, $response->body());
-        $uploadedFile = new \Illuminate\Http\File($tempPath);
-        $relativePath = $this->imageService->store($uploadedFile, 'heritage-shops/crawler');
+        if (file_put_contents($tempPath, $body) === false) {
+            @unlink($tempPath);
+            throw new RuntimeException('The crawler image could not be written temporarily.');
+        }
 
-        @unlink($tempPath);
+        $uploadedFile = new \Illuminate\Http\File($tempPath);
+        try {
+            $relativePath = $this->imageService->store($uploadedFile, $this->imageService->directory().'/crawler');
+        } finally {
+            @unlink($tempPath);
+        }
 
         if ($relativePath === false || blank($relativePath)) {
             throw new RuntimeException('The crawler image could not be stored.');

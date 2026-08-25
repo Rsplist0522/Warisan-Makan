@@ -10,16 +10,42 @@ use RuntimeException;
 
 class HeritageShopImageService
 {
+    /**
+     * Retained for compatibility with older records and callers. New files use
+     * the configured HeritageShop disk returned by diskName().
+     */
     public const DISK = 'public';
 
     public const DIRECTORY = 'heritage-shops';
 
     /**
-     * Store a validated Heritage image on Laravel's public disk.
+     * Return the disk used for all newly uploaded HeritageShop images.
      */
-    public function store(File|UploadedFile $file, string $directory = self::DIRECTORY): string
+    public function diskName(): string
     {
-        $path = Storage::disk(self::DISK)->putFile($directory, $file);
+        $disk = config('heritage_shop.image_disk', 'r2');
+
+        return is_string($disk) && $disk !== '' ? $disk : 'r2';
+    }
+
+    /**
+     * Return the module-owned root directory for new images.
+     */
+    public function directory(): string
+    {
+        $directory = config('heritage_shop.image_directory', self::DIRECTORY);
+
+        return is_string($directory) && trim($directory) !== ''
+            ? trim($directory, '/')
+            : self::DIRECTORY;
+    }
+
+    /**
+     * Store a validated Heritage image on shared object storage by default.
+     */
+    public function store(File|UploadedFile $file, ?string $directory = null): string
+    {
+        $path = Storage::disk($this->diskName())->putFile($directory ?: $this->directory(), $file);
 
         if ($path === false || blank($path)) {
             throw new RuntimeException('The Heritage image could not be saved.');
@@ -41,8 +67,8 @@ class HeritageShopImageService
 
     /**
      * Return a response for a stored image without exposing filesystem paths.
-     * New records use the public disk; older records are read from the
-     * configured legacy media disk when that file still exists.
+     * New records use the configured HeritageShop disk; older records are read
+     * from the public and legacy media disks when that file still exists.
      */
     public function response(ShopImage $image)
     {
@@ -56,8 +82,8 @@ class HeritageShopImageService
     }
 
     /**
-     * Delete a file from the public disk and any legacy disk configured for
-     * the Heritage module without touching other module files.
+     * Delete a file from the configured disk and known legacy disks without
+     * touching files outside the HeritageShop path supplied by the caller.
      */
     public function delete(?string $path): void
     {
@@ -65,12 +91,14 @@ class HeritageShopImageService
             return;
         }
 
-        Storage::disk(self::DISK)->delete($path);
-
-        $legacyDiskName = config('filesystems.media_disk');
-        if (is_string($legacyDiskName) && $legacyDiskName !== self::DISK) {
-            Storage::disk($legacyDiskName)->delete($path);
+        foreach ($this->candidateDiskNames() as $diskName) {
+            Storage::disk($diskName)->delete($path);
         }
+    }
+
+    public function exists(?string $path): bool
+    {
+        return $this->diskForPath($path) !== null;
     }
 
     private function diskForPath(?string $path)
@@ -79,19 +107,26 @@ class HeritageShopImageService
             return null;
         }
 
-        $publicDisk = Storage::disk(self::DISK);
-        if ($publicDisk->exists($path)) {
-            return $publicDisk;
-        }
-
-        $legacyDiskName = config('filesystems.media_disk');
-        if (is_string($legacyDiskName) && $legacyDiskName !== self::DISK) {
-            $legacyDisk = Storage::disk($legacyDiskName);
-            if ($legacyDisk->exists($path)) {
-                return $legacyDisk;
+        foreach ($this->candidateDiskNames() as $diskName) {
+            $disk = Storage::disk($diskName);
+            if ($disk->exists($path)) {
+                return $disk;
             }
         }
 
         return null;
+    }
+
+    /**
+     * New storage first, then the prior public and media disks for migrations.
+     * The unique list also prevents duplicate I/O when settings overlap.
+     */
+    private function candidateDiskNames(): array
+    {
+        return array_values(array_unique(array_filter([
+            $this->diskName(),
+            self::DISK,
+            config('filesystems.media_disk'),
+        ], fn ($diskName): bool => is_string($diskName) && $diskName !== '')));
     }
 }

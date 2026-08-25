@@ -9,15 +9,24 @@ use InvalidArgumentException;
 
 class ShopCrawlerService
 {
+    public function __construct(private ?HeritageShopUrlGuard $urlGuard = null)
+    {
+        $this->urlGuard ??= new HeritageShopUrlGuard();
+    }
+
     public function crawl(string $url): array
+
     {
         $parsed = parse_url($url);
 
-        if (! is_array($parsed) || empty($parsed['host']) || ! in_array(strtolower((string) ($parsed['scheme'] ?? '')), ['http', 'https'], true)) {
+                if (! is_array($parsed) || empty($parsed['host']) || ! in_array(strtolower((string) ($parsed['scheme'] ?? '')), ['http', 'https'], true)) {
             throw new InvalidArgumentException('Please provide a valid http or https URL to crawl.');
         }
 
+        $this->urlGuard->assertAllowed($url);
+
         $response = Http::accept('text/html')->timeout(15)->get($url);
+
         if ($response->failed() || trim((string) $response->body()) === '') {
             throw new InvalidArgumentException('The provided URL could not be fetched. Please check that the website is accessible and publicly viewable.');
         }

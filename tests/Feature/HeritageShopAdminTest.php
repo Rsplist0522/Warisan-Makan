@@ -56,9 +56,12 @@ class HeritageShopAdminTest extends TestCase
 
         $this->actingAs($admin);
 
-        $response = $this->postJson(route('admin.heritage-shops.crawl'), [
-            'url' => 'https://example.com/heritage-shop',
-        ]);
+        $csrfToken = 'heritage-shop-test-csrf-token';
+        $response = $this->withSession(['_token' => $csrfToken])
+            ->withHeader('X-CSRF-TOKEN', $csrfToken)
+            ->postJson(route('admin.heritage-shops.crawl'), [
+                'url' => 'https://example.com/heritage-shop',
+            ]);
 
         $response->assertOk()
             ->assertJsonStructure([

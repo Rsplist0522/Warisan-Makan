@@ -9,15 +9,41 @@ use InvalidArgumentException;
 
 class ShopCrawlerService
 {
-    public function crawl(string $url): array
+    public function __construct(private ?HeritageShopUrlGuard $urlGuard = null)
     {
+        $this->urlGuard ??= new HeritageShopUrlGuard();
+    }
+
+        public function normalizeUrl(string $url): string
+    {
+        $parts = parse_url(trim($url));
+        if (! is_array($parts) || empty($parts['host'])) {
+            return trim($url);
+        }
+
+        $scheme = strtolower((string) ($parts['scheme'] ?? 'https'));
+        $host = strtolower((string) $parts['host']);
+        $port = isset($parts['port']) ? ':'.(int) $parts['port'] : '';
+        $path = rtrim((string) ($parts['path'] ?? ''), '/');
+        $query = isset($parts['query']) && $parts['query'] !== '' ? '?'.$parts['query'] : '';
+
+        return $scheme.'://'.$host.$port.($path !== '' ? $path : '').$query;
+    }
+
+    public function crawl(string $url): array
+
+    {
+
         $parsed = parse_url($url);
 
-        if (! is_array($parsed) || empty($parsed['host']) || ! in_array(strtolower((string) ($parsed['scheme'] ?? '')), ['http', 'https'], true)) {
+                if (! is_array($parsed) || empty($parsed['host']) || ! in_array(strtolower((string) ($parsed['scheme'] ?? '')), ['http', 'https'], true)) {
             throw new InvalidArgumentException('Please provide a valid http or https URL to crawl.');
         }
 
+        $this->urlGuard->assertAllowed($url);
+
         $response = Http::accept('text/html')->timeout(15)->get($url);
+
         if ($response->failed() || trim((string) $response->body()) === '') {
             throw new InvalidArgumentException('The provided URL could not be fetched. Please check that the website is accessible and publicly viewable.');
         }
@@ -44,7 +70,61 @@ class ShopCrawlerService
         return $payload;
     }
 
+        /**
+     * Preview several shops from a permitted list page without saving anything.
+     * The admin chooses which reviewed result to load into the normal shop form.
+     */
+    public function discoverFromList(string $url, int $limit = 6): array
+    {
+        $url = $this->normalizeUrl($url);
+        $this->urlGuard->assertAllowed($url);
+
+        $response = Http::accept('text/html')->timeout(15)->get($url);
+        if ($response->failed() || trim((string) $response->body()) === '') {
+            throw new InvalidArgumentException('The list page could not be fetched. Please check that it is publicly viewable and permitted for automated access.');
+        }
+
+        $candidateUrls = $this->candidateDetailUrls($url, $response->body());
+        $items = [];
+        $skipped = 0;
+
+        foreach (array_slice($candidateUrls, 0, max(1, min($limit, 10))) as $detailUrl) {
+            try {
+                $detailResponse = Http::accept('text/html')->timeout(15)->get($detailUrl);
+                if ($detailResponse->failed() || trim((string) $detailResponse->body()) === '') {
+                    $skipped++;
+                    continue;
+                }
+
+                $payload = $this->extractFromHtml($detailUrl, $detailResponse->body());
+                if (blank($payload['name'] ?? null)) {
+                    $skipped++;
+                    continue;
+                }
+
+                $payload['source_url'] = $detailUrl;
+                $payload['review_required'] = true;
+                $items[] = $payload;
+            } catch (\Throwable $exception) {
+                Log::info('Heritage shop list discovery skipped a detail page.', [
+                    'url' => $detailUrl,
+                    'message' => $exception->getMessage(),
+                ]);
+                $skipped++;
+            }
+        }
+
+        return [
+            'source_url' => $url,
+            'candidate_count' => count($candidateUrls),
+            'items' => $items,
+            'skipped_count' => $skipped,
+            'review_required' => true,
+        ];
+    }
+
     public function extractFromHtml(string $url, string $html): array
+
     {
         $title = $this->extractTag($html, 'title');
         $description = $this->extractMeta($html, ['property' => 'og:description', 'name' => 'description'])
@@ -96,7 +176,87 @@ class ShopCrawlerService
         ];
     }
 
+        private function absoluteUrl(string $href, string $baseUrl): ?string
+    {
+        if (filter_var($href, FILTER_VALIDATE_URL)) {
+            return $this->normalizeUrl($href);
+        }
+
+        $base = parse_url($baseUrl);
+        if (! is_array($base) || empty($base['scheme']) || empty($base['host'])) {
+            return null;
+        }
+
+        $origin = strtolower((string) $base['scheme']).'://'.strtolower((string) $base['host'])
+            .(isset($base['port']) ? ':'.(int) $base['port'] : '');
+        if (str_starts_with($href, '/')) {
+            return $this->normalizeUrl($origin.$href);
+        }
+
+        $basePath = (string) ($base['path'] ?? '/');
+        $directory = rtrim(str_replace('\\', '/', dirname($basePath)), '/');
+        $resolved = $directory.'/'.$href;
+        $segments = [];
+        foreach (explode('/', $resolved) as $segment) {
+            if ($segment === '' || $segment === '.') {
+                continue;
+            }
+            if ($segment === '..') {
+                array_pop($segments);
+                continue;
+            }
+            $segments[] = $segment;
+        }
+
+        return $this->normalizeUrl($origin.'/'.implode('/', $segments));
+    }
+
+    private function candidateDetailUrls(string $listUrl, string $html): array
+    {
+        preg_match_all("~<a[^>]+href=[\\\"']([^\\\"']+)[\\\"'][^>]*>(.*?)</a>~is", $html, $matches, PREG_SET_ORDER);
+        $listParts = parse_url($listUrl);
+        $listHost = strtolower((string) ($listParts['host'] ?? ''));
+        $candidates = [];
+
+        foreach ($matches as $match) {
+            $href = html_entity_decode(trim((string) ($match[1] ?? '')), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            $label = trim(strip_tags((string) ($match[2] ?? '')));
+            if ($href === '' || str_starts_with($href, '#') || preg_match('/^(?:mailto|tel|javascript):/i', $href)) {
+                continue;
+            }
+
+            $absolute = $this->absoluteUrl($href, $listUrl);
+            if (! is_string($absolute) || ! filter_var($absolute, FILTER_VALIDATE_URL)) {
+                continue;
+            }
+
+            $parts = parse_url($absolute);
+            if (! is_array($parts) || strtolower((string) ($parts['host'] ?? '')) !== $listHost) {
+                continue;
+            }
+
+            $path = strtolower((string) ($parts['path'] ?? ''));
+            if ($absolute === $listUrl || preg_match('/\\.(?:jpg|jpeg|png|webp|gif|svg|pdf|css|js)$/i', $path)) {
+                continue;
+            }
+            if (preg_match('/\\/(?:about|contact|privacy|terms|login|search|blog|news|category|tag|cart|checkout)(?:[\\/]|$)/i', $path)) {
+                continue;
+            }
+
+            $signal = strtolower($label.' '.$path);
+            if (! preg_match('/restaurant|shop|stall|cafe|café|kopitiam|warung|kedai|food|eat|dining|menu/', $signal)) {
+                continue;
+            }
+
+            $normalized = $this->normalizeUrl($absolute);
+            $candidates[$normalized] = true;
+        }
+
+        return array_keys($candidates);
+    }
+
     private function searchForMissingDetails(array $payload): array
+
     {
         if (! $this->shouldResearchWeb() || ! $this->hasMissingResearchFields($payload)) {
             return [];
@@ -643,10 +803,12 @@ class ShopCrawlerService
         return null;
     }
 
-    private function mergeLinkedMenu(array $payload, string $menuUrl): array
+        private function mergeLinkedMenu(array $payload, string $menuUrl): array
     {
         try {
+            $this->urlGuard->assertAllowed($menuUrl);
             $response = Http::accept('text/html')->timeout(15)->get($menuUrl);
+
             if ($response->failed()) {
                 return $payload;
             }

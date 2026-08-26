@@ -1,7 +1,9 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminCommunityContributionController;
+use App\Http\Controllers\Admin\BadgeManagementController;
 use App\Http\Controllers\Admin\BlindBoxController as AdminBlindBoxController;
+use App\Http\Controllers\Admin\HeritageFoodItemAdminController;
 use App\Http\Controllers\Admin\HeritageShopAdminController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\AuthController;
@@ -13,11 +15,17 @@ use App\Http\Controllers\FoodTrailController;
 use App\Http\Controllers\Admin\FoodTrailSuggestionController;
 use App\Http\Controllers\HeritageShopController;
 use App\Http\Controllers\PassportController;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/login', 'auth.login')->middleware('guest')->name('login');
 Route::get('/auth/google', [AuthController::class, 'redirect'])->middleware('guest')->name('auth.google');
 Route::get('/auth/google/callback', [AuthController::class, 'callback'])->middleware('guest');
+Route::get('/guest', function (\Illuminate\Http\Request $request) {
+    $request->session()->put('guest_mode', true);
+
+    return redirect()->route('user.dashboard');
+})->middleware('guest')->name('guest.continue');
 Route::get('/admin-login', [AuthController::class, 'showAdminLogin'])
     ->name('admin.login');
 Route::post('/admin-login', [AuthController::class, 'adminLogin'])
@@ -27,13 +35,36 @@ Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->n
 
 Route::view('/landing', 'landing')->name('landing');
 
+$userDashboard = function (\Illuminate\Http\Request $request) {
+    if ($request->user()?->isAdmin()) {
+        return redirect()->route('admin.dashboard');
+    }
+
+    if ($request->user()?->isBlocked()) {
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect()->route('login')->withErrors([
+            'login' => __('Your account has been blocked. Please contact the administrator to regain access.'),
+        ]);
+    }
+
+    return view('user-home', [
+        'userName' => $request->user()?->name ?? 'Food Explorer',
+    ]);
+};
+
+Route::get('/', $userDashboard)->name('home');
+Route::get('/dashboard', $userDashboard)->name('user.dashboard');
+
 Route::middleware(['auth', 'active_user'])->group(function (): void {
     Route::middleware('regular_user')->group(function (): void {
         Route::get('/', function () {
-            return view('user-home', ['userName' => auth()->user()->name]);
+            return view('user-home', ['userName' => request()->user()->name]);
         })->name('home');
         Route::get('/dashboard', function () {
-            return view('user-home', ['userName' => auth()->user()->name]);
+            return view('user-home', ['userName' => request()->user()->name]);
         })->name('user.dashboard');
     });
 
@@ -99,13 +130,31 @@ Route::prefix('admin')
         Route::resource('food-trails', FoodTrailSuggestionController::class)->except('show');
         Route::post('/users/{user}/toggle-status', [UserManagementController::class, 'toggleStatus'])->name('users.toggle-status');
 
+        Route::prefix('badges')->name('badges.')->group(function (): void {
+            Route::get('/', [BadgeManagementController::class, 'index'])->name('index');
+            Route::get('/create', [BadgeManagementController::class, 'create'])->name('create');
+            Route::post('/', [BadgeManagementController::class, 'store'])->name('store');
+            Route::get('/{badge}/edit', [BadgeManagementController::class, 'edit'])->name('edit');
+            Route::put('/{badge}', [BadgeManagementController::class, 'update'])->name('update');
+            Route::patch('/{badge}/toggle', [BadgeManagementController::class, 'toggle'])->name('toggle');
+        });
+
         Route::prefix('heritage-shops')->name('heritage-shops.')->group(function () {
             Route::get('/', [HeritageShopAdminController::class, 'index'])->name('index');
             Route::get('/create', [HeritageShopAdminController::class, 'create'])->name('create');
             Route::post('/', [HeritageShopAdminController::class, 'store'])->name('store');
             Route::get('/{heritageShop}/edit', [HeritageShopAdminController::class, 'edit'])->name('edit');
             Route::put('/{heritageShop}', [HeritageShopAdminController::class, 'update'])->name('update');
-            Route::post('/crawl', [HeritageShopAdminController::class, 'crawl'])->name('crawl');
+            Route::delete('/{heritageShop}', [HeritageShopAdminController::class, 'destroy'])->name('destroy');
+            Route::post('/crawl', [HeritageShopAdminController::class, 'crawl'])->middleware('throttle:10,1')->name('crawl');
+            Route::post('/discover', [HeritageShopAdminController::class, 'discover'])->middleware('throttle:10,1')->name('discover');
+            Route::post('/discover/import', [HeritageShopAdminController::class, 'importDiscovered'])->name('discover.import');
+            Route::get('/{heritageShop}/food-items', [HeritageFoodItemAdminController::class, 'index'])->name('food-items.index');
+            Route::get('/{heritageShop}/food-items/{foodItem}/image', [HeritageFoodItemAdminController::class, 'image'])->name('food-items.image');
+            Route::post('/{heritageShop}/food-items', [HeritageFoodItemAdminController::class, 'store'])->name('food-items.store');
+            Route::put('/{heritageShop}/food-items/{foodItem}', [HeritageFoodItemAdminController::class, 'update'])->name('food-items.update');
+            Route::patch('/{heritageShop}/food-items/{foodItem}/toggle', [HeritageFoodItemAdminController::class, 'toggle'])->name('food-items.toggle');
+            Route::delete('/{heritageShop}/food-items/{foodItem}', [HeritageFoodItemAdminController::class, 'destroy'])->name('food-items.destroy');
         });
 
         Route::prefix('blind-box-items')->name('blind-box-items.')->group(function (): void {
@@ -157,16 +206,16 @@ Route::prefix('admin')
 
 // Blind Box routes
 Route::get('/blind-box', [BlindBoxController::class, 'index'])->middleware('auth')->name('blind-box.index');
-Route::post('/blind-box/draw', [BlindBoxController::class, 'draw'])->name('blind-box.draw');
+Route::post('/blind-box/draw', [BlindBoxController::class, 'draw'])->middleware('auth')->name('blind-box.draw');
 Route::post('/chat', [ChatController::class, 'respond'])->name('chat.respond');
 
 // Module-only shop check-in page (public for development)
-Route::get('/foodPassport/shop/{id}', [PassportController::class, 'showShop'])
+Route::get('/foodPassport/shop/{id}', [PassportController::class, 'showShop'])->middleware('auth')
     ->name('passport.shop');
 
 // Food Passport 
 // Public Food Passport page (no login required for viewing)
-Route::get('/foodPassport', [PassportController::class, 'index'])
+Route::get('/foodPassport', [PassportController::class, 'index'])->middleware('auth')
     ->name('passport.index');
 
 // Protected endpoints for authenticated users
@@ -186,11 +235,23 @@ Route::get('/foodtrails', [FoodTrailController::class, 'index'])->name('foodtrai
 // Start trail page
 Route::get('/start_trail', function () {
     return view('start_trail');
-});
+})->middleware('auth');
 
 Route::get('/heritage-shops', [HeritageShopController::class, 'index'])->name('heritage-shops.index');
 Route::get('/heritage-shops/{heritageShop}/images/{image}', [HeritageShopController::class, 'image'])
     ->whereNumber('heritageShop')
     ->whereNumber('image')
     ->name('heritage-shops.images.show');
+Route::get('/heritage-shops/{heritageShop}/food-items/{foodItem}', [HeritageShopController::class, 'foodItem'])
+    ->whereNumber('heritageShop')
+    ->whereNumber('foodItem')
+    ->name('heritage-shops.food-items.show');
+Route::get('/heritage-shops/{heritageShop}/food-items/{foodItem}/image', [HeritageShopController::class, 'foodImage'])
+    ->whereNumber('heritageShop')
+    ->whereNumber('foodItem')
+    ->name('heritage-shops.food-images.show');
+Route::post('/heritage-shops/{heritageShop}/ai-guide', [HeritageShopController::class, 'aiGuide'])
+    ->middleware('throttle:30,1')
+    ->whereNumber('heritageShop')
+    ->name('heritage-shops.ai-guide');
 Route::get('/heritage-shops/{id}', [HeritageShopController::class, 'show'])->whereNumber('id')->name('heritage-shops.show');

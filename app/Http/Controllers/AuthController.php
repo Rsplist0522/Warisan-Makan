@@ -79,7 +79,7 @@ class AuthController extends Controller
         $googleUser = Socialite::driver('google')->user();
 
         $email = $googleUser->getEmail();
-        abort_unless($email, 422, 'Google did not provide an email address.');
+        abort_unless($email, 422, __('Google did not provide an email address.'));
 
         $user = User::firstOrNew(['email' => $email]);
         $user->fill([
@@ -99,7 +99,7 @@ class AuthController extends Controller
             request()->session()->regenerateToken();
 
             return redirect()->route('login')->withErrors([
-                'login' => 'Your account has been blocked. Please contact the administrator to regain access.',
+                'login' => __('Your account has been blocked. Please contact the administrator to regain access.'),
             ]);
         }
 

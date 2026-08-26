@@ -114,7 +114,7 @@
 
 <button id="chatFab"
         class="chat-fab animate__animated animate__fadeIn"
-        aria-label="Ask about heritage shops"
+        aria-label="{{ __('Ask about heritage shops') }}"
         aria-expanded="false">
     💬
     <span class="chat-fab-badge"></span>
@@ -123,13 +123,13 @@
 <div id="chatPanel"
      class="chat-panel"
      role="dialog"
-     aria-label="Heritage shop assistant">
+     aria-label="{{ __('Heritage shop assistant') }}">
 
     <div class="chat-header">
-        <div class="chat-header-title">🏮 Heritage Shop Assistant</div>
+        <div class="chat-header-title">🏮 {{ __('Heritage Shop Assistant') }}</div>
         <button id="chatClose"
                 class="chat-close"
-                aria-label="Close chat">✕</button>
+                aria-label="{{ __('Close chat') }}">✕</button>
     </div>
 
     <div id="chatMessages" class="chat-messages"></div>
@@ -137,13 +137,13 @@
     <div class="chat-input-row">
         <input id="chatInput"
                type="text"
-               placeholder="Ask about a shop, e.g. cendol in Melaka..."
+               placeholder="{{ __('Ask about a shop, e.g. cendol in Melaka...') }}"
                maxlength="500"
                autocomplete="off">
 
         <button id="chatSend"
                 class="chat-send"
-                aria-label="Send message">➤</button>
+                aria-label="{{ __('Send message') }}">➤</button>
     </div>
 </div>
 
@@ -153,6 +153,12 @@
         chatUrl: '{{ route('chat.respond') }}',
         csrfToken: '{{ csrf_token() }}'
     };
+    //pass translated chat messages into JS
+    const CHAT_TEXT = {
+    greeting: @json(__('Hi! Ask me about any heritage shop — its category, state, or story.')),
+    fallbackReply: @json(__('Sorry, something went wrong. Please try again.')),
+    connectionError: @json(__('Sorry, I could not connect right now. Please try again.')),
+};
 
     const fab = document.getElementById('chatFab');
     const panel = document.getElementById('chatPanel');
@@ -198,7 +204,7 @@
         if (!greeted) {
             greeted = true;
             addBubble(
-                'Hi! Ask me about any heritage shop — its category, state, or story.',
+                CHAT_TEXT.greeting,
                 'bot'
             );
         }
@@ -248,8 +254,7 @@
 
             typing.remove();
 
-            const reply = data?.reply ||
-                'Sorry, something went wrong. Please try again.';
+            const reply = data?.reply || CHAT_TEXT.fallbackReply;
 
             addBubble(reply, 'bot');
 
@@ -264,10 +269,7 @@
 
         } catch (error) {
             typing.remove();
-            addBubble(
-                "Sorry, I couldn't connect right now. Please try again.",
-                'bot'
-            );
+            addBubble(CHAT_TEXT.connectionError, 'bot');
         } finally {
             sending = false;
             sendBtn.disabled = false;

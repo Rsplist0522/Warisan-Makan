@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\HeritageShop;
 use App\Models\ShopImage;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -33,6 +34,10 @@ class HeritageShopVisibilityTest extends TestCase
             ->assertDontSee($archived->shop_name);
 
         $this->get(route('heritage-shops.show', ['id' => $published->id]))
+            ->assertForbidden();
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('heritage-shops.show', ['id' => $published->id]))
             ->assertOk()
             ->assertSee($published->shop_name);
 

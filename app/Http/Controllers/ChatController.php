@@ -76,7 +76,7 @@ class ChatController extends Controller
             Log::warning('ChatController: Groq call failed. ' . $e->getMessage());
 
             return response()->json([
-                'reply' => "Sorry, I couldn't reach the assistant right now. Please try again in a moment.",
+                'reply' => __('Sorry, I could not reach the assistant right now. Please try again in a moment.'),
                 'matched_shop_count' => count($matchedShops),
                 'mode' => 'error',
             ], 200);

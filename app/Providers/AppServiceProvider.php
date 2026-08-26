@@ -49,11 +49,14 @@ class AppServiceProvider extends ServiceProvider
         $database = config("database.connections.{$connection}.database");
         $host = (string) config("database.connections.{$connection}.host", '');
 
-        if ($connection !== 'mysql'
-            || $database !== 'warisan_makan_testing'
-            || str_contains(strtolower($host), 'aivencloud.com')) {
+        $isSafeSqliteTestDatabase = $connection === 'sqlite' && $database === ':memory:';
+        $isSafeMysqlTestDatabase = $connection === 'mysql'
+            && $database === 'warisan_makan_testing'
+            && ! str_contains(strtolower($host), 'aivencloud.com');
+
+        if (! $isSafeSqliteTestDatabase && ! $isSafeMysqlTestDatabase) {
             throw new RuntimeException(
-                'Refusing to run tests unless DB_CONNECTION=mysql and DB_DATABASE=warisan_makan_testing.'
+                'Refusing to run tests unless using SQLite :memory: or MySQL database warisan_makan_testing.'
             );
         }
     }

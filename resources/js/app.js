@@ -10,6 +10,7 @@ const foodTrailApp = (() => {
         categorySelect: 'categorySelect',
         searchKeyword: 'searchKeyword',
         generateButton: 'generateTrailButton',
+        clearTrailSearchButton: 'clearTrailSearchButton',
         resultsPanel: 'resultsPanel',
         initialPanel: 'initialPanel',
         resultsCount: 'resultsCount',
@@ -242,9 +243,19 @@ const foodTrailApp = (() => {
                 <p class="mt-3 text-sm text-[#7B6B5F]">${item.description}</p>
             `;
             card.querySelector('button')?.addEventListener('click', () => {
-                getElement(selectors.locationInput).value = item.location;
-                getElement(selectors.categorySelect).value = 'all';
-                handleGenerateTrail();
+                const restaurants = Array.isArray(item.restaurants) && item.restaurants.length
+                    ? item.restaurants
+                    : getRestaurantsForLocation(item.location);
+                state.routeRestaurants = restaurants.map((restaurant) => ({ ...restaurant, visited: false }));
+                state.activeRestaurants = state.routeRestaurants.slice();
+                state.filteredRestaurants = state.routeRestaurants.slice();
+                state.selectedRestaurant = state.routeRestaurants[0] || null;
+                saveCurrentRoute();
+                setPanelVisibility(true);
+                renderRestaurantList();
+                renderRouteSummary();
+                updateRouteCompletion();
+                renderSelectedRestaurantDetails();
             });
             container.appendChild(card);
         });
@@ -544,11 +555,8 @@ const foodTrailApp = (() => {
         const locationValue = getElement(selectors.locationInput)?.value?.trim();
         const categoryValue = getElement(selectors.categorySelect)?.value || 'all';
         const keywordValue = getElement(selectors.searchKeyword)?.value.trim().toLowerCase();
-        if (!locationValue) {
-            getElement(selectors.selectedTrailSummary).innerText = translate('enterLocation', 'Please enter a location before generating.');
-            return;
-        }
-        const allRestaurants = getRestaurantsForLocation(locationValue);
+        const locationRestaurants = locationValue ? getRestaurantsForLocation(locationValue) : [];
+        const allRestaurants = locationRestaurants.length ? locationRestaurants : Object.values(appData.restaurants || {}).flat();
         if (!allRestaurants.length) {
             getElement(selectors.selectedTrailSummary).innerText = translate('noLocationRestaurants', 'No restaurants found for this location. Try another city.');
             return;
@@ -556,10 +564,11 @@ const foodTrailApp = (() => {
         const filteredByCategory = categoryValue === 'all'
             ? allRestaurants
             : allRestaurants.filter((restaurant) => restaurant.category === categoryValue);
-        const keywordFiltered = keywordValue
+        const searchValue = keywordValue || (!locationRestaurants.length ? locationValue.toLowerCase() : '');
+        const keywordFiltered = searchValue
             ? filteredByCategory.filter((restaurant) => {
-                const value = `${restaurant.name} ${restaurant.description} ${restaurant.location}`.toLowerCase();
-                return value.includes(keywordValue);
+                const value = `${restaurant.name} ${restaurant.description} ${restaurant.location} ${restaurant.category} ${(restaurant.tags || []).join(' ')}`.toLowerCase();
+                return value.includes(searchValue);
             })
             : filteredByCategory;
         state.activeRestaurants = keywordFiltered;
@@ -589,6 +598,7 @@ const foodTrailApp = (() => {
         getElement(selectors.searchKeyword).value = '';
         applyFilters();
     };
+    const clearTrailSearch = () => { ['locationInput','searchKeyword'].forEach((id) => { const input = getElement(id); if (input) input.value = ''; }); const category = getElement(selectors.categorySelect); if (category) category.value = 'all'; state.activeRestaurants = []; state.filteredRestaurants = []; state.selectedRestaurant = null; setPanelVisibility(false); renderRestaurantList(); renderSelectedRestaurantDetails(); getElement(selectors.selectedTrailSummary).innerText = 'Search by restaurant name or location to begin.'; };
     const handleStartNow = () => {
         localStorage.setItem(currentRouteKey, JSON.stringify(state.routeRestaurants));
         window.location.href = '/start_trail';
@@ -598,6 +608,7 @@ const foodTrailApp = (() => {
     };
     const wireEvents = () => {
         getElement(selectors.generateButton)?.addEventListener('click', handleGenerateTrail);
+        getElement(selectors.clearTrailSearchButton)?.addEventListener('click', clearTrailSearch);
         getElement(selectors.categoryFilter)?.addEventListener('change', applyFilters);
         getElement(selectors.distanceFilter)?.addEventListener('change', applyFilters);
         getElement(selectors.priceFilter)?.addEventListener('change', applyFilters);

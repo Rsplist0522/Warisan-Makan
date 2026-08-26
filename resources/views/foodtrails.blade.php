@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{{ __('Food Trails') }} | {{ config('app.name', 'Warisan Makan') }}</title>
     <script>
-        const googleMapsErrorMessage = @json(__('Google Maps rejected this API key. Check that Maps JavaScript API is enabled, billing is active, and your key restrictions allow this site.')); 
+        const googleMapsErrorMessage = @json(__('Google Maps rejected this API key. Check that Maps JavaScript API is enabled, billing is active, and your key restrictions allow this site.'));
 
         window.googleMapsApiKey = @json(config('services.google.maps_api_key'));
         window.googleMapsLoaded = false;
@@ -16,7 +16,7 @@
             if (typeof window.initStartTrailMap === 'function') window.initStartTrailMap();
         };
         window.gm_authFailure = function () {
-            window.dispatchEvent(new CustomEvent('googleMapsError', { detail: googleMapsErrorMessage}));
+            window.dispatchEvent(new CustomEvent('googleMapsError', { detail: googleMapsErrorMessage }));
         };
     </script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -101,7 +101,8 @@
             <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                     <p class="text-sm uppercase tracking-[0.32em] text-[#B8874A]">{{ __('Heritage food trails') }}</p>
-                    <h1 class="mt-3 text-3xl font-semibold text-[#1F1B19]">{{ __('Explore and generate your next food trail') }}
+                    <h1 class="mt-3 text-3xl font-semibold text-[#1F1B19]">
+                        {{ __('Explore and generate your next food trail') }}
                     </h1>
                     <p class="mt-3 max-w-2xl text-sm leading-7 text-[#6B5B4B]">
                         {{ __('Pick a location, filter by category, and then use the map and vendor cards to navigate your trail step by step.') }}
@@ -118,22 +119,27 @@
             <div class="rounded-[32px] bg-white p-6 shadow-[0_12px_30px_rgba(46,32,16,0.08)]">
                 <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                     <div class="min-w-0">
-                        <p class="text-sm uppercase tracking-[0.35em] text-[#B8874A]">{{ __('Search your food trail') }}</p>
-                        <h2 class="mt-3 text-3xl font-semibold text-[#1F1B19]">{{ __('Start by searching your location') }}</h2>
+                        <p class="text-sm uppercase tracking-[0.35em] text-[#B8874A]">{{ __('Search your food trail') }}
+                        </p>
+                        <h2 class="mt-3 text-3xl font-semibold text-[#1F1B19]">
+                            {{ __('Start by searching your location') }}
+                        </h2>
                         <p class="mt-3 max-w-2xl text-sm leading-7 text-[#6B5B4B]">
                             {{ __('Enter a city or heritage district, choose a category, and generate a curated food trail with restaurant recommendations.') }}
                         </p>
                     </div>
-                    <button id="generateTrailButton"
-                        class="rounded-full bg-[#B8874A] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#9c6f33]">{{ __('Generate Trail') }} 
-                    </button>
+                    <div class="flex gap-3"><button id="clearTrailSearchButton"
+                            class="rounded-full border border-[#D8B58F] bg-white px-5 py-3 text-sm font-semibold text-[#6B553F] hover:bg-[#F8F0E6]">Clear</button><button
+                            id="generateTrailButton"
+                            class="rounded-full bg-[#B8874A] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#9c6f33]">{{ __('Generate Trail') }}</button>
+                    </div>
                 </div>
 
                 <div class="mt-6 grid gap-4 lg:grid-cols-[1.8fr_1fr]">
                     <div>
                         <input id="locationInput" list="locations"
                             class="w-full rounded-3xl border border-[#E6D8C4] bg-[#FFFBF6] px-4 py-4 text-sm text-[#1F1B19] shadow-sm outline-none"
-                            placeholder="{{ __('Search location or heritage district') }}" />
+                            placeholder="{{ __('Search location') }}" />
                         <datalist id="locations">
                             @foreach ($locations as $location)
                                 <option value="{{ $location }}"></option>
@@ -150,7 +156,7 @@
                         </select>
                         <input id="searchKeyword" type="search"
                             class="rounded-3xl border border-[#E6D8C4] bg-[#FFFBF6] px-4 py-4 text-sm text-[#1F1B19] shadow-sm outline-none"
-                            placeholder="{{ __('Search restaurant or menu') }}" />
+                            placeholder="{{ __('Search restaurant') }}" />
                     </div>
                 </div>
 
@@ -192,8 +198,11 @@
                     <div class="rounded-[32px] bg-white p-6 shadow-[0_12px_30px_rgba(46,32,16,0.08)]">
                         <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                             <div>
-                                <p class="text-sm uppercase tracking-[0.2em] text-[#B08B59]">{{ __('Search results') }}</p>
-                                <h2 class="mt-2 text-xl font-semibold text-[#1F1B19]">{{ __('Restaurant recommendations') }}</h2>
+                                <p class="text-sm uppercase tracking-[0.2em] text-[#B08B59]">{{ __('Search results') }}
+                                </p>
+                                <h2 class="mt-2 text-xl font-semibold text-[#1F1B19]">
+                                    {{ __('Restaurant recommendations') }}
+                                </h2>
                             </div>
                             <span id="resultsCount"
                                 class="rounded-full bg-[#F7E4C1] px-3 py-1 text-sm font-semibold text-[#8A5A24]">0
@@ -202,14 +211,16 @@
 
                         <div class="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                             <div>
-                                <label class="mb-2 block text-sm font-semibold text-[#5A5047]">{{ __('Category') }}</label>
+                                <label
+                                    class="mb-2 block text-sm font-semibold text-[#5A5047]">{{ __('Category') }}</label>
                                 <select id="categoryFilter"
                                     class="w-full rounded-3xl border border-[#E6D8C4] bg-[#FFFBF6] px-4 py-3 text-sm outline-none shadow-sm">
                                     <option value="all">{{ __('All categories') }}</option>
                                 </select>
                             </div>
                             <div>
-                                <label class="mb-2 block text-sm font-semibold text-[#5A5047]">{{ __('Distance') }}</label>
+                                <label
+                                    class="mb-2 block text-sm font-semibold text-[#5A5047]">{{ __('Distance') }}</label>
                                 <select id="distanceFilter"
                                     class="w-full rounded-3xl border border-[#E6D8C4] bg-[#FFFBF6] px-4 py-3 text-sm outline-none shadow-sm">
                                     <option value="all">{{ __('Any distance') }}</option>
@@ -220,17 +231,8 @@
                                 </select>
                             </div>
                             <div>
-                                <label class="mb-2 block text-sm font-semibold text-[#5A5047]">{{ __('Price') }}</label>
-                                <select id="priceFilter"
-                                    class="w-full rounded-3xl border border-[#E6D8C4] bg-[#FFFBF6] px-4 py-3 text-sm outline-none shadow-sm">
-                                    <option value="all">{{ __('Any price') }}</option>
-                                    <option value="RM 8 - RM 15">RM 8 - RM 15</option>
-                                    <option value="RM 16 - RM 30">RM 16 - RM 30</option>
-                                    <option value="RM 31 - RM 60">RM 31 - RM 60</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="mb-2 block text-sm font-semibold text-[#5A5047]">{{ __('Reviews') }}</label>
+                                <label
+                                    class="mb-2 block text-sm font-semibold text-[#5A5047]">{{ __('Reviews') }}</label>
                                 <select id="reviewFilter"
                                     class="w-full rounded-3xl border border-[#E6D8C4] bg-[#FFFBF6] px-4 py-3 text-sm outline-none shadow-sm">
                                     <option value="all">{{ __('Any rating') }}</option>
@@ -257,7 +259,8 @@
                     <div class="rounded-[32px] bg-white p-6 shadow-[0_12px_30px_rgba(46,32,16,0.08)]">
                         <div class="flex items-center justify-between gap-4">
                             <div>
-                                <p class="text-sm uppercase tracking-[0.2em] text-[#B08B59]">{{ __('Route summary') }}</p>
+                                <p class="text-sm uppercase tracking-[0.2em] text-[#B08B59]">{{ __('Route summary') }}
+                                </p>
                                 <h2 class="mt-2 text-xl font-semibold text-[#1F1B19]">{{ __('Your food trail') }}</h2>
                             </div>
                             <span id="routeCompletion"
@@ -322,35 +325,35 @@
             locations: @json($locations),
             categories: @json(array_merge(['all'], $categories)),
             translations: {{ \Illuminate\Support\Js::from([
-                'noSavedTrails' => __('No saved food trails yet. Generate a trail and save it as a favorite.'),
-                'open' => __('Open'),
-                'try' => __('Try'),
-                'restaurants' => __('restaurants'),
-                'allCategories' => __('All categories'),
-                'noRestaurantMatches' => __('No restaurants match the selected filters. Try another filter or location.'),
-                'added' => __('Added'),
-                'add' => __('+ Add'),
-                'pickRestaurant' => __('Pick a restaurant'),
-                'pickRestaurantHelp' => __('Select a restaurant from the list to see details, add to your trail, or mark it as visited.'),
-                'removeFromTrail' => __('Remove from trail'),
-                'addToTrail' => __('+ Add to trail'),
-                'visited' => __('Visited'),
-                'markVisited' => __('Mark visited'),
-                'liked' => __('Liked'),
-                'love' => __('Love'),
-                'complete' => __('complete'),
-                'addRestaurantsToTrail' => __('Add restaurants to your food trail and get a simple route plan with estimated travel time.'),
-                'totalEstimatedJourneyTime' => __('Total estimated journey time'),
-                'pending' => __('Pending'),
-                'nextTravelTime' => __('Next travel time: :value min'),
-                'enterLocation' => __('Please enter a location before generating.'),
-                'noLocationRestaurants' => __('No restaurants found for this location. Try another city.'),
-                'showingRestaurants' => __('Showing :count restaurants in :location. Use filters to refine the list.'),
-                'noCriteriaRestaurants' => __('No restaurants match your criteria. Adjust the filters to see more results.'),
-                'clearSavedTrails' => __('Clear all saved favourite trails?'),
-                'mapNotConfigured' => __('Google Maps is not configured. Add GOOGLE_MAPS_API_KEY to your .env file and reload.'),
-                'mapLoadFailed' => __('Google Maps could not be loaded.'),
-            ]) }},
+    'noSavedTrails' => __('No saved food trails yet. Generate a trail and save it as a favorite.'),
+    'open' => __('Open'),
+    'try' => __('Try'),
+    'restaurants' => __('restaurants'),
+    'allCategories' => __('All categories'),
+    'noRestaurantMatches' => __('No restaurants match the selected filters. Try another filter or location.'),
+    'added' => __('Added'),
+    'add' => __('+ Add'),
+    'pickRestaurant' => __('Pick a restaurant'),
+    'pickRestaurantHelp' => __('Select a restaurant from the list to see details, add to your trail, or mark it as visited.'),
+    'removeFromTrail' => __('Remove from trail'),
+    'addToTrail' => __('+ Add to trail'),
+    'visited' => __('Visited'),
+    'markVisited' => __('Mark visited'),
+    'liked' => __('Liked'),
+    'love' => __('Love'),
+    'complete' => __('complete'),
+    'addRestaurantsToTrail' => __('Add restaurants to your food trail and get a simple route plan with estimated travel time.'),
+    'totalEstimatedJourneyTime' => __('Total estimated journey time'),
+    'pending' => __('Pending'),
+    'nextTravelTime' => __('Next travel time: :value min'),
+    'enterLocation' => __('Please enter a location before generating.'),
+    'noLocationRestaurants' => __('No restaurants found for this location. Try another city.'),
+    'showingRestaurants' => __('Showing :count restaurants in :location. Use filters to refine the list.'),
+    'noCriteriaRestaurants' => __('No restaurants match your criteria. Adjust the filters to see more results.'),
+    'clearSavedTrails' => __('Clear all saved favourite trails?'),
+    'mapNotConfigured' => __('Google Maps is not configured. Add GOOGLE_MAPS_API_KEY to your .env file and reload.'),
+    'mapLoadFailed' => __('Google Maps could not be loaded.'),
+]) }},
             locations: [
                 'Kuala Lumpur',
                 'Penang',

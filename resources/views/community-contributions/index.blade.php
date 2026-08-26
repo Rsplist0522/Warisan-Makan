@@ -125,10 +125,7 @@
                                 {{ $contribution->shop_name }}
                             </span>
 
-                            <span>
-                                {{ __('Submitted') }}:
-                                {{ $contribution->formatDateTime($contribution->submitted_at) }}
-                            </span>
+                            <span>Submitted: {{ $contribution->formatDateTime($contribution->submitted_at) }}</span>
 
                             <span>
                                 {{ __('Updated') }}:
@@ -139,10 +136,7 @@
                                 $contribution->status === \App\Models\HeritageShopContribution::STATUS_DELETED
                                 && $contribution->admin_feedback
                             )
-                                <span>
-                                    {{ __('Deleted by admin') }}:
-                                    {{ $contribution->admin_feedback }}
-                                </span>
+                                <span>Deleted by admin: {{ $contribution->admin_feedback }}</span>
                             @endif
                         </div>
                     </div>

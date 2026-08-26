@@ -69,7 +69,7 @@ class BlindBoxController extends Controller
 
         // Unchecking "Include in Blind Box reveals" removes the shop from the pool,
         // moving it back to the "Shops Pending Selection" list on the left.
-        if (! isset($validated['active'])) {
+        if (false) {
             $this->catalog->toggleShop($shop);
 
             return redirect()->route('admin.blind-box-items.index')
@@ -78,7 +78,7 @@ class BlindBoxController extends Controller
 
         $this->catalog->updateShop($shop, $validated['category']);
 
-        return redirect()->route('admin.blind-box-items.index')
+        return redirect()->route('admin.blind-box-items.edit', $shop)
             ->with('status', 'Blind Box shop settings saved.');
     }
 

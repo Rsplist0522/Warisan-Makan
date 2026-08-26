@@ -974,7 +974,7 @@
                 <div class="panel">
                     <div class="panel-inner">
                         <div class="section-header">
-                            <h2>{{ __('Available Heritage Shops') }}</h2>
+                            <h2>{{ __('Nearby heritage stop') }}</h2>
                             <span class="tag">{{ __('Live') }}</span>
                         </div>
 
@@ -1092,7 +1092,7 @@
 
                                     @for ($page = 1; $page <= $visitedLocations->lastPage(); $page++)
                                         @if ($page === $visitedLocations->currentPage())
-                                            <span class="active" aria-current="page">{{ $page }}</span>
+                                            <span class="active" aria-current="page">Page {{ $page }}</span>
                                         @else
                                             <a href="{{ $visitedLocations->url($page) }}#visited-locations" aria-label="Visited locations page {{ $page }}">{{ $page }}</a>
                                         @endif
@@ -1104,7 +1104,7 @@
                                         <span aria-disabled="true">Next</span>
                                     @endif
                                 @else
-                                    <span class="active" aria-current="page">{{ $visitedLocations->currentPage() }}</span>
+                                    <span class="active" aria-current="page">Page {{ $visitedLocations->currentPage() }}</span>
                                 @endif
                             </nav>
                         @endif

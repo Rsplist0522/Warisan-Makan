@@ -55,6 +55,9 @@ class BadgeManagementController extends Controller
     {
         if ($badge->is_active && $badge->userBadges()->exists()) {
             return redirect()->route('admin.badges.index')
+                ->withErrors([
+                    'badge' => 'Deactivation failed. Badge has already been awarded to users',
+                ])
                 ->with('badge_error', 'This badge cannot be deactivated because it has already been earned by one or more users.');
         }
 

@@ -36,6 +36,10 @@ Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->n
 Route::view('/landing', 'landing')->name('landing');
 
 $userDashboard = function (\Illuminate\Http\Request $request) {
+    if (! $request->user() && ! (bool) $request->session()->get('guest_mode')) {
+        return redirect()->route('login');
+    }
+
     if ($request->user()?->isAdmin()) {
         return redirect()->route('admin.dashboard');
     }
@@ -59,15 +63,6 @@ Route::get('/', $userDashboard)->name('home');
 Route::get('/dashboard', $userDashboard)->name('user.dashboard');
 
 Route::middleware(['auth', 'active_user'])->group(function (): void {
-    Route::middleware('regular_user')->group(function (): void {
-        Route::get('/', function () {
-            return view('user-home', ['userName' => request()->user()->name]);
-        })->name('home');
-        Route::get('/dashboard', function () {
-            return view('user-home', ['userName' => request()->user()->name]);
-        })->name('user.dashboard');
-    });
-
     Route::get('/profile', [App\Http\Controllers\ProfileController::class, 'show'])->name('profile.show');
     Route::get('/profile/edit', [App\Http\Controllers\ProfileController::class, 'edit'])->name('profile.edit');
     Route::post('/profile', [App\Http\Controllers\ProfileController::class, 'update'])->name('profile.update');

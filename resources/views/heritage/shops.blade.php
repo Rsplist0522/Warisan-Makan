@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ isset($shop) ? $shop->shop_name.' - '.__('Heritage Shop') : __('Heritage Shops') }} - Warisan Makan</title>
+    <title>{{ isset($shop) ? $shop->shop_name.' - Heritage Shop' : 'Heritage Shops' }} - Warisan Makan</title>
     @fonts
     <style>
         :root {
@@ -25,13 +25,15 @@
         body {
             margin: 0;
             min-height: 100vh;
+            min-width: 0;
+            overflow-x: hidden;
             color: var(--wm-ink);
             background: var(--wm-bg);
             font-family: 'Instrument Sans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }
         a { color: inherit; }
         button, input, select { font: inherit; }
-        h1, h2, h3, p { overflow-wrap: anywhere; }
+        h1, h2, h3, p { overflow-wrap: break-word; word-break: normal; }
         h1, h2, h3 { font-family: Georgia, 'Times New Roman', serif; }
         .shell { min-height: 100vh; display: grid; grid-template-columns: 268px minmax(0, 1fr); }
         .shell.nav-collapsed { grid-template-columns: 82px minmax(0, 1fr); }
@@ -58,14 +60,19 @@
         .brand-mark { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 12px; color: #3b1b16; background: var(--wm-gold); }
         .shell.nav-collapsed .brand { justify-content:center; padding-inline:0; }
         .shell.nav-collapsed .brand-word, .shell.nav-collapsed .nav-label, .shell.nav-collapsed .nav-item span, .shell.nav-collapsed .user-name, .shell.nav-collapsed .user-role { display:none; }
-        .shell.nav-collapsed .nav-item { justify-content:center; padding-inline:8px; }
+        .shell.nav-collapsed .nav-item { width: 44px; min-height: 44px; justify-content:center; margin-inline:auto; padding-inline:8px; overflow:hidden; }
+        .shell.nav-collapsed .nav-item::before { width:28px; height:28px; border-color:transparent; background:rgba(255,255,255,.04); }
+        .shell[data-heritage-public-nav].nav-collapsed .nav-item:hover::after, .shell[data-heritage-public-nav].nav-collapsed .nav-item:focus-visible::after { content:attr(data-label); position:absolute; z-index:60; left:calc(100% + 10px); top:50%; display:block; min-width:max-content; transform:translateY(-50%); padding:8px 10px; border:1px solid rgba(255,255,255,.12); border-radius:8px; color:#fffaf4; background:#3b1b18; box-shadow:0 10px 22px rgba(0,0,0,.18); font-size:.75rem; font-weight:800; }
+        .shell[data-heritage-public-nav].nav-collapsed .nav-item:hover { overflow:visible; }
         .nav-toggle { display:inline-flex; align-items:center; gap:8px; min-height:38px; padding:0 12px; border:1px solid var(--wm-line); border-radius:10px; color:var(--wm-ink); background:#fff; cursor:pointer; font-size:.8rem; font-weight:800; }
         .nav-toggle:hover { border-color:rgba(163,58,45,.35); background:#fffaf4; }
         .nav-backdrop { display:none; }
         .nav-label { margin: 27px 12px 10px; color: rgba(255, 245, 236, .48); font-size: .68rem; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
         .nav { display: grid; gap: 5px; }
-        .nav-item { display: flex; align-items: center; gap: 11px; padding: 11px 12px; border-radius: 10px; color: rgba(255, 245, 236, .72); font-size: .88rem; font-weight: 700; text-decoration: none; }
+        .nav-item { position: relative; display: flex; min-width: 0; align-items: center; gap: 11px; padding: 11px 12px; border-radius: 10px; color: rgba(255, 245, 236, .72); font-size: .88rem; font-weight: 700; text-decoration: none; white-space: nowrap; }
         .nav-item::before { content: ''; width: 7px; height: 7px; flex: 0 0 auto; border: 1px solid currentColor; border-radius: 50%; }
+        .shell[data-heritage-public-nav] .nav-item::before { content: attr(data-icon); width: 25px; height: 25px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.15); border-radius: 8px; font-size: .75rem; line-height: 1; }
+        .shell[data-heritage-public-nav] .nav-item.active::before { border-color: rgba(200,148,50,.42); }
         .nav-item.active, .nav-item:hover { color: #fff; background: var(--wm-sidebar-soft); }
         .nav-item.active::before { border-color: var(--wm-gold); background: var(--wm-gold); }
         .sidebar-footer { margin-top: auto; padding-top: 22px; border-top: 1px solid rgba(255, 255, 255, .1); }
@@ -73,7 +80,7 @@
         .user-role { margin: 0 0 14px; color: rgba(255, 245, 236, .52); font-size: .76rem; }
         .logout { width: 100%; padding: 9px 12px; border: 1px solid rgba(255, 255, 255, .16); border-radius: 9px; color: #fff5ec; background: transparent; cursor: pointer; text-align: left; }
         .logout:hover { background: rgba(255, 255, 255, .08); }
-        .main { min-width: 0; background: linear-gradient(135deg, rgba(163, 58, 45, .06), transparent 34%), linear-gradient(315deg, rgba(61, 111, 85, .07), transparent 38%), var(--wm-bg); }
+        .main { min-width: 0; overflow-x: hidden; background: linear-gradient(135deg, rgba(163, 58, 45, .06), transparent 34%), linear-gradient(315deg, rgba(61, 111, 85, .07), transparent 38%), var(--wm-bg); }
         .topbar { min-height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 16px 34px; border-bottom: 1px solid var(--wm-line); background: rgba(255, 253, 249, .9); }
         .topbar h2 { margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 1.35rem; }
         .topbar p { margin: 3px 0 0; color: var(--wm-muted); font-size: .82rem; }
@@ -96,8 +103,6 @@
         .button { min-height: 42px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid transparent; border-radius: 10px; padding: 0 15px; font-weight: 800; text-decoration: none; cursor: pointer; }
         .button.primary { color: #3f2a0d; background: var(--wm-gold); }
         .button.secondary { border-color: var(--wm-line); color: var(--wm-ink); background: #fff; }
-        .guest-trigger { display:inline-flex; align-items:center; gap:8px; min-height:42px; padding:0 14px; border:1px solid var(--wm-line); border-radius:999px; color:var(--wm-accent); background:#fff; font-weight:800; cursor:pointer; }
-        .guest-trigger::before { content:''; width:9px; height:9px; border-radius:50%; background:var(--wm-gold); }
         .filter-actions { display: flex; gap: 8px; align-items: end; }
         .result-summary { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 0 0 14px; color: var(--wm-muted); font-size: .86rem; }
         .shop-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
@@ -112,10 +117,12 @@
         .description { margin: 0; color: var(--wm-muted); font-size: .88rem; line-height: 1.55; }
         .card-facts { display: grid; gap: 7px; margin: 16px 0; padding-top: 14px; border-top: 1px solid var(--wm-line); color: var(--wm-muted); font-size: .82rem; }
         .card-facts strong { color: var(--wm-ink); }
-        .food-coverage { display: inline-flex; width: fit-content; align-items: center; gap: 6px; margin-top: 12px; padding: 5px 9px; border-radius: 999px; color: var(--wm-green); background: rgba(61,111,85,.09); font-size: .7rem; font-weight: 900; }
+        .food-coverage { display: inline-flex; width: fit-content; min-height: 28px; align-items: center; gap: 6px; margin-top: 0; padding: 5px 9px; border-radius: 999px; color: var(--wm-green); background: rgba(61,111,85,.09); font-size: .7rem; font-weight: 900; }
         .food-coverage::before { content: '✦'; color: var(--wm-gold); }
         .food-coverage.empty { color: var(--wm-muted); background: rgba(109,91,79,.1); }
-        .card-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; }
+        .card-support { display: grid; gap: 10px; margin-top: auto; padding-top: 16px; }
+        .card-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 0; }
+        .card-actions .button { flex: 1 1 150px; }
         .status { display: inline-flex; width: fit-content; align-items: center; border-radius: 999px; padding: 5px 9px; color: var(--wm-green); background: rgba(61, 111, 85, .11); font-size: .7rem; font-weight: 850; letter-spacing: .04em; text-transform: uppercase; }
         .pagination { display:flex; justify-content:center; gap:8px; margin-top:22px; }
         .pagination a, .pagination span { display:inline-flex; align-items:center; justify-content:center; min-width:38px; min-height:38px; padding:0 10px; border:1px solid var(--wm-line); border-radius:9px; color:var(--wm-ink); background:#fff; text-decoration:none; font-weight:800; }
@@ -193,35 +200,30 @@
         .ai-guide-source { margin-top: 11px; color: var(--wm-muted); font-size: .72rem; }
         @keyframes guide-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
         @media (max-width: 1080px) { .filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .filter-actions { grid-column: 1 / -1; } .shop-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-        @media (max-width: 850px) { .shell, .shell.nav-collapsed { display:block; } .sidebar { position:fixed; z-index:40; left:0; top:0; width:min(86vw,310px); height:100dvh; transform:translateX(-105%); transition:transform .2s ease; box-shadow:18px 0 45px rgba(44,18,12,.22); } .shell.nav-open .sidebar { transform:translateX(0); } .shell.nav-open .nav-backdrop { display:block; position:fixed; z-index:30; inset:0; border:0; background:rgba(34,16,12,.42); cursor:pointer; } .shell.nav-collapsed .brand { justify-content:flex-start; padding-inline:10px; } .shell.nav-collapsed .brand-word, .shell.nav-collapsed .nav-label, .shell.nav-collapsed .nav-item span, .shell.nav-collapsed .user-name, .shell.nav-collapsed .user-role { display:block; } .shell.nav-collapsed .nav-item { justify-content:flex-start; padding-inline:12px; } .nav { grid-template-columns: repeat(2, minmax(0, 1fr)); } .sidebar-footer { margin-top: 24px; } .topbar, .content { padding-inline: 20px; } .detail-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 850px) { .shell, .shell.nav-collapsed { display:block; width:100%; max-width:100%; } .main { width:100%; min-width:0; overflow-x:hidden; } .sidebar { position:fixed; z-index:40; left:0; top:0; width:min(88vw,340px); height:100dvh; transform:translateX(-105%); transition:transform .2s ease; box-shadow:18px 0 45px rgba(44,18,12,.22); } .shell.nav-open .sidebar { transform:translateX(0); } .shell.nav-open .nav-backdrop { display:block; position:fixed; z-index:30; inset:0; border:0; background:rgba(34,16,12,.42); cursor:pointer; } .shell.nav-collapsed .brand { justify-content:flex-start; padding-inline:10px; } .shell.nav-collapsed .brand-word, .shell.nav-collapsed .nav-label, .shell.nav-collapsed .nav-item span, .shell.nav-collapsed .user-name, .shell.nav-collapsed .user-role { display:block; } .shell.nav-collapsed .nav-item { width:auto; min-height:0; justify-content:flex-start; margin-inline:0; padding-inline:12px; overflow:visible; } .nav { grid-template-columns:1fr; } .sidebar-footer { margin-top:24px; } .topbar, .content { padding-inline:20px; } .detail-grid { grid-template-columns:1fr; } }
         @media (prefers-reduced-motion: reduce) { .sidebar, .shop-card, .menu-card { transition:none; } }
-        @media (max-width: 620px) { .nav, .filter-grid, .shop-grid { grid-template-columns: 1fr; } .topbar, .page-header, .detail-heading { display: grid; } .content { padding: 22px 16px 34px; } .page-header, .detail-panel { padding: 22px; } .header-pill { justify-self: start; } .filter-actions { grid-column: auto; flex-direction: column; align-items: stretch; } .filter-actions .button { width: 100%; } }
+        @media (max-width: 620px) { .nav, .filter-grid, .shop-grid { grid-template-columns: 1fr; } .topbar, .page-header, .detail-heading { display: grid; } .topbar > div { min-width: 0; } .content { width: 100%; padding: 22px 16px 34px; } .page-header, .detail-panel { padding: 22px; } .header-pill { justify-self: start; } .filter-actions { grid-column: auto; flex-direction: column; align-items: stretch; } .filter-actions .button, .card-actions .button { width: 100%; flex-basis:100%; } .card-support { padding-top: 14px; } }
     </style>
 </head>
 <body>
     <div class="shell" data-heritage-public-nav>
         <aside class="sidebar" id="public-heritage-sidebar">
             <div class="brand"><span class="brand-mark">W</span><span class="brand-word">WarisanMakan</span></div>
-            <p class="nav-label">{{ __('Home') }}</p>
+            <p class="nav-label">Home</p>
             <nav class="nav" aria-label="User home navigation">
                 @auth
-                    <a class="nav-item" href="{{ route('home') }}">{{ __('Dashboard') }}</a>
-                    <a class="nav-item" href="{{ route('profile.show') }}">{{ __('Profile') }}</a>
+                    <a class="nav-item" data-icon="⌂" data-label="Dashboard" title="Dashboard" href="{{ route('home') }}"><span>Dashboard</span></a>
+                    <a class="nav-item" data-icon="◎" data-label="Profile" title="Profile" href="{{ route('profile.show') }}"><span>Profile</span></a>
                 @else
-                    <a class="nav-item" href="{{ route('home') }}">{{ __('Dashboard') }}</a>
-                    <a class="nav-item" href="{{ route('login') }}">{{ __('Log in') }}</a>
+                    <a class="nav-item" data-icon="⌂" data-label="Landing page" title="Landing page" href="{{ route('landing') }}"><span>Landing page</span></a>
+                    <a class="nav-item" data-icon="↪" data-label="Log in" title="Log in" href="{{ route('login') }}"><span>Log in</span></a>
                 @endauth
             </nav>
-            <p class="nav-label">{{ __('Modules') }}</p>
+            <p class="nav-label">Modules</p>
             <nav class="nav" aria-label="WarisanMakan modules">
-                <a class="nav-item active" href="{{ route('heritage-shops.index') }}">{{ __('Heritage Shop Tracking') }}</a>
-                @guest
-                    <a class="nav-item" href="#" data-login-required="true">{{ __('Food Passport') }}</a>
-                    <a class="nav-item" href="#" data-login-required="true">{{ __('Food Trail & Navigation') }}</a>
-                @else
-                    <a class="nav-item" href="{{ route('passport.index') }}">{{ __('Food Passport') }}</a>
-                    <a class="nav-item" href="{{ url('/foodtrails') }}">{{ __('Food Trail & Navigation') }}</a>
-                @endguest
+                <a class="nav-item active" data-icon="✦" data-label="Heritage Shop Tracking" title="Heritage Shop Tracking" href="{{ route('heritage-shops.index') }}"><span>Heritage Shop Tracking</span></a>
+                <a class="nav-item" data-icon="◇" data-label="Food Passport" title="Food Passport" href="{{ route('passport.index') }}"><span>Food Passport</span></a>
+                <a class="nav-item" data-icon="⌁" data-label="Food Trail &amp; Navigation" title="Food Trail &amp; Navigation" href="{{ url('/foodtrails') }}"><span>Food Trail &amp; Navigation</span></a>
             </nav>
             @auth
                 <div class="sidebar-footer">
@@ -229,7 +231,7 @@
                     <p class="user-role">WarisanMakan member</p>
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
-                        <button class="logout" type="submit">{{ __('Log out') }}</button>
+                        <button class="logout" type="submit">Log out</button>
                     </form>
                 </div>
             @endauth
@@ -240,13 +242,13 @@
             <header class="topbar">
                 <button class="nav-toggle" id="public-nav-toggle" type="button" aria-controls="public-heritage-sidebar" aria-expanded="true"><span aria-hidden="true">☰</span><span id="public-nav-toggle-label">Collapse</span></button>
                 <div>
-                    <h2>{{ __('Heritage Shop Tracking') }}</h2>
-                    <p>{{ __('Explore verified heritage food businesses and their cultural stories.') }}</p>
+                    <h2>Heritage Shop Tracking</h2>
+                    <p>Explore verified heritage food businesses and their cultural stories.</p>
                 </div>
                 @auth
-                    <a class="topbar-link" href="{{ route('home') }}">{{ __('Back to dashboard') }}</a>
+                    <a class="topbar-link" href="{{ route('home') }}">Back to dashboard</a>
                 @else
-                    <button class="guest-trigger" type="button" data-login-trigger>{{ __('Guest Mode') }}</button>
+                    <a class="topbar-link" href="{{ route('login') }}">Log in</a>
                 @endauth
             </header>
 
@@ -256,11 +258,11 @@
                         $primaryImage = $shop->images->first();
                         $primaryImageUrl = $primaryImage ? $imageService->url($primaryImage) : null;
                     @endphp
-                    <a class="back-link" href="{{ route('heritage-shops.index') }}">← {{ __('Back to Heritage Shop list') }}</a>
+                    <a class="back-link" href="{{ route('heritage-shops.index') }}">← Back to Heritage Shop list</a>
                     <article class="detail-panel">
                         <header class="detail-heading">
                             <div>
-                                <p class="eyebrow" style="color:var(--wm-accent);">{{ __('Heritage profile') }}</p>
+                                <p class="eyebrow" style="color:var(--wm-accent);">Heritage profile</p>
                                 <h1>{{ $shop->shop_name }}</h1>
                                 <p class="meta">{{ $shop->primary_food_category ?: 'Heritage food business' }} · {{ $shop->state ?: ($shop->city ?: 'Location not provided') }}</p>
                             </div>
@@ -271,7 +273,7 @@
                                 @if ($primaryImageUrl)
                                     <img class="detail-main-image" src="{{ $primaryImageUrl }}" alt="{{ $shop->shop_name }} heritage food shop" onerror="this.remove()">
                                 @else
-                                    <div class="detail-placeholder" role="img" aria-label="{{ __('No image available for :name', ['name' => $shop->shop_name]) }}">{{ __('No image available') }}</div>
+                                    <div class="detail-placeholder" role="img" aria-label="No image available for {{ $shop->shop_name }}">No image available</div>
                                 @endif
                                 @if ($shop->images->count() > 1)
                                     <div class="gallery" aria-label="Additional images">
@@ -284,34 +286,34 @@
 
                             <div>
                                 <section class="info-section">
-                                    <h2>{{ __('Heritage information') }}</h2>
+                                    <h2>Heritage information</h2>
                                     <dl class="definition-list">
                                         @if ($shop->heritage_story)
-                                            <div><dt>{{ __('Cultural significance') }}</dt><dd>{{ $shop->heritage_story }}</dd></div>
+                                            <div><dt>Cultural significance</dt><dd>{{ $shop->heritage_story }}</dd></div>
                                         @endif
                                         @if ($shop->founder_name || $shop->establishment_year)
-                                            <div><dt>{{ __('Origins') }}</dt><dd>{{ $shop->founder_name ? 'Founder: '.$shop->founder_name : '' }}{{ $shop->founder_name && $shop->establishment_year ? ' · ' : '' }}{{ $shop->establishment_year ? 'Established: '.$shop->establishment_year : '' }}</dd></div>
+                                            <div><dt>Origins</dt><dd>{{ $shop->founder_name ? 'Founder: '.$shop->founder_name : '' }}{{ $shop->founder_name && $shop->establishment_year ? ' · ' : '' }}{{ $shop->establishment_year ? 'Established: '.$shop->establishment_year : '' }}</dd></div>
                                         @endif
                                         @if ($shop->founder_background)
-                                            <div><dt>{{ __('Founder background') }}</dt><dd>{{ $shop->founder_background }}</dd></div>
+                                            <div><dt>Founder background</dt><dd>{{ $shop->founder_background }}</dd></div>
                                         @endif
                                         @if ($shop->current_owner_name || $shop->current_owner_details)
-                                            <div><dt>{{ __('Current ownership') }}</dt><dd>{{ $shop->current_owner_name }}{{ $shop->current_owner_name && $shop->current_owner_details ? ' — ' : '' }}{{ $shop->current_owner_details }}</dd></div>
+                                            <div><dt>Current ownership</dt><dd>{{ $shop->current_owner_name }}{{ $shop->current_owner_name && $shop->current_owner_details ? ' — ' : '' }}{{ $shop->current_owner_details }}</dd></div>
                                         @endif
                                     </dl>
                                 </section>
 
                                 <section class="info-section">
-                                    <h2>{{ __('Visit information') }}</h2>
+                                    <h2>Visit information</h2>
                                     <dl class="definition-list">
                                         @if ($shop->address || $shop->city || $shop->state || $shop->postal_code)
-                                            <div><dt>{{ __('Address') }}</dt><dd>{{ collect([$shop->address, $shop->city, $shop->state, $shop->postal_code])->filter()->implode(', ') }}</dd></div>
+                                            <div><dt>Address</dt><dd>{{ collect([$shop->address, $shop->city, $shop->state, $shop->postal_code])->filter()->implode(', ') }}</dd></div>
                                         @endif
                                         @if ($shop->operating_hours)
-                                            <div><dt>{{ __('Operating information') }}</dt><dd>{{ is_array($shop->operating_hours) ? implode('; ', $shop->operating_hours) : $shop->operating_hours }}</dd></div>
+                                            <div><dt>Operating information</dt><dd>{{ is_array($shop->operating_hours) ? implode('; ', $shop->operating_hours) : $shop->operating_hours }}</dd></div>
                                         @endif
                                         @if ($shop->contact_number)
-                                            <div><dt>{{ __('Contact') }}</dt><dd>{{ $shop->contact_number }}</dd></div>
+                                            <div><dt>Contact</dt><dd>{{ $shop->contact_number }}</dd></div>
                                         @endif
                                     </dl>
                                 </section>
@@ -399,65 +401,65 @@
 
                         @if ($shop->source_url)
                             <section class="info-section" style="margin-top:12px;">
-                                <h2>{{ __('Related information') }}</h2>
-                                <p class="description">{{ __('The profile was prepared from the registered source information.') }}<a href="{{ $shop->source_url }}" target="_blank" rel="noopener noreferrer" style="color:var(--wm-accent);font-weight:800;">{{ __('View source') }}</a></p>
+                                <h2>Related information</h2>
+                                <p class="description">The profile was prepared from the registered source information. <a href="{{ $shop->source_url }}" target="_blank" rel="noopener noreferrer" style="color:var(--wm-accent);font-weight:800;">View source</a></p>
                             </section>
                         @endif
 
                         @auth
                             <div class="card-actions" style="margin-top:22px;">
-                                <a class="button secondary" href="{{ route('heritage-shops.correction-requests.create', $shop) }}">{{ __('Report incorrect information') }}</a>
+                                <a class="button secondary" href="{{ route('heritage-shops.correction-requests.create', $shop) }}">Report incorrect information</a>
                             </div>
                         @endauth
                     </article>
                 @else
                     <header class="page-header">
                         <div>
-                            <p class="eyebrow">{{ __('Heritage food explorer') }}</p>
-                            <h1>{{ __('Discover Malaysia\'s food heritage') }}</h1>
-                            <p>{{ __('Browse verified heritage food shops, learn their cultural significance, and explore the stories preserved by the WarisanMakan community.') }}</p>
+                            <p class="eyebrow">Heritage food explorer</p>
+                            <h1>Discover Malaysia's food heritage</h1>
+                            <p>Browse verified heritage food shops, learn their cultural significance, and explore the stories preserved by the WarisanMakan community.</p>
                         </div>
-                        <span class="header-pill">{{ trans_choice(':count published record|:count published records', $shops->total(), ['count' => $shops->total()]) }}</span>
+                        <span class="header-pill">{{ $shops->total() }} published record{{ $shops->total() === 1 ? '' : 's' }}</span>
                     </header>
 
                     <section class="filter-panel" aria-labelledby="filter-heading">
-                        <h2 id="filter-heading">{{ __('Find a heritage shop') }}</h2>
+                        <h2 id="filter-heading" style="margin:0 0 15px; font-family:Georgia,serif; color:var(--wm-accent);">Find a heritage shop</h2>
                         <form action="{{ route('heritage-shops.index') }}" method="GET">
                             <div class="filter-grid">
                                 <div class="field">
-                                    <label for="search">{{ __('Search') }}</label>
-                                    <input id="search" name="search" type="search" value="{{ $search }}" placeholder="{{ __('Name, location, story') }}">
+                                    <label for="search">Search</label>
+                                    <input id="search" name="search" type="search" value="{{ $search }}" placeholder="Name, location, story">
                                 </div>
                                 <div class="field">
-                                    <label for="category">{{ __('Category') }}</label>
+                                    <label for="category">Category</label>
                                     <select id="category" name="category">
-                                        <option value="">{{ __('All categories') }}</option>
+                                        <option value="">All categories</option>
                                         @foreach ($categories as $option)
                                             <option value="{{ $option }}" @selected(strtolower($category) === strtolower($option))>{{ $option }}</option>
                                         @endforeach
                                     </select>
                                 </div>
                                 <div class="field">
-                                    <label for="state">{{ __('State / region') }}</label>
+                                    <label for="state">State / region</label>
                                     <select id="state" name="state">
-                                        <option value="">{{ __('All states') }}</option>
+                                        <option value="">All states</option>
                                         @foreach ($states as $option)
                                             <option value="{{ $option }}" @selected(strtolower($state) === strtolower($option))>{{ $option }}</option>
                                         @endforeach
                                     </select>
                                 </div>
                                 <div class="field">
-                                    <label for="sort">{{ __('Sort by') }}</label>
+                                    <label for="sort">Sort by</label>
                                     <select id="sort" name="sort">
-                                        <option value="name_asc">{{ __('Name A–Z') }}</option>
-                                        <option value="name_desc">{{ __('Name Z–A') }}</option>
-                                        <option value="newest">{{ __('Newest') }}</option>
-                                        <option value="oldest">{{ __('Oldest') }}</option>
+                                        <option value="name_asc" @selected($sort === 'name_asc')>Name A–Z</option>
+                                        <option value="name_desc" @selected($sort === 'name_desc')>Name Z–A</option>
+                                        <option value="newest" @selected($sort === 'newest')>Newest</option>
+                                        <option value="oldest" @selected($sort === 'oldest')>Oldest</option>
                                     </select>
                                 </div>
                                 <div class="filter-actions">
-                                    <button class="button primary" type="submit">{{ __('Apply filters') }}</button>
-                                    <a class="button secondary" href="{{ route('heritage-shops.index') }}">{{ __('Reset') }}</a>
+                                    <button class="button primary" type="submit">Apply filters</button>
+                                    <a class="button secondary" href="{{ route('heritage-shops.index') }}">Reset</a>
                                 </div>
                             </div>
                         </form>
@@ -465,30 +467,15 @@
 
                     @if ($shops->isEmpty())
                         <section class="empty-state" aria-live="polite">
-                            <h2>{{ __('No heritage shops found') }}</h2>
-                            <p>
-                                {{ $search || $category || $state
-                                ? __('No records match the selected search or filters. Try clearing a filter or using a broader keyword.')
-                                : __('There are no published heritage shop records available yet.') }}
-                            </p>
+                            <h2>No heritage shops found</h2>
+                            <p>{{ $search || $category || $state ? 'No records match the selected search or filters. Try clearing a filter or using a broader keyword.' : 'There are no published heritage shop records available yet.' }}</p>
                             @if ($search || $category || $state)
-                                <a class="button secondary" href="{{ route('heritage-shops.index') }}">{{ __('Clear search and filters') }}</a>
+                                <a class="button secondary" href="{{ route('heritage-shops.index') }}">Clear search and filters</a>
                             @endif
                         </section>
                     @else
-                        <div class="result-summary">
-                            <span>
-                                {{ __('Showing :shown of :total published records.', [
-                                    'shown' => $shops->count(),
-                                    'total' => $shops->total(),
-                                ]) }}
-                            </span>
-
-                            <span>
-                                {{ __('Images are shown when a verified gallery is available.') }}
-                        </span>
-                        </div>
-                        <section class="shop-grid" aria-label="{{ __('Heritage shop records') }}">
+                        <div class="result-summary"><span>Showing {{ $shops->count() }} of {{ $shops->total() }} published record{{ $shops->total() === 1 ? '' : 's' }}.</span><span>Images are shown when a verified gallery is available.</span></div>
+                        <section class="shop-grid" aria-label="Heritage shop records">
                             @foreach ($shops as $shop)
                                 @php
                                     $primaryImage = $shop->images->first();
@@ -499,42 +486,28 @@
                                         @if ($primaryImageUrl)
                                             <img src="{{ $primaryImageUrl }}" alt="{{ $shop->shop_name }} heritage food shop" loading="lazy" onerror="this.remove()">
                                         @else
-                                            <div class="image-placeholder" role="img" aria-label="{{ __('No image available for :name', ['name' => $shop->shop_name]) }}">
-                                                {{ __('No image available') }}
-                                            </div>
+                                            <div class="image-placeholder" role="img" aria-label="No image available for {{ $shop->shop_name }}">No image available</div>
                                         @endif
                                     </div>
                                     <div class="shop-card-body">
-                                        <p class="meta">
-                                            {{ $shop->primary_food_category ?: __('Heritage food business') }}
-                                            ·
-                                            {{ $shop->state ?: ($shop->city ?: __('Location not provided')) }}
-                                        </p>
+                                        <p class="meta">{{ $shop->primary_food_category ?: 'Heritage food business' }} · {{ $shop->state ?: ($shop->city ?: 'Location not provided') }}</p>
                                         <h2>{{ $shop->shop_name }}</h2>
-                                        <p class="description">{{ \Illuminate\Support\Str::limit($shop->heritage_story ?: __('Heritage information is being prepared.'), 150) }}</p>
+                                        <p class="description">{{ \Illuminate\Support\Str::limit($shop->heritage_story ?: 'Heritage information is being prepared.', 150) }}</p>
                                         <div class="card-facts">
-                                            <div>
-                                                <strong>{{ __('Location') }}:</strong>
-                                                {{ $shop->location ?: __('Not provided') }}
-                                            </div>
-                                        @if ($shop->operating_hours)
-                                            <div>
-                                                <strong>{{ __('Hours') }}:</strong>
-                                                {{ is_array($shop->operating_hours)
-                                                    ? implode('; ', $shop->operating_hours)
-                                                    : $shop->operating_hours }}
-                                            </div>
-                                        @endif
+                                            <div><strong>Location:</strong> {{ $shop->location ?: 'Not provided' }}</div>
+                                                            @if ($shop->operating_hours)<div><strong>Hours:</strong> {{ is_array($shop->operating_hours) ? implode('; ', $shop->operating_hours) : $shop->operating_hours }}</div>@endif
                                         </div>
-                                        <div class="card-actions">
-                                            <a class="button primary" href="{{ auth()->check() ? route('heritage-shops.show', ['id' => $shop->id]) : '#' }}" @guest data-login-required="true" @endguest>{{ __('View details') }}</a>
+                                        <div class="card-support">
+                                            @if ($shop->activeFoodItems->isNotEmpty())
+                                                <span class="food-coverage">{{ $shop->activeFoodItems->count() }} verified food item{{ $shop->activeFoodItems->count() === 1 ? '' : 's' }}</span>
+                                            @else
+                                                <span class="food-coverage empty">Menu being documented</span>
+                                            @endif
+                                            <div class="card-actions">
+                                                <a class="button secondary" href="{{ route('heritage-shops.show', ['id' => $shop->id]) }}">View details</a>
+                                                <a class="button primary" href="{{ route('heritage-shops.menu', $shop) }}">Explore menu &amp; stories</a>
+                                            </div>
                                         </div>
-                                        @if ($shop->activeFoodItems->isNotEmpty())
-                                            <span class="food-coverage">{{ $shop->activeFoodItems->count() }} verified food item{{ $shop->activeFoodItems->count() === 1 ? '' : 's' }}</span>
-                                        @else
-                                            <span class="food-coverage empty">Menu being documented</span>
-                                        @endif
-                                        <div class="card-actions"><a class="button primary" href="{{ route('heritage-shops.show', ['id' => $shop->id]) }}#food-menu">Explore food &amp; story</a></div>
                                     </div>
                                 </article>
                             @endforeach
@@ -545,9 +518,6 @@
             </main>
         </section>
     </div>
-    @guest
-        @include('partials.login-required-modal')
-    @endguest
     <script>
     (() => {
         const shell = document.querySelector('[data-heritage-public-nav]');

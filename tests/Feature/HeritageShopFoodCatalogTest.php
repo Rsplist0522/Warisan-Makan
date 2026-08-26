@@ -97,7 +97,42 @@ class HeritageShopFoodCatalogTest extends TestCase
         $this->assertSoftDeleted('heritage_food_items', ['id' => $item->id]);
     }
 
+        public function test_public_card_actions_open_distinct_profile_and_menu_routes(): void
+    {
+        $shop = HeritageShop::create([
+            'shop_name' => 'Distinct Action Kitchen',
+            'heritage_story' => 'A profile story for the card-action test.',
+            'publish_status' => HeritageShop::STATUS_PUBLISHED,
+        ]);
+        $shop->foodItems()->create([
+            'name' => 'Signature Heritage Dish',
+            'description' => 'A verified signature dish.',
+            'heritage_significance' => 'A documented family food tradition.',
+            'is_active' => true,
+        ]);
+
+        $list = $this->get(route('heritage-shops.index'));
+        $list->assertOk()
+            ->assertSee('View details')
+            ->assertSee('Explore menu &amp; stories', false)
+            ->assertSee(route('heritage-shops.show', ['id' => $shop->id]), false)
+            ->assertSee(route('heritage-shops.menu', $shop), false);
+
+        $this->get(route('heritage-shops.show', ['id' => $shop->id]))
+            ->assertOk()
+            ->assertSee('Heritage information')
+            ->assertSee('Heritage foods &amp; menu', false);
+
+        $this->get(route('heritage-shops.menu', $shop))
+            ->assertOk()
+            ->assertSee('Menu &amp; heritage stories', false)
+            ->assertSee('Signature Heritage Dish')
+            ->assertSee('Back to Distinct Action Kitchen profile')
+            ->assertDontSee('Ask the story behind this place');
+    }
+
     public function test_published_food_item_has_a_dedicated_story_page(): void
+
     {
         $shop = HeritageShop::create(['shop_name' => 'Story Kitchen', 'publish_status' => HeritageShop::STATUS_PUBLISHED]);
         $item = $shop->foodItems()->create([

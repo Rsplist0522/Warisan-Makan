@@ -234,6 +234,9 @@ Route::get('/start_trail', function () {
 })->middleware('auth');
 
 Route::get('/heritage-shops', [HeritageShopController::class, 'index'])->name('heritage-shops.index');
+Route::get('/heritage-shops/{heritageShop}/menu', [HeritageShopController::class, 'menu'])
+    ->whereNumber('heritageShop')
+    ->name('heritage-shops.menu');
 Route::get('/heritage-shops/{heritageShop}/images/{image}', [HeritageShopController::class, 'image'])
     ->whereNumber('heritageShop')
     ->whereNumber('image')

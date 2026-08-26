@@ -19,7 +19,7 @@
             --line: rgba(66, 43, 32, .12);
         }
         * { box-sizing: border-box; }
-        body { margin: 0; min-height: 100vh; color: var(--ink); background: var(--canvas); font-family: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif; }
+        body { margin: 0; min-height: 100vh; min-width: 0; overflow-x: hidden; color: var(--ink); background: var(--canvas); font-family: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif; }
         a { color: inherit; }
         button { font: inherit; }
         .shell { min-height: 100vh; display: grid; grid-template-columns: 270px 1fr; }
@@ -29,8 +29,10 @@
         .brand-mark { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.2); border-radius: 12px; color: #3b1b16; background: var(--gold); font-family: Georgia, serif; }
         .nav-label { margin: 27px 12px 10px; color: rgba(255,245,236,.48); font-size: .68rem; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
         .nav { display: grid; gap: 5px; }
-        .nav-item { display: flex; align-items: center; gap: 11px; padding: 11px 12px; border-radius: 10px; color: rgba(255,245,236,.7); font-size: .88rem; text-decoration: none; }
+        .nav-item { position: relative; display: flex; min-width: 0; align-items: center; gap: 11px; padding: 11px 12px; border-radius: 10px; color: rgba(255,245,236,.7); font-size: .88rem; text-decoration: none; white-space: nowrap; }
         .nav-item::before { content: ''; width: 7px; height: 7px; flex: 0 0 auto; border: 1px solid currentColor; border-radius: 50%; }
+        .shell[data-heritage-nav] .nav-item::before { content: attr(data-icon); width: 25px; height: 25px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.15); border-radius: 8px; font-size: .75rem; line-height: 1; }
+        .shell[data-heritage-nav] .nav-item.active::before { border-color: rgba(196,147,60,.42); }
         .nav-item.active, .nav-item:hover { color: #fff; background: var(--sidebar-soft); }
         .nav-item.active::before { border-color: var(--gold); background: var(--gold); }
         .nav-item.placeholder { color: rgba(255,245,236,.42); }
@@ -43,7 +45,10 @@
         .sidebar-footer { margin-top: auto; padding-top: 22px; border-top: 1px solid rgba(255,255,255,.1); }
         .shell.nav-collapsed .brand { justify-content: center; padding-inline: 0; }
         .shell.nav-collapsed .brand-word, .shell.nav-collapsed .nav-label, .shell.nav-collapsed .nav-item span, .shell.nav-collapsed .nav-item small, .shell.nav-collapsed .admin-name, .shell.nav-collapsed .admin-role { display: none; }
-        .shell.nav-collapsed .nav-item { justify-content: center; padding-inline: 8px; }
+        .shell.nav-collapsed .nav-item { width: 44px; min-height: 44px; justify-content: center; margin-inline: auto; padding-inline: 8px; overflow: hidden; }
+        .shell.nav-collapsed .nav-item::before { width: 28px; height: 28px; border-color: transparent; background: rgba(255,255,255,.04); }
+        .shell[data-heritage-nav].nav-collapsed .nav-item:hover::after, .shell[data-heritage-nav].nav-collapsed .nav-item:focus-visible::after { content: attr(data-label); position: absolute; z-index: 60; left: calc(100% + 10px); top: 50%; display: block; min-width: max-content; transform: translateY(-50%); padding: 8px 10px; border: 1px solid rgba(255,255,255,.12); border-radius: 8px; color: #fffaf4; background: #3b1b18; box-shadow: 0 10px 22px rgba(0,0,0,.18); font-size: .75rem; font-weight: 800; }
+        .shell[data-heritage-nav].nav-collapsed .nav-item:hover { overflow: visible; }
         .shell.nav-collapsed .subnav { display: none; }
         .nav-toggle { display:inline-flex; align-items:center; gap:8px; min-height:38px; border:1px solid var(--line); border-radius:10px; padding:0 12px; color:var(--ink); background:#fff; cursor:pointer; font-size:.8rem; font-weight:800; }
         .nav-toggle:hover { border-color:rgba(163,54,54,.35); background:#fffaf4; }
@@ -61,7 +66,7 @@
         .eyebrow { margin: 0 0 7px; color: var(--accent); font-size: .78rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
         .page-header h1 { margin: 0; font-family: Georgia, serif; font-size: clamp(2rem, 5vw, 3.2rem); line-height: 1; }
         .page-header p:last-child { margin: 9px 0 0; color: var(--muted); }
-        h1, h2, h3, p { overflow-wrap: anywhere; }
+        h1, h2, h3, p { overflow-wrap: break-word; word-break: normal; }
         h2 { margin: 0; font-size: 1.25rem; }
         h3 { margin: 0; font-size: 1rem; }
         .muted { color: var(--muted); }
@@ -139,17 +144,22 @@
         .pagination { margin-top: 18px; }
         nav[role='navigation'] svg { width: 18px; height: 18px; }
         @media (max-width: 850px) {
-            .shell, .shell.nav-collapsed { display:block; }
-            .sidebar { position:fixed; z-index:40; left:0; top:0; width:min(86vw, 310px); height:100dvh; transform:translateX(-105%); transition:transform .2s ease; box-shadow:18px 0 45px rgba(44,18,12,.22); }
+            .shell, .shell.nav-collapsed { display:block; width:100%; max-width:100%; }
+            .main { width:100%; min-width:0; overflow-x:hidden; }
+            .sidebar { position:fixed; z-index:40; left:0; top:0; width:min(88vw, 340px); height:100dvh; transform:translateX(-105%); transition:transform .2s ease; box-shadow:18px 0 45px rgba(44,18,12,.22); }
             .shell.nav-open .sidebar { transform:translateX(0); }
             .shell.nav-open .nav-backdrop { display:block; position:fixed; z-index:30; inset:0; border:0; background:rgba(34,16,12,.42); cursor:pointer; }
             .shell.nav-collapsed .brand { justify-content:flex-start; padding-inline:10px; }
             .shell.nav-collapsed .brand-word, .shell.nav-collapsed .nav-label, .shell.nav-collapsed .nav-item span, .shell.nav-collapsed .nav-item small, .shell.nav-collapsed .admin-name, .shell.nav-collapsed .admin-role { display:block; }
             .shell.nav-collapsed .nav-item { justify-content:flex-start; padding-inline:12px; }
-            .nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-            .subnav { grid-column: 1 / -1; margin-left: 0; }
+            .nav { grid-template-columns: 1fr; }
+            .subnav { grid-column: auto; margin-left: 0; }
             .sidebar-footer { margin-top: 24px; }
             .topbar, .content { padding-inline: 20px; }
+            .topbar > div { min-width: 0; }
+            .content { width: 100%; }
+            .record-card { grid-template-columns: 1fr; }
+            .record-actions { justify-content: start; }
             .filters, .filters.four, .filters.six { grid-template-columns: 1fr 1fr; }
             .filters .filter-action { grid-column: 1 / -1; }
             .module-grid { grid-template-columns: 1fr; }
@@ -161,6 +171,9 @@
         @media (max-width: 520px) {
             .nav, .filters, .filters.four, .filters.six, .definition-grid { grid-template-columns: 1fr; }
             .page-header, .record-card { display: grid; }
+            .record-card { grid-template-columns: 1fr; }
+            .topbar { padding-inline: 14px; }
+            .content { padding: 22px 14px 30px; }
             .record-actions { justify-content: start; }
         }
     </style>
@@ -171,7 +184,6 @@
         $heritageShopNavEnabled = request()->routeIs('admin.heritage-shops.*');
         $communityContributionActive = request()->routeIs('admin.community-contributions.*');
         $blindBoxActive = request()->routeIs('admin.blind-box-items.*');
-        $badgesActive = request()->routeIs('admin.badges.*');
         $placeholderModules = [
             'heritage-registry' => 'Heritage Registry',
             'food-map' => 'Food Map',
@@ -185,21 +197,18 @@
             <div class="brand"><span class="brand-mark">W</span><span class="brand-word">Warisan Makan</span></div>
             <p class="nav-label">Admin home</p>
             <nav class="nav" aria-label="Administrator modules">
-                <a class="nav-item {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}" href="{{ route('admin.dashboard') }}">Dashboard</a>
+                <a class="nav-item {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}" data-icon="⌂" data-label="Dashboard" title="Dashboard" href="{{ route('admin.dashboard') }}"><span>Dashboard</span></a>
             </nav>
 
             <p class="nav-label">Modules</p>
             <nav class="nav" aria-label="Administrator modules">
-                <a class="nav-item {{ request()->routeIs('admin.users.*') ? 'active' : '' }}" href="{{ route('admin.users.index') }}">
+                <a class="nav-item {{ request()->routeIs('admin.users.*') ? 'active' : '' }}" data-icon="◎" data-label="Users &amp; Roles" title="Users &amp; Roles" href="{{ route('admin.users.index') }}">
                     <span>Users &amp; Roles</span>
                 </a>
-                <a class="nav-item {{ $badgesActive ? 'active' : '' }}" href="{{ route('admin.badges.index') }}">
-                    <span>Achievement Badges</span>
-                </a>
-                <a class="nav-item {{ request()->routeIs('admin.heritage-shops.*') ? 'active' : '' }}" href="{{ route('admin.heritage-shops.index') }}">
+                <a class="nav-item {{ request()->routeIs('admin.heritage-shops.*') ? 'active' : '' }}" data-icon="✦" data-label="Heritage Shops" title="Heritage Shops" href="{{ route('admin.heritage-shops.index') }}">
                     <span>Heritage Shops</span>
                 </a>
-                <a class="nav-item {{ $communityContributionActive ? 'active' : '' }}" href="{{ route('admin.community-contributions.submissions') }}">
+                <a class="nav-item {{ $communityContributionActive ? 'active' : '' }}" data-icon="◌" data-label="Community Contribution" title="Community Contribution" href="{{ route('admin.community-contributions.submissions') }}">
                     <span>Community Contribution</span>
                 </a>
                 @if ($communityContributionActive)
@@ -211,12 +220,12 @@
                     </div>
                 @endif
 
-                <a class="nav-item {{ $blindBoxActive ? 'active' : '' }}" href="{{ route('admin.blind-box-items.index') }}">
+                <a class="nav-item {{ $blindBoxActive ? 'active' : '' }}" data-icon="◇" data-label="Blind Box" title="Blind Box" href="{{ route('admin.blind-box-items.index') }}">
                     <span>Blind Box</span>
                 </a>
 
                 @foreach ($placeholderModules as $slug => $name)
-                    <a class="nav-item placeholder {{ request()->routeIs('admin.modules.show') && request()->route('moduleSlug') === $slug ? 'active' : '' }}" href="{{ route('admin.modules.show', $slug) }}">
+                    <a class="nav-item placeholder {{ request()->routeIs('admin.modules.show') && request()->route('moduleSlug') === $slug ? 'active' : '' }}" data-icon="◈" data-label="{{ $name }}" title="{{ $name }}" href="{{ route('admin.modules.show', $slug) }}">
                         <span>{{ $name }}</span>
                         <small>soon</small>
                     </a>

@@ -13,11 +13,17 @@ use App\Http\Controllers\CommunityContributionController;
 use App\Http\Controllers\CorrectionRequestController;
 use App\Http\Controllers\HeritageShopController;
 use App\Http\Controllers\PassportController;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/login', 'auth.login')->middleware('guest')->name('login');
 Route::get('/auth/google', [AuthController::class, 'redirect'])->middleware('guest')->name('auth.google');
 Route::get('/auth/google/callback', [AuthController::class, 'callback'])->middleware('guest');
+Route::get('/guest', function (\Illuminate\Http\Request $request) {
+    $request->session()->put('guest_mode', true);
+
+    return redirect()->route('user.dashboard');
+})->middleware('guest')->name('guest.continue');
 Route::get('/admin-login', [AuthController::class, 'showAdminLogin'])
     ->name('admin.login');
 Route::post('/admin-login', [AuthController::class, 'adminLogin'])
@@ -26,6 +32,29 @@ Route::post('/admin-login', [AuthController::class, 'adminLogin'])
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
 
 Route::view('/landing', 'landing')->name('landing');
+
+$userDashboard = function (\Illuminate\Http\Request $request) {
+    if ($request->user()?->isAdmin()) {
+        return redirect()->route('admin.dashboard');
+    }
+
+    if ($request->user()?->isBlocked()) {
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect()->route('login')->withErrors([
+            'login' => __('Your account has been blocked. Please contact the administrator to regain access.'),
+        ]);
+    }
+
+    return view('user-home', [
+        'userName' => $request->user()?->name ?? 'Food Explorer',
+    ]);
+};
+
+Route::get('/', $userDashboard)->name('home');
+Route::get('/dashboard', $userDashboard)->name('user.dashboard');
 
 Route::middleware(['auth', 'active_user'])->group(function (): void {
     Route::middleware('regular_user')->group(function (): void {
@@ -171,16 +200,16 @@ Route::prefix('admin')
 
 // Blind Box routes
 Route::get('/blind-box', [BlindBoxController::class, 'index'])->middleware('auth')->name('blind-box.index');
-Route::post('/blind-box/draw', [BlindBoxController::class, 'draw'])->name('blind-box.draw');
+Route::post('/blind-box/draw', [BlindBoxController::class, 'draw'])->middleware('auth')->name('blind-box.draw');
 Route::post('/chat', [ChatController::class, 'respond'])->name('chat.respond');
 
 // Module-only shop check-in page (public for development)
-Route::get('/foodPassport/shop/{id}', [PassportController::class, 'showShop'])
+Route::get('/foodPassport/shop/{id}', [PassportController::class, 'showShop'])->middleware('auth')
     ->name('passport.shop');
 
 // Food Passport 
 // Public Food Passport page (no login required for viewing)
-Route::get('/foodPassport', [PassportController::class, 'index'])
+Route::get('/foodPassport', [PassportController::class, 'index'])->middleware('auth')
     ->name('passport.index');
 
 // Protected endpoints for authenticated users
@@ -197,12 +226,12 @@ Route::middleware('auth')->group(function () {
 // Food trails page
 Route::get('/foodtrails', function () {
     return view('foodtrails');
-});
+})->middleware('auth');
 
 // Start trail page
 Route::get('/start_trail', function () {
     return view('start_trail');
-});
+})->middleware('auth');
 
 Route::get('/heritage-shops', [HeritageShopController::class, 'index'])->name('heritage-shops.index');
 Route::get('/heritage-shops/{heritageShop}/images/{image}', [HeritageShopController::class, 'image'])

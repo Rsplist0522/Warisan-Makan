@@ -341,6 +341,25 @@
             color: #8a7a70;
         }
 
+        .guest-trigger {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            min-height: 44px;
+            padding: 7px 13px;
+            border: 1px solid rgba(46, 36, 32, .14);
+            border-radius: 999px;
+            color: var(--wm-accent);
+            background: #fff;
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        .guest-trigger::before { content: ''; width: 9px; height: 9px; border-radius: 50%; background: var(--wm-gold); }
+        .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+        .language-form { display: inline-flex; align-items: center; }
+        .language-form select { min-height: 44px; padding: 0 34px 0 13px; border: 1px solid rgba(46, 36, 32, .14); border-radius: 999px; color: var(--wm-accent); background: #fff; font: inherit; font-weight: 800; cursor: pointer; }
+        .topbar-account-group { display: inline-flex; align-items: center; justify-content: flex-end; gap: 8px; margin-left: auto; }
         @media (max-width: 980px) {
             .shell { grid-template-columns: 1fr; }
             .sidebar {
@@ -370,6 +389,7 @@
 <body>
     @php
         $userName = auth()->user()->name ?? 'Food Explorer';
+        $isGuest = ! auth()->check();
         $modules = [
             [
                 'name' => 'Community Contribution',
@@ -377,6 +397,7 @@
                 'status' => 'Open module',
                 'icon' => 'community',
                 'route' => 'community-contribution.create',
+                'guestRestricted' => true,
             ],
             [
                 'name' => 'Heritage Shop Tracking',
@@ -391,6 +412,7 @@
                 'status' => 'Open module',
                 'icon' => 'award',
                 'route' => 'passport.index',
+                'guestRestricted' => true,
             ],
             [
                 'name' => 'Food Trail & Navigation',
@@ -398,6 +420,7 @@
                 'status' => 'Open module',
                 'icon' => 'map',
                 'url' => url('/foodtrails'),
+                'guestRestricted' => true,
             ],
             [
                 'name' => 'Blind Box Recommendation',
@@ -405,6 +428,7 @@
                 'status' => 'Open module',
                 'icon' => 'box',
                 'route' => 'blind-box.index',
+                'guestRestricted' => true,
             ],
         ];
     @endphp
@@ -416,26 +440,26 @@
             <p class="nav-label">{{ __('Home') }}</p>
             <nav class="nav" aria-label="User home navigation">
                 <a class="nav-item active" href="{{ route('home') }}">{{ __('Dashboard') }}</a>
-                <a class="nav-item" href="{{ route('profile.show') }}">{{ __('Profile') }}</a>
+                @auth<a class="nav-item" href="{{ route('profile.show') }}">{{ __('Profile') }}</a>@endauth
             </nav>
 
             <p class="nav-label">{{ __('Modules') }}</p>
             <nav class="nav" aria-label="WarisanMakan modules">
                 @foreach ($modules as $module)
-                    <a class="nav-item" href="{{ isset($module['route']) ? route($module['route']) : $module['url'] }}">
+                    <a class="nav-item" href="{{ $isGuest && ($module['guestRestricted'] ?? false) ? '#' : (isset($module['route']) ? route($module['route']) : $module['url']) }}" @if($isGuest && ($module['guestRestricted'] ?? false)) data-login-required="true" @endif>
                         <span>{{ __($module['name']) }}</span>
                     </a>
                 @endforeach
             </nav>
 
-            <div class="sidebar-footer">
+            @auth<div class="sidebar-footer">
                 <p class="user-name">{{ $userName }}</p>
                 <p class="user-role">{{ __('WarisanMakan member') }}</p>
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
                     <button class="logout" type="submit">{{ __('Log out') }}</button>
                 </form>
-            </div>
+            </div>@endauth
         </aside>
 
         <section class="main">
@@ -444,16 +468,35 @@
                     <h2>{{ __('User Dashboard') }}</h2>
                     <p>{{ __('WarisanMakan heritage food portal') }}</p>
                 </div>
-                <div style="display:flex;align-items:center;gap:14px">
-                    <a href="{{ route('profile.show') }}" style="display:inline-flex;align-items:center;gap:10px;padding:10px 14px;border-radius:999px;border:1px solid rgba(46, 36, 32, .14);background:#fff;">
-                        @if (auth()->user()->profile_photo)
-                            <img src="{{ auth()->user()->profilePhotoUrl() }}" alt="Profile photo" style="width:38px;height:38px;border-radius:999px;object-fit:cover;">
-                        @else
-                            <span style="display:inline-flex;width:38px;height:38px;align-items:center;justify-content:center;border-radius:999px;background:#f2e7dd;color:var(--wm-accent);font-weight:800;">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</span>
-                        @endif
-                        <span style="font-size:.92rem;font-weight:700">{{ $userName }}</span>
-                    </a>
-                </div>
+                @auth
+                    <div class="topbar-account-group">
+                        <form class="language-form" method="POST" action="{{ route('profile.update') }}">
+                            @csrf
+                            <input type="hidden" name="language_only" value="1">
+                            <input type="hidden" name="name" value="{{ auth()->user()->name }}">
+                            <input type="hidden" name="email" value="{{ auth()->user()->email }}">
+                            <input type="hidden" name="phone" value="{{ auth()->user()->phone }}">
+                            <input type="hidden" name="city" value="{{ auth()->user()->city }}">
+                            <input type="hidden" name="bio" value="{{ auth()->user()->bio }}">
+                            <label class="sr-only" for="dashboard-language">{{ __('Language') }}</label>
+                            <select id="dashboard-language" name="language" onchange="this.form.submit()">
+                                <option value="en" @selected((auth()->user()->language ?? 'en') === 'en')>{{ __('English') }}</option>
+                                <option value="ms" @selected((auth()->user()->language ?? 'en') === 'ms')>{{ __('Bahasa Melayu') }}</option>
+                                <option value="zh" @selected((auth()->user()->language ?? 'en') === 'zh')>{{ __('中文 (Chinese)') }}</option>
+                            </select>
+                        </form>
+                        <a href="{{ route('profile.show') }}" style="display:inline-flex;align-items:center;gap:10px;padding:10px 14px;border-radius:999px;border:1px solid rgba(46, 36, 32, .14);background:#fff;">
+                            @if (auth()->user()->profile_photo)
+                                <img src="{{ auth()->user()->profilePhotoUrl() }}" alt="Profile photo" style="width:38px;height:38px;border-radius:999px;object-fit:cover;">
+                            @else
+                                <span style="display:inline-flex;width:38px;height:38px;align-items:center;justify-content:center;border-radius:999px;background:#f2e7dd;color:var(--wm-accent);font-weight:800;">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</span>
+                            @endif
+                            <span style="font-size:.92rem;font-weight:700">{{ $userName }}</span>
+                        </a>
+                    </div>
+                @else
+                    <button class="guest-trigger" type="button" data-login-trigger aria-label="Guest Mode">Guest Mode</button>
+                @endauth
             </header>
 
             <main class="content">
@@ -469,7 +512,7 @@
                 <section class="module-grid" aria-label="WarisanMakan modules">
                     @foreach ($modules as $module)
                         @if (isset($module['route']) || isset($module['url']))
-                            <a class="module-card is-active" href="{{ isset($module['route']) ? route($module['route']) : $module['url'] }}">
+                            <a class="module-card is-active" href="{{ $isGuest && ($module['guestRestricted'] ?? false) ? '#' : (isset($module['route']) ? route($module['route']) : $module['url']) }}" @if($isGuest && ($module['guestRestricted'] ?? false)) data-login-required="true" @endif>
                                 <span class="module-icon" aria-hidden="true">
                                     @include('partials.module-icon', ['icon' => $module['icon']])
                                 </span>
@@ -492,5 +535,9 @@
             </main>
         </section>
     </div>
+
+    @guest
+        @include('partials.login-required-modal')
+    @endguest
 </body>
 </html>

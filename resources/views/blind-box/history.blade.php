@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Blind Box History</title>
+    <title>{{ __('Blind Box History') }}</title>
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
 
@@ -69,8 +69,8 @@
 <body>
 <div class="page">
     <section class="hero animate__animated animate__fadeInDown">
-        <h1>Blind Box History</h1>
-        <p>All of your surprise discoveries are recorded here so the heritage trail stays memorable.</p>
+        <h1>{{ __('Blind Box History') }}</h1>
+        <p>{{ __('All of your surprise discoveries are recorded here so the heritage trail stays memorable.') }}</p>
         <div class="button-row">
             <a class="btn btn-secondary" href="/blind-box">Back to Blind Box</a>
             <a class="btn btn-secondary" href="/heritage-shops">Browse Heritage Shops</a>
@@ -83,8 +83,8 @@
         @if(empty($drawHistory))
             <div class="empty-state">
                 <span class="big-icon">🎁</span>
-                <p><strong>No draws yet.</strong></p>
-                <p>Open the Blind Box to discover a heritage shop and your surprise will appear here.</p>
+                <p><strong>{{ __('No draws yet.') }}</strong></p>
+                <p>{{ __('Open the Blind Box to discover a heritage shop and your surprise will appear here.') }}</p>
             </div>
         @else
             <div class="history-grid">

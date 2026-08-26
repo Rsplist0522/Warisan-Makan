@@ -21,14 +21,31 @@ class AdminPortalTest extends TestCase
             ->assertRedirect(route('admin.login'));
     }
 
-    public function test_public_login_only_shows_user_google_sign_in(): void
+    public function test_public_login_shows_google_and_guest_options(): void
     {
         $this->get(route('login'))
             ->assertOk()
             ->assertSee('User sign in')
             ->assertSee('Sign in with Google')
+            ->assertSee('Continue as Guest')
             ->assertDontSee('Administrator access')
             ->assertDontSee('password123');
+    }
+
+    public function test_guest_option_enters_the_existing_user_dashboard(): void
+    {
+        $this->get(route('guest.continue'))
+            ->assertRedirect(route('user.dashboard'))
+            ->assertSessionHas('guest_mode', true);
+
+        $this->get(route('user.dashboard'))
+            ->assertOk()
+            ->assertSee('Guest Mode')
+            ->assertSee('Community Contribution')
+            ->assertSee('Heritage Shop Tracking')
+            ->assertSee('Food Passport & Achievement')
+            ->assertSee('Food Trail & Navigation')
+            ->assertSee('Blind Box Recommendation');
     }
 
     public function test_admin_login_page_is_separate_and_does_not_show_default_credentials(): void

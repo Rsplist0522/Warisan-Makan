@@ -455,7 +455,7 @@ class PassportController extends Controller
         if (! $user) {
             return response()->json([
                 'success' => false,
-                'message' => 'Please sign in before checking in to your heritage passport.',
+                'message' => __('Please sign in before checking in to your heritage passport.'),
             ], 401);
         }
 
@@ -477,7 +477,7 @@ class PassportController extends Controller
         if (! $shop || $shop->latitude === null || $shop->longitude === null) {
             return response()->json([
                 'success' => false,
-                'message' => 'This shop is not available for check-in right now.',
+                'message' => __('This shop is not available for check-in right now.'),
             ], 422);
         }
 
@@ -497,7 +497,7 @@ class PassportController extends Controller
         if ($already) {
             return response()->json([
                 'success' => false,
-                'message' => 'You have already checked in at this shop. Reset the demo to start again.',
+                'message' => __('You have already checked in at this shop. Reset the demo to start again.'),
             ], 409);
         }
 
@@ -507,7 +507,7 @@ class PassportController extends Controller
         if ($distance > $radius) {
             return response()->json([
                 'success' => false,
-                'message' => 'You need to be within ' . round($radius) . ' metres of this shop to check in.',
+                'message' => __('You need to be within :radius metres of this shop to check in.', ['radius' => round($radius)]),
             ], 422);
         }
 
@@ -538,11 +538,11 @@ class PassportController extends Controller
                 ->values();
 
             $message = $demoMode
-                ? 'Demo check-in successful! Your passport has been updated.'
-                : 'Check-in successful! Your passport has been updated.';
+                ? __('Demo check-in successful! Your passport has been updated.')
+                : __('Check-in successful! Your passport has been updated.');
 
             if ($newlyUnlockedBadges->isNotEmpty()) {
-                $message .= ' Congratulations! You unlocked ' . $newlyUnlockedBadges->pluck('name')->join(', ') . '.';
+                $message .= ' ' . __('Congratulations! You unlocked :badges.', ['badges' => $newlyUnlockedBadges->pluck('name')->join(', ')]);
             }
 
             return response()->json([
@@ -563,7 +563,7 @@ class PassportController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'We could not complete your check-in right now. Please try again.',
+                'message' => __('We could not complete your check-in right now. Please try again.'),
             ], 500);
         }
     }
@@ -575,7 +575,7 @@ class PassportController extends Controller
         if (! $user) {
             return response()->json([
                 'success' => false,
-                'message' => 'Please sign in before resetting the demo passport.',
+                'message' => __('Please sign in before resetting the demo passport.'),
             ], 401);
         }
 
@@ -584,7 +584,7 @@ class PassportController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Demo passport reset. You can start the demonstration again.',
+            'message' => __('Demo passport reset. You can start the demonstration again.'),
         ]);
     }
 

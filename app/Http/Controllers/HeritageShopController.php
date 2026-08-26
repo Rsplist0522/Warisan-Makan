@@ -200,8 +200,12 @@ class HeritageShopController extends Controller
     }
 
     // Show a single shop detail by DB id
-    public function show(string $id)
+    public function show(string $id, Request $request)
     {
+        if (! $request->user()) {
+            abort(403, 'Please sign in with Google to view the heritage shop details.');
+        }
+
         $shop = HeritageShop::query()->published()->with(['images', 'activeFoodItems'])->findOrFail($id);
         $shops = HeritageShop::query()->published()->with(['images', 'activeFoodItems'])->orderBy('shop_name')->get();
         $menuItems = $this->resolveFoodItems($shop);

@@ -1,10 +1,11 @@
 <!doctype html>
-<html lang="en">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Food Passport</title>
+    <title>{{ __('Food Passport') }}</title>
     <style>
         :root {
             --primary: #8C1F1F;
@@ -928,11 +929,11 @@
         </header>
 
         <main>
-            <section class="hero" aria-label="Heritage passport hero section">
+            <section class="hero" aria-label="{{ __('Heritage passport hero section') }}">
                 <div class="hero-copy">
-                    <p class="eyebrow">Food Passport</p>
-                    <h1>Your Heritage Passport</h1>
-                    <p>Collect stamps from authentic heritage food stops, uncover founder stories, and unlock rewards as you explore the city’s living culinary heritage.</p>
+                    <p class="eyebrow">{{ __('Food Passport') }}</p>
+                    <h1>{{ __('Your Heritage Passport') }}</h1>
+                    <p>{{ __('Collect stamps from authentic heritage food stops, uncover founder stories, and unlock rewards as you explore the city’s living culinary heritage.') }}</p>
 
                     <div class="action-row" aria-label="Passport sections">
                         <a href="#check-in" class="btn secondary section-nav-link active" data-section-nav="check-in">Check In</a>
@@ -941,27 +942,27 @@
                         <a href="#leaderboard" class="btn secondary section-nav-link" data-section-nav="leaderboard">Leaderboard</a>
                     </div>
 
-                    <div class="stats-row" aria-label="Passport progress statistics">
+                    <div class="stats-row" aria-label="{{ __('Passport progress statistics') }}">
                         <div class="stat">
                             <strong>{{ $stats['visited'] ?? 0 }}</strong>
-                            <span>Visited</span>
+                            <span>{{ __('Visited') }}</span>
                         </div>
                         <div class="stat">
                             <strong>{{ $stats['completion'] ?? 0 }}%</strong>
-                            <span>Progress</span>
+                            <span>{{ __('Progress') }}</span>
                         </div>
                         <div class="stat">
                             <strong>{{ $stats['badges'] ?? 0 }}</strong>
-                            <span>Badges</span>
+                            <span>{{ __('Badges') }}</span>
                         </div>
                     </div>
                 </div>
 
                 @if (!empty($shops))
-                    <div class="hero-media" aria-label="Featured heritage shop image">
+                   <div class="hero-media" aria-label="{{ __('Featured heritage shop image') }}">
                         <img id="featuredShopImage" src="{{ $shops[0]['image'] ?? '' }}" alt="{{ $shops[0]['name'] }}" style="{{ empty($shops[0]['image']) ? 'display:none;' : '' }}">
                         <div class="floating-card">
-                            <span class="label">Featured stop</span>
+                            <span class="label">{{ __('Featured stop') }}</span>
                             <h3 id="featuredShopName">{{ $shops[0]['name'] }}</h3>
                             <p id="featuredShopFounder">{{ $shops[0]['founder'] }}</p>
                         </div>
@@ -973,8 +974,8 @@
                 <div class="panel">
                     <div class="panel-inner">
                         <div class="section-header">
-                            <h2>Available Heritage Shops</h2>
-                            <span class="tag">Live</span>
+                            <h2>{{ __('Available Heritage Shops') }}</h2>
+                            <span class="tag">{{ __('Live') }}</span>
                         </div>
 
                         @if (!empty($shops))
@@ -989,7 +990,7 @@
                                                 <span>{{ $shop['status'] }}</span>
                                             </div>
                                         </div>
-                                        <button type="button" class="mini-action select-shop">Check In</button>
+                                        <button type="button" class="mini-action select-shop">{{ __('Check In') }}</button>
                                     </article>
                                 @endforeach
                             </div>
@@ -1022,35 +1023,39 @@
                                 </nav>
                             @endif
                         @else
-                            <p style="margin: 0; color: var(--muted);">No approved heritage shops with GPS coordinates are available for check-in yet. Add the shop location and approve it in the Heritage Shop module.</p>
+                            <p style="margin: 0; color: var(--muted);">
+                                {{ __('No approved heritage shops with GPS coordinates are available for check-in yet. Add the shop location and approve it in the Heritage Shop module.') }}
+                            </p>
                         @endif
                     </div>
                 </div>
 
                 <aside class="panel check-in-panel" id="check-in">
                     <div class="section-header">
-                        <h2>Check In</h2>
-                        <span class="tag">GPS</span>
+                        <h2>{{ __('Check In') }}</h2>
+                        <span class="tag">{{ __('GPS') }}</span>
                     </div>
 
                     @if (!empty($shops))
                         <div class="selected-shop">
                             <div>
-                                <p class="label">Selected stop</p>
+                                <p class="label">{{ __('Selected stop') }}</p>
                                 <h3 id="selectedShopName">{{ $shops[0]['name'] }}</h3>
                                 <p id="selectedShopFounder">{{ $shops[0]['founder'] }}</p>
                             </div>
                         </div>
 
                         <div class="button-row">
-                            <button type="button" id="btnCheckIn" class="btn primary">Use my location</button>
-                            <button type="button" id="btnDemoCheckIn" class="btn secondary">Use demo location</button>
-                            <button type="button" id="btnRefresh" class="btn secondary">Reset demo</button>
+                            <button type="button" id="btnCheckIn" class="btn primary">{{ __('Use my location') }}</button>
+                            <button type="button" id="btnDemoCheckIn" class="btn secondary">{{ __('Use demo location') }}</button>
+                            <button type="button" id="btnRefresh" class="btn secondary">{{ __('Reset demo') }}</button>
                         </div>
 
-                        <pre id="result" class="result-box">Ready to check in. Select a shop and allow location access.</pre>
+                        <pre id="result" class="result-box">{{ __('Ready to check in. Select a shop and allow location access.') }}</pre>
                     @else
-                        <p style="margin: 16px 0 0; color: var(--muted);">Check-in will be available after an approved Heritage Shop has latitude and longitude coordinates.</p>
+                        <p style="margin: 16px 0 0; color: var(--muted);">
+                            {{ __('Check-in will be available after an approved Heritage Shop has latitude and longitude coordinates.') }}
+                        </p>
                     @endif
                 </aside>
             </section>
@@ -1058,8 +1063,8 @@
             <section class="panel" id="visited-locations" style="margin-top: 26px;">
                 <div class="panel-inner">
                     <div class="section-header">
-                        <h2>Visited locations</h2>
-                        <span class="tag">History</span>
+                        <h2>{{ __('Visited locations') }}</h2>
+                        <span class="tag">{{ __('History') }}</span>
                     </div>
 
                     @if ($visitedLocations->isNotEmpty())
@@ -1104,7 +1109,9 @@
                             </nav>
                         @endif
                     @else
-                        <p style="margin: 0; color: var(--muted);">No visited heritage locations yet. Complete a check-in to start building your food passport.</p>
+                        <p style="margin: 0; color: var(--muted);">
+                            {{ __('No visited heritage locations yet. Complete a check-in to start building your food passport.') }}
+                        </p>
                     @endif
                 </div>
             </section>
@@ -1112,28 +1119,28 @@
             <section class="panel" id="passport-progress" style="margin-top: 26px;">
                 <div class="panel-inner">
                     <div class="section-header">
-                        <h2>Passport progress & statistics</h2>
-                        <span class="tag">Live</span>
+                        <h2>{{ __('Passport progress & statistics') }}</h2>
+                        <span class="tag">{{ __('Live') }}</span>
                     </div>
 
                     <div class="stats-row" style="margin-top: 0;">
                         <div class="stat">
                             <strong>{{ $stats['visited'] ?? 0 }}</strong>
-                            <span>Visited</span>
+                            <span>{{ __('Visited') }}</span>
                         </div>
                         <div class="stat">
                             <strong>{{ $stats['completion'] ?? 0 }}%</strong>
-                            <span>Completion</span>
+                            <span>{{ __('Completion') }}</span>
                         </div>
                         <div class="stat">
                             <strong>{{ $stats['stamps'] ?? 0 }}</strong>
-                            <span>Stamps</span>
+                            <span>{{ __('Stamps') }}</span>
                         </div>
                     </div>
 
                     <div style="margin-top: 16px; padding: 14px 16px; border-radius: 14px; background: rgba(140,31,31,0.04); border: 1px solid rgba(140,31,31,0.08);">
                         <div style="display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 8px; color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em;">
-                            <span>Progress</span>
+                            <span>{{ __('Progress') }}</span>
                             <strong style="color: var(--primary);">{{ $stats['visited'] ?? 0 }}/{{ $stats['goal'] ?? 0 }}</strong>
                         </div>
                         <div style="height: 12px; background: rgba(86,59,48,0.08); border-radius: 999px; overflow: hidden;">
@@ -1146,8 +1153,8 @@
             <section class="panel" style="margin-top: 26px;">
                 <div class="panel-inner">
                     <div class="section-header">
-                        <h2>Passport rewards</h2>
-                        <span class="tag">Unlocked</span>
+                        <h2>{{ __('Passport rewards') }}</h2>
+                        <span class="tag">{{ __('Unlocked') }}</span>
                     </div>
 
                     <div class="badge-grid">
@@ -1163,17 +1170,17 @@
                                     data-badge-icon="{{ $badge['icon'] }}"
                                     data-badge-progress="{{ $badge['progress'] }}"
                                     data-badge-threshold="{{ $badge['threshold'] }}"
-                                    aria-label="Share your {{ $badge['name'] }} badge"
+                                    aria-label="{{ __('Share your :name badge', ['name' => $badge['name']]) }}"
                                 @endif
                             >
                                 <div class="badge-crest">{{ $badge['icon'] }}</div>
-                                <h4>{{ $badge['name'] }}</h4>
-                                <p>{{ $badge['description'] }}</p>
+                                <h4>{{ __($badge['name']) }}</h4>
+                                <p>{{ __($badge['description']) }}</p>
                                 <p style="margin-top: 8px; color: {{ $badge['earned'] ? '#3E6C4F' : '#675B54' }}; font-weight: 700;">
                                     {{ $badge['earned'] ? 'Unlocked' : 'Need ' . (int) $badge['threshold'] . ' visits' }}
                                 </p>
                                 @if ($badge['earned'])
-                                    <p class="badge-share-hint">Click to share</p>
+                                    <p class="badge-share-hint">{{ __('Click to share') }}</p>
                                 @endif
                             </div>
                         @endforeach
@@ -1184,10 +1191,12 @@
             <section class="panel" id="leaderboard" style="margin-top: 26px;">
                 <div class="panel-inner">
                     <div class="section-header">
-                        <h2>Leaderboard</h2>
-                        <span class="tag">Top 10</span>
+                        <h2>{{ __('Leaderboard') }}</h2>
+                        <span class="tag">{{ __('Top 10') }}</span>
                     </div>
-                    <p class="leaderboard-intro">Ranked by badges received, then total check-ins. Recent check-ins decide ties.</p>
+                    <p class="leaderboard-intro">
+                        {{ __('Ranked by badges received, then total check-ins. Recent check-ins decide ties.') }}
+                    </p>
 
                     @if ($leaderboard->isNotEmpty())
                         <div class="leaderboard-list">
@@ -1195,12 +1204,12 @@
                                 <article class="leaderboard-row">
                                     <div class="leaderboard-rank">#{{ $entry->rank }}</div>
                                     <div class="leaderboard-user">
-                                        <h3>{{ $entry->name ?: 'Heritage Explorer' }}</h3>
-                                        <p>Last check-in: {{ $entry->last_check_in_label }}</p>
+                                        <h3>{{ $entry->name ?: __('Heritage Explorer') }}</h3>
+                                        <p>{{ __('Last check-in: :date', ['date' => $entry->last_check_in_label]) }}</p>
                                     </div>
                                     <div class="leaderboard-metrics">
-                                        <span>{{ $entry->badges_received }} badges</span>
-                                        <span>{{ $entry->check_ins }} check-ins</span>
+                                        <span>{{ __(':count badges', ['count' => $entry->badges_received]) }}</span>
+                                        <span>{{ __(':count check-ins', ['count' => $entry->check_ins]) }}</span>
                                     </div>
                                 </article>
                             @endforeach
@@ -1234,53 +1243,58 @@
                             </nav>
                         @endif
                     @else
-                        <p class="leaderboard-empty">The leaderboard will appear after users start checking in and earning badges.</p>
+                        <p class="leaderboard-empty">
+                            {{ __('The leaderboard will appear after users start checking in and earning badges.') }}
+                        </p>
                     @endif
                 </div>
             </section>
         </main>
 
         <footer>
-            Discover heritage flavour. Preserve the stories behind every bowl.
+            {{ __('Discover heritage flavour. Preserve the stories behind every bowl.') }}
         </footer>
     </div>
 
     <div id="badgeModal" class="badge-modal" hidden role="dialog" aria-modal="true" aria-labelledby="badgeModalTitle">
         <div class="badge-modal-backdrop" data-close-badge-modal></div>
         <div class="badge-modal-card">
-            <button type="button" class="badge-modal-close" data-close-badge-modal aria-label="Close badge announcement">&times;</button>
-            <h2 id="badgeModalTitle">Achievement unlocked</h2>
-            <p>Save this moment and share your heritage-food journey.</p>
+            <button type="button" class="badge-modal-close" data-close-badge-modal aria-label="{{ __('Close badge announcement') }}">&times;</button>
+            <h2 id="badgeModalTitle">{{ __('Achievement unlocked') }}</h2>
+            <p>{{ __('Save this moment and share your heritage-food journey.') }}</p>
             <div id="achievementCardPreview" class="achievement-card-preview">
-                <div class="achievement-card-kicker">Warisan Makan · Heritage Passport</div>
+                <div class="achievement-card-kicker">{{ __('Warisan Makan · Heritage Passport') }}</div>
                 <div class="achievement-card-main">
                     <div id="badgeModalIcon" class="achievement-card-icon">★</div>
                     <div>
-                        <h3 id="badgeModalBadgeName" class="achievement-card-title">Your new badge</h3>
-                        <p id="badgeModalBadgeDescription" class="achievement-card-description">The badge you unlock will appear here.</p>
+                        <h3 id="badgeModalBadgeName" class="achievement-card-title">{{ __('Your new badge') }}</h3>
+                        <p id="badgeModalBadgeDescription" class="achievement-card-description">{{ __('The badge you unlock will appear here.') }}</p>
                     </div>
                 </div>
-                <div id="badgeModalProgress" class="achievement-card-progress">Your milestone will appear here</div>
-                <div class="achievement-card-footer">Every dish has a story. Discover yours.</div>
+                <div id="badgeModalProgress" class="achievement-card-progress">{{ __('Your milestone will appear here') }}</div>
+                <div class="achievement-card-footer">{{ __('Every dish has a story. Discover yours.') }}</div>
             </div>
-            <p class="share-label">Share your achievement</p>
+            <p class="share-label">{{ __('Share your achievement') }}</p>
             <div class="share-actions">
-                <button type="button" class="share-btn" data-share="instagram">Prepare Instagram Story</button>
-                <button type="button" class="share-btn" data-share="facebook">Prepare Facebook Post</button>
-                <button type="button" class="share-btn" data-share="whatsapp">Share to WhatsApp</button>
-                <button type="button" class="share-btn" data-share="copy">Copy caption</button>
+                <button type="button" class="share-btn" data-share="instagram">{{ __('Prepare Instagram Story') }}</button>
+                <button type="button" class="share-btn" data-share="facebook">{{ __('Prepare Facebook Post') }}</button>
+                <button type="button" class="share-btn" data-share="whatsapp">{{ __('Share to WhatsApp') }}</button>
+                <button type="button" class="share-btn" data-share="copy">{{ __('Copy caption') }}</button>
             </div>
             <div class="share-download-actions">
-                <button type="button" class="share-download-btn" data-share="download-square">Download square card</button>
-                <button type="button" class="share-download-btn" data-share="download-story">Download story card</button>
+                <button type="button" class="share-download-btn" data-share="download-square">{{ __('Download square card') }}</button>
+                <button type="button" class="share-download-btn" data-share="download-story">{{ __('Download story card') }}</button>
             </div>
             <p id="shareStatus" class="share-status" aria-live="polite"></p>
-            <p class="share-note">Instagram and Facebook may ask you to log in and upload the downloaded card. WhatsApp can attach the card automatically on supported devices.</p>
-            <button type="button" class="btn primary badge-modal-continue" data-close-badge-modal>Continue exploring</button>
+            <p class="share-note">{{ __('Instagram and Facebook may ask you to log in and upload the downloaded card. WhatsApp can attach the card automatically on supported devices.') }}</p>
+            <button type="button" class="btn primary badge-modal-continue" data-close-badge-modal>{{ __('Continue exploring') }}</button>
         </div>
     </div>
 
     <script>
+        const sendingCheckInRequestMessage = @json(__('Sending check-in request...'));
+        const resettingDemoPassportMessage = @json(__('Resetting the demo passport...'));
+
         const shops = @json($shops);
         let activeShop = shops[0] || null;
 
@@ -1709,7 +1723,8 @@
         }
 
         async function submitCheckIn(payload) {
-            setResult('Sending check-in request...');
+            setResult(sendingCheckInRequestMessage);
+
 
             const endpoint = '/passport/check-in';
 
@@ -1751,7 +1766,7 @@
                 return;
             }
 
-            setResult('Resetting the demo passport...');
+            setResult(resettingDemoPassportMessage);
 
             try {
                 const response = await fetch('/passport/reset-demo', {

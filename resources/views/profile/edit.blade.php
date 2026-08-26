@@ -358,13 +358,6 @@
                         <label class="camera-button" for="profile_photo" tabindex="0">{{ __('Choose File') }}</label>
                         <button class="camera-button" id="openCamera" type="button">{{ __('Use camera') }}</button>
                     </div>
-                    <label for="language">{{ __('Language') }}</label>
-                    <select id="language" name="language" aria-describedby="language-help">
-                        <option value="en" @selected(old('language', $user->language ?? 'en') === 'en')>{{ __('English') }}</option>
-                        <option value="ms" @selected(old('language', $user->language ?? 'en') === 'ms')>{{ __('Bahasa Melayu') }}</option>
-                        <option value="zh" @selected(old('language', $user->language ?? 'en') === 'zh')>{{ __('中文 (Chinese)') }}</option>
-                    </select>
-                    <small id="language-help">{{ __('Choose the language for your WarisanMakan experience.') }}</small>
                 </div>
             </div>
 

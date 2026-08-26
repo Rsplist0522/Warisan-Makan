@@ -49,7 +49,7 @@
                 <div class="field"><label for="new-availability">Availability</label><input id="new-availability" name="availability" maxlength="120" placeholder="Daily · Until sold out"></div>
                 <div class="field full"><label for="new-description">Description</label><textarea id="new-description" name="description" maxlength="2000" placeholder="What is served, and what should a visitor notice?"></textarea></div>
                 <div class="field full"><label for="new-significance">Heritage significance</label><textarea id="new-significance" name="heritage_significance" maxlength="3000" placeholder="How is this dish connected to the family, community, place, technique, or memory?"></textarea></div>
-                <div class="field"><label for="new-image">Food photo</label><input id="new-image" name="image" type="file" accept="image/jpeg,image/png,image/webp"><span class="help-text">JPG, PNG, or WebP · max 1 MB</span></div>
+                <div class="field"><label for="new-image">Food photo</label><input id="new-image" name="image" type="file" accept="image/jpeg,image/png,image/webp" data-heritage-image-input data-max-bytes="{{ config('heritage_shop.max_image_bytes', 1048576) }}"><span class="help-text">JPG, PNG, or WebP · max {{ number_format(config('heritage_shop.max_image_kb', 1024) / 1024, 2) }} MB</span><span class="image-size-error status-banner error" data-image-error style="display:none; margin:0; padding:8px 10px;"></span></div>
                 <div class="field"><label for="new-order">Display order</label><input id="new-order" name="display_order" type="number" min="0" max="9999" value="0"></div>
                 <div class="field food-check-field"><label><input type="checkbox" name="is_active" value="1" checked> Show this item publicly</label></div>
             </div>
@@ -95,7 +95,7 @@
                                 <div class="field"><label for="availability-{{ $item->id }}">Availability</label><input id="availability-{{ $item->id }}" name="availability" value="{{ $item->availability }}" maxlength="120"></div>
                                 <div class="field full"><label for="description-{{ $item->id }}">Description</label><textarea id="description-{{ $item->id }}" name="description" maxlength="2000">{{ $item->description }}</textarea></div>
                                 <div class="field full"><label for="significance-{{ $item->id }}">Heritage significance</label><textarea id="significance-{{ $item->id }}" name="heritage_significance" maxlength="3000">{{ $item->heritage_significance }}</textarea></div>
-                                <div class="field"><label for="image-{{ $item->id }}">Replace photo</label><input id="image-{{ $item->id }}" name="image" type="file" accept="image/jpeg,image/png,image/webp"><span class="help-text">Leave empty to keep the current photo.</span></div>
+                                <div class="field"><label for="image-{{ $item->id }}">Replace photo</label><input id="image-{{ $item->id }}" name="image" type="file" accept="image/jpeg,image/png,image/webp" data-heritage-image-input data-max-bytes="{{ config('heritage_shop.max_image_bytes', 1048576) }}"><span class="help-text">Leave empty to keep the current photo. New photo max {{ number_format(config('heritage_shop.max_image_kb', 1024) / 1024, 2) }} MB.</span><span class="image-size-error status-banner error" data-image-error style="display:none; margin:0; padding:8px 10px;"></span></div>
                                 <div class="field"><label for="order-{{ $item->id }}">Display order</label><input id="order-{{ $item->id }}" name="display_order" type="number" min="0" max="9999" value="{{ $item->display_order }}"></div>
                                 <div class="field food-check-field"><label><input type="checkbox" name="is_active" value="1" @checked($item->is_active)> Show this item publicly</label></div>
                             </div>
@@ -138,3 +138,24 @@
     @media (max-width:560px) { .food-catalog-summary, .food-form-grid { grid-template-columns:1fr; } .food-form-grid .full { grid-column:auto; } .food-item-admin-header { display:grid; } .food-item-admin-actions { justify-content:start; } }
 </style>
 @endpush
+
+<script>
+(() => {
+    const maxLabel = '{{ number_format(config('heritage_shop.max_image_kb', 1024) / 1024, 2) }} MB';
+    document.querySelectorAll('[data-heritage-image-input]').forEach((input) => {
+        input.addEventListener('change', () => {
+            const error = input.closest('.field')?.querySelector('[data-image-error]');
+            const file = input.files?.[0];
+            if (file && file.size > Number(input.dataset.maxBytes || 1048576)) {
+                if (error) {
+                    error.textContent = 'This image is larger than the HeritageShop limit of ' + maxLabel + '.';
+                    error.style.display = 'block';
+                }
+                input.value = '';
+                return;
+            }
+            if (error) error.style.display = 'none';
+        });
+    });
+})();
+</script>

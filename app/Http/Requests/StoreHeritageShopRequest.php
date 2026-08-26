@@ -14,6 +14,21 @@ class StoreHeritageShopRequest extends FormRequest
         return $this->user()?->isAdmin() === true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        $url = trim((string) $this->input('source_url', ''));
+        if ($url !== '') {
+            $parts = parse_url($url);
+            if (is_array($parts) && ! empty($parts['host'])) {
+                $url = strtolower((string) ($parts['scheme'] ?? 'https')).'://'.strtolower((string) $parts['host'])
+                    .(isset($parts['port']) ? ':'.(int) $parts['port'] : '')
+                    .rtrim((string) ($parts['path'] ?? ''), '/')
+                    .(isset($parts['query']) && $parts['query'] !== '' ? '?'.$parts['query'] : '');
+                $this->merge(['source_url' => $url]);
+            }
+        }
+    }
+
     public function withValidator($validator): void
     {
         $validator->sometimes(
@@ -48,13 +63,18 @@ class StoreHeritageShopRequest extends FormRequest
             'postal_code' => ['nullable', 'string', 'max:20'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
-            'source_url' => ['nullable', 'url', 'max:500'],
+            'source_url' => [
+                'nullable',
+                'url',
+                'max:500',
+                Rule::unique('heritage_shops', 'source_url')->ignore($this->route('heritageShop') instanceof HeritageShop ? $this->route('heritageShop')->getKey() : null),
+            ],
             'publish_status' => ['nullable', Rule::in(HeritageShop::ADMIN_STATUSES)],
 
             'images' => ['nullable', 'array', 'max:10'],
-            'images.*' => ['file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:1024'],
+            'images.*' => ['file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:'.(int) config('heritage_shop.max_image_kb', 1024)],
             'replace_images' => ['nullable', 'array'],
-            'replace_images.*' => ['file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:1024'],
+            'replace_images.*' => ['file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:'.(int) config('heritage_shop.max_image_kb', 1024)],
 
             'existing_images' => ['nullable', 'array'],
             'existing_images.*' => ['integer'],

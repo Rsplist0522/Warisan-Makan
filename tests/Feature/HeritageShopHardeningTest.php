@@ -184,7 +184,31 @@ class HeritageShopHardeningTest extends TestCase
         Http::assertNotSent(fn ($request): bool => str_contains($request->url(), '127.0.0.1'));
     }
 
+        public function test_crawler_rejects_remote_images_over_the_shared_one_mb_limit(): void
+    {
+        Storage::fake('public');
+        $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', true);
+        $this->assertIsString($png);
+
+        Http::fake([
+            'https://example.com/*' => Http::response('<html><head><title>Large Image Heritage Shop</title></head><body><img src="https://images.example.com/large.png"></body></html>', 200),
+            'https://images.example.com/*' => Http::response($png, 200, [
+                'Content-Type' => 'image/png',
+                'Content-Length' => (string) (config('heritage_shop.max_image_bytes') + 1),
+            ]),
+        ]);
+        $this->actingAs($this->admin());
+
+        $response = $this->withCsrf()->postJson(route('admin.heritage-shops.crawl'), [
+            'url' => 'https://example.com/large-image-shop',
+        ]);
+
+        $response->assertOk()->assertJsonPath('images', []);
+        $this->assertSame([], glob(Storage::disk('public')->path('heritage-shops/crawler/*')) ?: []);
+    }
+
     public function test_crawler_accepts_valid_image_bytes_with_mime_parameters_and_persists_them(): void
+
     {
         Storage::fake('public');
         $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', true);

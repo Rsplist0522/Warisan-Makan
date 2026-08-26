@@ -58,7 +58,24 @@ class HeritageShopFoodCatalogTest extends TestCase
         $this->get(route('heritage-shops.food-images.show', [$shop, $item]))->assertOk();
     }
 
+        public function test_food_catalog_rejects_a_dish_photo_over_the_shared_one_mb_limit(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $shop = HeritageShop::create(['shop_name' => 'Photo Limit Kitchen', 'publish_status' => HeritageShop::STATUS_DRAFT]);
+
+        $response = $this->withHeritageCsrf()->actingAs($admin)->from(route('admin.heritage-shops.food-items.index', $shop))
+            ->post(route('admin.heritage-shops.food-items.store', $shop), [
+                'name' => 'Oversized Dish Photo',
+                'image' => UploadedFile::fake()->image('oversized-dish.jpg')->size((int) config('heritage_shop.max_image_kb') + 1),
+            ]);
+
+        $response->assertRedirect(route('admin.heritage-shops.food-items.index', $shop))
+            ->assertSessionHasErrors('image');
+        $this->assertDatabaseMissing('heritage_food_items', ['name' => 'Oversized Dish Photo']);
+    }
+
     public function test_admin_can_update_hide_restore_and_archive_food_item(): void
+
     {
         Storage::fake('public');
         $admin = User::factory()->create(['role' => 'admin']);

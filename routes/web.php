@@ -103,7 +103,10 @@ Route::prefix('admin')
             Route::post('/', [HeritageShopAdminController::class, 'store'])->name('store');
             Route::get('/{heritageShop}/edit', [HeritageShopAdminController::class, 'edit'])->name('edit');
             Route::put('/{heritageShop}', [HeritageShopAdminController::class, 'update'])->name('update');
-            Route::post('/crawl', [HeritageShopAdminController::class, 'crawl'])->name('crawl');
+            Route::delete('/{heritageShop}', [HeritageShopAdminController::class, 'destroy'])->name('destroy');
+            Route::post('/crawl', [HeritageShopAdminController::class, 'crawl'])->middleware('throttle:10,1')->name('crawl');
+            Route::post('/discover', [HeritageShopAdminController::class, 'discover'])->middleware('throttle:10,1')->name('discover');
+            Route::post('/discover/import', [HeritageShopAdminController::class, 'importDiscovered'])->name('discover.import');
             Route::get('/{heritageShop}/food-items', [HeritageFoodItemAdminController::class, 'index'])->name('food-items.index');
             Route::get('/{heritageShop}/food-items/{foodItem}/image', [HeritageFoodItemAdminController::class, 'image'])->name('food-items.image');
             Route::post('/{heritageShop}/food-items', [HeritageFoodItemAdminController::class, 'store'])->name('food-items.store');

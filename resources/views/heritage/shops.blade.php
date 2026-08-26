@@ -34,6 +34,7 @@
         h1, h2, h3, p { overflow-wrap: anywhere; }
         h1, h2, h3 { font-family: Georgia, 'Times New Roman', serif; }
         .shell { min-height: 100vh; display: grid; grid-template-columns: 268px minmax(0, 1fr); }
+        .shell.nav-collapsed { grid-template-columns: 82px minmax(0, 1fr); }
         .sidebar {
             position: sticky;
             top: 0;
@@ -55,6 +56,12 @@
             font-weight: 800;
         }
         .brand-mark { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 12px; color: #3b1b16; background: var(--wm-gold); }
+        .shell.nav-collapsed .brand { justify-content:center; padding-inline:0; }
+        .shell.nav-collapsed .brand-word, .shell.nav-collapsed .nav-label, .shell.nav-collapsed .nav-item span, .shell.nav-collapsed .user-name, .shell.nav-collapsed .user-role { display:none; }
+        .shell.nav-collapsed .nav-item { justify-content:center; padding-inline:8px; }
+        .nav-toggle { display:inline-flex; align-items:center; gap:8px; min-height:38px; padding:0 12px; border:1px solid var(--wm-line); border-radius:10px; color:var(--wm-ink); background:#fff; cursor:pointer; font-size:.8rem; font-weight:800; }
+        .nav-toggle:hover { border-color:rgba(163,58,45,.35); background:#fffaf4; }
+        .nav-backdrop { display:none; }
         .nav-label { margin: 27px 12px 10px; color: rgba(255, 245, 236, .48); font-size: .68rem; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
         .nav { display: grid; gap: 5px; }
         .nav-item { display: flex; align-items: center; gap: 11px; padding: 11px 12px; border-radius: 10px; color: rgba(255, 245, 236, .72); font-size: .88rem; font-weight: 700; text-decoration: none; }
@@ -184,14 +191,15 @@
         .ai-guide-source { margin-top: 11px; color: var(--wm-muted); font-size: .72rem; }
         @keyframes guide-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
         @media (max-width: 1080px) { .filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .filter-actions { grid-column: 1 / -1; } .shop-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-        @media (max-width: 850px) { .shell { grid-template-columns: 1fr; } .sidebar { position: static; height: auto; } .nav { grid-template-columns: repeat(2, minmax(0, 1fr)); } .sidebar-footer { margin-top: 24px; } .topbar, .content { padding-inline: 20px; } .detail-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 850px) { .shell, .shell.nav-collapsed { display:block; } .sidebar { position:fixed; z-index:40; left:0; top:0; width:min(86vw,310px); height:100dvh; transform:translateX(-105%); transition:transform .2s ease; box-shadow:18px 0 45px rgba(44,18,12,.22); } .shell.nav-open .sidebar { transform:translateX(0); } .shell.nav-open .nav-backdrop { display:block; position:fixed; z-index:30; inset:0; border:0; background:rgba(34,16,12,.42); cursor:pointer; } .shell.nav-collapsed .brand { justify-content:flex-start; padding-inline:10px; } .shell.nav-collapsed .brand-word, .shell.nav-collapsed .nav-label, .shell.nav-collapsed .nav-item span, .shell.nav-collapsed .user-name, .shell.nav-collapsed .user-role { display:block; } .shell.nav-collapsed .nav-item { justify-content:flex-start; padding-inline:12px; } .nav { grid-template-columns: repeat(2, minmax(0, 1fr)); } .sidebar-footer { margin-top: 24px; } .topbar, .content { padding-inline: 20px; } .detail-grid { grid-template-columns: 1fr; } }
+        @media (prefers-reduced-motion: reduce) { .sidebar, .shop-card, .menu-card { transition:none; } }
         @media (max-width: 620px) { .nav, .filter-grid, .shop-grid { grid-template-columns: 1fr; } .topbar, .page-header, .detail-heading { display: grid; } .content { padding: 22px 16px 34px; } .page-header, .detail-panel { padding: 22px; } .header-pill { justify-self: start; } .filter-actions { grid-column: auto; flex-direction: column; align-items: stretch; } .filter-actions .button { width: 100%; } }
     </style>
 </head>
 <body>
-    <div class="shell">
-        <aside class="sidebar">
-            <div class="brand"><span class="brand-mark">W</span> WarisanMakan</div>
+    <div class="shell" data-heritage-public-nav>
+        <aside class="sidebar" id="public-heritage-sidebar">
+            <div class="brand"><span class="brand-mark">W</span><span class="brand-word">WarisanMakan</span></div>
             <p class="nav-label">Home</p>
             <nav class="nav" aria-label="User home navigation">
                 @auth
@@ -219,9 +227,11 @@
                 </div>
             @endauth
         </aside>
+        <button class="nav-backdrop" id="public-nav-backdrop" type="button" aria-label="Close navigation"></button>
 
         <section class="main">
             <header class="topbar">
+                <button class="nav-toggle" id="public-nav-toggle" type="button" aria-controls="public-heritage-sidebar" aria-expanded="true"><span aria-hidden="true">☰</span><span id="public-nav-toggle-label">Collapse</span></button>
                 <div>
                     <h2>Heritage Shop Tracking</h2>
                     <p>Explore verified heritage food businesses and their cultural stories.</p>
@@ -494,6 +504,48 @@
             </main>
         </section>
     </div>
+    <script>
+    (() => {
+        const shell = document.querySelector('[data-heritage-public-nav]');
+        const toggle = document.getElementById('public-nav-toggle');
+        const label = document.getElementById('public-nav-toggle-label');
+        const backdrop = document.getElementById('public-nav-backdrop');
+        if (!shell || !toggle || !label) return;
+        const key = 'warisan-heritage-public-nav-collapsed';
+        const mobile = () => window.matchMedia('(max-width: 850px)').matches;
+        const sync = () => {
+            if (mobile()) {
+                shell.classList.remove('nav-collapsed');
+                const open = shell.classList.contains('nav-open');
+                toggle.setAttribute('aria-expanded', String(open));
+                toggle.setAttribute('aria-label', open ? 'Close navigation' : 'Open navigation');
+                label.textContent = open ? 'Close' : 'Menu';
+            } else {
+                shell.classList.remove('nav-open');
+                const collapsed = localStorage.getItem(key) === 'true';
+                shell.classList.toggle('nav-collapsed', collapsed);
+                toggle.setAttribute('aria-expanded', String(!collapsed));
+                toggle.setAttribute('aria-label', collapsed ? 'Expand navigation' : 'Collapse navigation');
+                label.textContent = collapsed ? 'Expand' : 'Collapse';
+            }
+        };
+        toggle.addEventListener('click', () => {
+            if (mobile()) shell.classList.toggle('nav-open');
+            else {
+                const collapsed = !shell.classList.contains('nav-collapsed');
+                shell.classList.toggle('nav-collapsed', collapsed);
+                localStorage.setItem(key, String(collapsed));
+            }
+            sync();
+        });
+        backdrop?.addEventListener('click', () => { shell.classList.remove('nav-open'); sync(); });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') { shell.classList.remove('nav-open'); sync(); }
+        });
+        window.addEventListener('resize', sync, {passive:true});
+        sync();
+    })();
+    </script>
     @if (isset($shop))
         <script>
             (() => {

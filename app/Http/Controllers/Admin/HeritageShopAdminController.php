@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CrawlHeritageShopRequest;
+use App\Http\Requests\DiscoverHeritageShopsRequest;
 use App\Http\Requests\StoreHeritageShopRequest;
 use App\Models\HeritageShop;
+use App\Models\PassportStamp;
 use App\Models\ShopImage;
 use App\Services\HeritageShopImageService;
 use App\Services\HeritageShopUrlGuard;
@@ -143,10 +145,44 @@ class HeritageShopAdminController extends Controller
             ->with('success', 'Heritage shop updated successfully.');
     }
 
+    public function destroy(HeritageShop $heritageShop): RedirectResponse
+    {
+        if (PassportStamp::query()->where('shop_id', $heritageShop->getKey())->exists()) {
+            return back()->with('error', 'This shop cannot be permanently deleted because visitor passport history is linked to it. Set the shop to Archived instead so the history remains valid.');
+        }
+
+        DB::transaction(function () use ($heritageShop): void {
+            $heritageShop->load(['images', 'foodItems']);
+
+            foreach ($heritageShop->images as $image) {
+                $this->imageService->delete($image->path);
+            }
+
+            foreach ($heritageShop->foodItems as $foodItem) {
+                $this->imageService->delete($foodItem->image_path);
+            }
+
+            $heritageShop->delete();
+        });
+
+        return redirect()->route('admin.heritage-shops.index')
+            ->with('success', 'Heritage shop and its catalog were deleted successfully.');
+    }
+
     public function crawl(CrawlHeritageShopRequest $request, ShopCrawlerService $service): JsonResponse
     {
+        $url = $service->normalizeUrl($request->string('url')->toString());
+        $existing = $this->findShopBySourceUrl($url, $request->integer('heritage_shop_id'), $service);
+        if ($existing) {
+            return response()->json([
+                'message' => 'This source URL is already linked to “'.$existing->shop_name.'”. Open the existing record instead of importing it again.',
+                'existing_shop_id' => $existing->getKey(),
+                'existing_shop_url' => route('admin.heritage-shops.edit', $existing),
+            ], 409);
+        }
+
         try {
-            $payload = $service->crawl($request->string('url')->toString());
+            $payload = $service->crawl($url);
             $storedImages = [];
 
             foreach (($payload['images'] ?? []) as $imageUrl) {
@@ -168,6 +204,122 @@ class HeritageShopAdminController extends Controller
         }
     }
 
+    public function discover(DiscoverHeritageShopsRequest $request, ShopCrawlerService $service): JsonResponse
+    {
+        $url = $service->normalizeUrl($request->string('url')->toString());
+        $host = strtolower((string) parse_url($url, PHP_URL_HOST));
+        if (str_contains($host, 'tripadvisor.')) {
+            return response()->json([
+                'message' => 'This source is not supported for automated discovery. Use an official, user-authorized, or explicitly permitted list page instead of copying restricted directory content.',
+            ], 422);
+        }
+
+        try {
+            $discovery = $service->discoverFromList(
+                $url,
+                min($request->integer('limit', 6), (int) config('heritage_shop.max_list_discovery_items', 10)),
+            );
+            foreach ($discovery['items'] as &$item) {
+                $existing = $this->findShopBySourceUrl((string) ($item['source_url'] ?? ''), null, $service);
+                $item['duplicate'] = $existing !== null;
+                $item['duplicate_shop_name'] = $existing?->shop_name;
+                $item['can_import'] = $existing === null;
+            }
+            unset($item);
+
+            return response()->json($discovery);
+        } catch (\Throwable $exception) {
+            return response()->json([
+                'message' => $exception->getMessage() ?: 'The list page could not be discovered safely.',
+            ], 422);
+        }
+    }
+
+    public function importDiscovered(Request $request, ShopCrawlerService $service): RedirectResponse
+    {
+        $listUrl = $service->normalizeUrl($request->string('list_url')->toString());
+        $listHost = strtolower((string) parse_url($listUrl, PHP_URL_HOST));
+        if (! filter_var($listUrl, FILTER_VALIDATE_URL) || $listHost === '' || str_contains($listHost, 'tripadvisor.')) {
+            return back()->with('error', 'This import session is invalid or uses a restricted source. Run a fresh preview from an official or explicitly permitted list page.');
+        }
+
+        $items = $request->input('items', []);
+        if (! is_array($items) || $items === []) {
+            return back()->with('error', 'Select at least one reviewed shop before importing.');
+        }
+
+        $items = array_slice($items, 0, (int) config('heritage_shop.max_list_discovery_items', 10));
+        $created = 0;
+        $duplicates = [];
+        $invalid = 0;
+
+        DB::transaction(function () use ($items, $service, $listHost, &$created, &$duplicates, &$invalid): void {
+            foreach ($items as $item) {
+                if (! is_array($item)) {
+                    $invalid++;
+                    continue;
+                }
+
+                $name = trim((string) ($item['shop_name'] ?? $item['name'] ?? ''));
+                $rawSourceUrl = trim((string) ($item['source_url'] ?? ''));
+                $sourceUrl = $service->normalizeUrl($rawSourceUrl);
+                $sourceHost = strtolower((string) parse_url($sourceUrl, PHP_URL_HOST));
+                if ($name === '' || ! filter_var($sourceUrl, FILTER_VALIDATE_URL) || $sourceHost !== $listHost) {
+                    $invalid++;
+                    continue;
+                }
+
+                $existing = $this->findShopBySourceUrl($sourceUrl, null, $service);
+                if ($existing) {
+                    $duplicates[] = $name.' (already linked to '.$existing->shop_name.')';
+                    continue;
+                }
+
+                $foodItems = $item['food_items'] ?? $item['menu'] ?? [];
+                if (is_string($foodItems)) {
+                    $decodedFoodItems = json_decode($foodItems, true);
+                    $foodItems = is_array($decodedFoodItems) ? $decodedFoodItems : [];
+                }
+                $shop = HeritageShop::query()->create([
+                    'shop_name' => $name,
+                    'primary_food_category' => filled($item['primary_food_category'] ?? null) ? trim((string) $item['primary_food_category']) : null,
+                    'establishment_year' => is_numeric($item['establishment_year'] ?? null) ? (int) $item['establishment_year'] : null,
+                    'heritage_story' => filled($item['heritage_story'] ?? $item['description'] ?? null) ? trim((string) ($item['heritage_story'] ?? $item['description'])) : null,
+                    'contact_number' => filled($item['contact_number'] ?? null) ? trim((string) $item['contact_number']) : null,
+                    'address' => filled($item['address'] ?? null) ? trim((string) $item['address']) : null,
+                    'city' => filled($item['city'] ?? null) ? trim((string) $item['city']) : null,
+                    'state' => filled($item['state'] ?? null) ? trim((string) $item['state']) : null,
+                    'postal_code' => filled($item['postal_code'] ?? null) ? trim((string) $item['postal_code']) : null,
+                    'source_url' => $sourceUrl,
+                    'publish_status' => HeritageShop::STATUS_DRAFT,
+                    'food_items' => $this->normalizeFoodItems($foodItems),
+                ]);
+                $this->syncNormalizedFoodItems($shop, $this->normalizeFoodItems($foodItems));
+                $created++;
+            }
+        });
+
+        $message = $created.' shop'.($created === 1 ? '' : 's').' imported as Draft for review.';
+        if ($duplicates !== []) {
+            $message .= ' Skipped duplicates: '.implode(', ', $duplicates).'.';
+        }
+        if ($invalid > 0) {
+            $message .= ' Skipped '.$invalid.' incomplete result'.($invalid === 1 ? '' : 's').'.';
+        }
+
+        return redirect()->route('admin.heritage-shops.index')->with('success', $message);
+    }
+
+    private function findShopBySourceUrl(string $url, ?int $ignoreId, ShopCrawlerService $service): ?HeritageShop
+    {
+        return HeritageShop::query()
+            ->whereNotNull('source_url')
+            ->get(['id', 'shop_name', 'source_url'])
+            ->first(function (HeritageShop $shop) use ($url, $ignoreId, $service): bool {
+                return $shop->getKey() !== $ignoreId && $service->normalizeUrl((string) $shop->source_url) === $url;
+            });
+    }
+
     private function shopPayload(StoreHeritageShopRequest $request): array
     {
         $validated = $request->validated();
@@ -179,6 +331,17 @@ class HeritageShopAdminController extends Controller
         }
 
         $operatingHours = $request->input('operating_hours');
+
+        $sourceUrl = $validated['source_url'] ?? null;
+        if (is_string($sourceUrl) && $sourceUrl !== '') {
+            $parts = parse_url(trim($sourceUrl));
+            if (is_array($parts) && ! empty($parts['host'])) {
+                $sourceUrl = strtolower((string) ($parts['scheme'] ?? 'https')).'://'.strtolower((string) $parts['host'])
+                    .(isset($parts['port']) ? ':'.(int) $parts['port'] : '')
+                    .rtrim((string) ($parts['path'] ?? ''), '/')
+                    .(isset($parts['query']) && $parts['query'] !== '' ? '?'.$parts['query'] : '');
+            }
+        }
 
         return [
             'shop_name' => $validated['shop_name'] ?? null,
@@ -198,7 +361,7 @@ class HeritageShopAdminController extends Controller
             'postal_code' => $validated['postal_code'] ?? null,
             'latitude' => $validated['latitude'] ?? null,
             'longitude' => $validated['longitude'] ?? null,
-            'source_url' => $validated['source_url'] ?? null,
+            'source_url' => $sourceUrl,
             'publish_status' => $validated['publish_status'] ?? 'draft',
         ];
     }
@@ -371,8 +534,8 @@ class HeritageShopAdminController extends Controller
 
         $sizeInKb = $response->header('Content-Length');
         $sizeBytes = is_numeric($sizeInKb) ? ((int) $sizeInKb) : strlen($body);
-        if ($sizeBytes > 5 * 1024 * 1024) {
-            throw new RuntimeException('Crawler image exceeds the 5MB limit.');
+        if ($sizeBytes > (int) config('heritage_shop.max_image_bytes', 1024 * 1024)) {
+            throw new RuntimeException('Crawler image exceeds the '.number_format(((int) config('heritage_shop.max_image_bytes', 1024 * 1024)) / 1024 / 1024, 2).' MB HeritageShop limit.');
         }
 
         $tempPath = tempnam(sys_get_temp_dir(), 'wm-crawler-');

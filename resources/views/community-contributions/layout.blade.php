@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -324,7 +324,7 @@
 
     @if ($backToHomeRoute !== '')
         <div class="home-back">
-            <a class="button secondary small" href="{{ route($backToHomeRoute) }}">&larr; Back to Home</a>
+            <a class="button secondary small" href="{{ route($backToHomeRoute) }}">&larr; {{ __('Back to Home') }}</a>
         </div>
     @endif
 

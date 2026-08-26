@@ -56,6 +56,8 @@ class ProfileController extends Controller
 
         $user->fill($data);
         $user->save();
+        $request->session()->put('locale', $data['language']);
+
 
         if ($request->boolean('language_only')) {
             return redirect()->route('home');

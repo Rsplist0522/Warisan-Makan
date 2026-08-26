@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -150,19 +150,23 @@
     <section class="hero">
         <div class="hero-grid">
             <div>
-                <span class="eyebrow">WarisanMakan • Heritage Discovery PWA</span>
-                <h1>Preserve Malaysia's culinary heritage through every bite.</h1>
-                <p class="lead">Discover forgotten food stories, celebrate traditional vendors, and let every visit feel like a small cultural expedition.</p>
+                <span class="eyebrow">{{ __('WarisanMakan • Heritage Discovery PWA') }}</span>
+                <h1>{{ __('Preserve Malaysia\'s culinary heritage through every bite.') }}</h1>
+                <p class="lead">
+                    {{ __('Discover forgotten food stories, celebrate traditional vendors, and let every visit feel like a small cultural expedition.') }}
+                </p>
                 <div class="button-row">
-                    <a class="btn btn-primary" href="#blind-box">Explore Blind Box</a>
-                    <a class="btn btn-secondary" href="/">Go to main page</a>
+                    <a class="btn btn-primary" href="#blind-box">{{ __('Explore Blind Box') }}</a>
+                    <a class="btn btn-secondary" href="/">{{ __('Go to main page') }}</a>
                 </div>
             </div>
 
             <div class="illustration">
                 <div class="illustration-card">
-                    <h3>"A heritage food trail, made playful."</h3>
-                    <p style="color:#fbeedc;opacity:.95;font-weight:500;">Warm spice-market energy, editorial storytelling, and one surprise discovery at a time.</p>
+                    <h3>{{ __('A heritage food trail, made playful.') }}</h3>
+                    <p style="color:#fbeedc;opacity:.95;font-weight:500;">
+                        {{ __('Warm spice-market energy, editorial storytelling, and one surprise discovery at a time.') }}
+                    </p>
                 </div>
             </div>
         </div>
@@ -170,12 +174,12 @@
 
     <section id="discover" class="section">
                 <h2>{{ __('Heritage Shop Discovery') }}</h2>
-        <p class="lead">All heritage shops currently in the Blind Box pool — the surprise pick comes from this list.</p>
+        <p class="lead">{{ __('All heritage shops currently in the Blind Box pool — the surprise pick comes from this list.') }}</p>
 
         @if(empty($shops))
             <div class="empty-message">
-                <p><strong>No heritage shops match your current filters.</strong></p>
-                <p>Try widening your filters below.</p>
+                <p><strong>{{ __('No heritage shops match your current filters.') }}</strong></p>
+                <p>{{ __('Try widening your filters below.') }}</p>
             </div>
         @else
             <div class="shop-grid">
@@ -184,16 +188,16 @@
                         <div class="item-media">
                             <img src="{{ $shop['image'] ?? '' }}" alt="{{ $shop['name'] ?? '' }}">
                             @if(!empty($shop['year']))
-                                <span class="year-badge">Est. {{ $shop['year'] }}</span>
+                                <span class="year-badge">{{ __('Est.') }} {{ $shop['year'] }}</span>
                             @endif
                         </div>
                         <div class="item-body">
-                            <span class="tag">{{ $shop['category'] ?? 'Heritage' }}</span>
+                            <span class="tag">{{ $shop['category'] ?? __('Heritage') }}</span>
                             <h3>{{ $shop['name'] ?? '' }}</h3>
                             <p class="muted">{{ $shop['description'] ?? '' }}</p>
                             <div class="item-meta">
-                                <span class="state-chip">📍 {{ $shop['state'] ?? 'Malaysia' }}</span>
-                                <span>Since {{ $shop['year'] ?? 'Heritage' }}</span>
+                                <span class="state-chip">📍 {{ $shop['state'] ?? __('Malaysia') }}</span>
+                                <span>{{ __('Since') }} {{ $shop['year'] ?? __('Heritage') }}</span>
                             </div>
                         </div>
                     </article>
@@ -203,33 +207,43 @@
     </section>
 
     <section id="blind-box" class="section">
-        <h2>Blind Box Recommendation</h2>
-        <p class="lead">Set your filters, then tap the box for a surprise heritage shop recommendation.</p>
+        <h2>{{ __('Blind Box Recommendation') }}</h2>
+        <p class="lead">{{ __('Set your filters, then tap the box for a surprise heritage shop recommendation.') }}</p>
 
         <div class="period-banner animate__animated animate__fadeIn">
             <span class="period-icon">{{ $periodInfo['icon'] }}</span>
-            <span class="period-text">It is currently <strong>{{ $periodInfo['label'] }}</strong> &nbsp;·&nbsp; <em>({{ $periodInfo['tag'] }})</em></span>
-            <span class="period-rule">One surprise draw per period</span>
+            <span class="period-text">
+                {{ __('It is currently') }}
+                <strong>{{ __($periodInfo['label']) }}</strong>
+                &nbsp;·&nbsp;
+                <em>({{ __($periodInfo['tag']) }})</em>
+            </span>
+            <span class="period-rule">{{ __('One surprise draw per period') }}</span>
         </div>
 
         <form action="{{ url('/blind-box') }}#blind-box" method="GET">
             <div class="filter-row">
                 <select name="state" onchange="this.form.submit()">
-                    <option value="">All states</option>
+                    <option value="">{{ __('All states') }}</option>
                     @foreach($states as $option)
                         <option value="{{ $option }}" @selected($activeFilters['state'] === $option)>{{ $option }}</option>
                     @endforeach
                 </select>
 
                 <select name="category" onchange="this.form.submit()">
-                    <option value="">All food categories</option>
+                    <option value="">{{ __('All food categories') }}</option>
                     @foreach($categories as $option)
-                        <option value="{{ $option }}" @selected($activeFilters['category'] === $option)>{{ $option }}</option>
+                        <option
+                            value="{{ $option }}"
+                                @selected($activeFilters['category'] === $option)
+                        >
+                            {{ __($option) }}
+                        </option>
                     @endforeach
                 </select>
 
                 @if($activeFilters['state'] !== '' || $activeFilters['category'] !== '')
-                    <a class="filter-reset" href="{{ url('/blind-box') }}#blind-box">Reset filters</a>
+                    <a class="filter-reset" href="{{ url('/blind-box') }}#blind-box">{{ __('Reset filters') }}</a>
                 @endif
             </div>
         </form>
@@ -249,7 +263,7 @@
                     <div class="box-lid"></div>
                     <div class="box-body">
                         <div class="box-question">{{ $alreadyDrew ? '✓' : '?' }}</div>
-                        <div class="box-label">{{ $alreadyDrew ? 'OPENED' : 'OPEN ME' }}</div>
+                        <div class="box-label">{{ $alreadyDrew ? __('OPENED') : __('OPEN ME') }}</div>
                     </div>
                 </div>
             </div>
@@ -270,6 +284,34 @@
         alreadyDrew: @json($alreadyDrew),
         periodKey: @json($periodInfo['key']),
     };
+
+    const BLIND_BOX_TEXT = {
+    surpriseDiscoveryUnlocked: @json(__('Surprise Discovery Unlocked')),
+    heritageShop: @json(__('Heritage Shop')),
+    estimated: @json(__('Est.')),
+    noDescription: @json(__('No description available.')),
+    category: @json(__('Category')),
+    state: @json(__('State')),
+    whatNext: @json(__('What would you like to do next?')),
+    exploreFoodTrails: @json(__('Explore Food Trails')),
+    browseHeritageShops: @json(__('Browse Heritage Shops')),
+    openedDuring: @json(__('You opened this Blind Box during the :period period. Come back next period for another surprise!')),
+    current: @json(__('current')),
+    tryAgainLater: @json(__('Try Again Later')),
+    tryLater: @json(__('TRY LATER')),
+    somethingWentWrong: @json(__('Something went wrong. Please try again.')),
+    oops: @json(__('Oops')),
+    tryAgain: @json(__('TRY AGAIN')),
+    opened: @json(__('OPENED')),
+};
+
+const BLIND_BOX_PERIODS = {
+    morning: @json(__('Morning')),
+    afternoon: @json(__('Afternoon')),
+    evening: @json(__('Evening')),
+    night: @json(__('Night')),
+};
+
 
     document.addEventListener('DOMContentLoaded', function () {
         const box = document.getElementById('box');
@@ -316,54 +358,70 @@
         }
 
         function renderResult(shop, periodKey, { animateIn = false } = {}) {
-            const mediaAnim = animateIn ? 'animate__animated animate__zoomIn' : '';
-            const infoAnim = animateIn ? 'animate__animated animate__fadeInRight' : '';
+    const mediaAnim = animateIn ? 'animate__animated animate__zoomIn' : '';
+    const infoAnim = animateIn ? 'animate__animated animate__fadeInRight' : '';
+    const periodLabel = BLIND_BOX_PERIODS[periodKey] || BLIND_BOX_TEXT.current;
 
-            result.className = 'result show';
+    result.className = 'result show';
 
-            result.innerHTML = `
-                <div class="reveal-header">
-                    <span class="renewal-tag">✨ Surprise Discovery Unlocked ✨</span>
+    result.innerHTML = `
+        <div class="reveal-header">
+            <span class="renewal-tag">✨ ${BLIND_BOX_TEXT.surpriseDiscoveryUnlocked} ✨</span>
+        </div>
+
+        <div class="result-content">
+            <div class="result-media ${mediaAnim}">
+                <img
+                    class="result-image"
+                    src="${shop.image || ''}"
+                    alt="${shop.name || shop.shop_name || BLIND_BOX_TEXT.heritageShop}"
+                >
+                <span class="year-badge">
+                    ${BLIND_BOX_TEXT.estimated} ${shop.year || BLIND_BOX_TEXT.heritageShop}
+                </span>
+            </div>
+
+            <div class="result-info ${infoAnim}">
+                <h3 class="shop-name">${shop.name || shop.shop_name || BLIND_BOX_TEXT.heritageShop}</h3>
+                <p class="shop-desc">${shop.description || BLIND_BOX_TEXT.noDescription}</p>
+
+                <div class="shop-meta">
+                    <span class="meta-chip">
+                        <em>${BLIND_BOX_TEXT.category}:</em>
+                        <strong>${shop.category || BLIND_BOX_TEXT.heritageShop}</strong>
+                    </span>
+                    <span class="meta-chip">
+                        <em>${BLIND_BOX_TEXT.state}:</em>
+                        <strong>${shop.state || 'Malaysia'}</strong>
+                    </span>
                 </div>
 
-                <div class="result-content">
-                    <div class="result-media ${mediaAnim}">
-                        <img class="result-image" src="${shop.image || ''}" alt="${shop.name || shop.shop_name || 'Heritage Shop'}">
-                        <span class="year-badge">Est. ${shop.year || 'Heritage'}</span>
-                    </div>
+                <div class="next-steps">
+                    <div class="next-steps-label">${BLIND_BOX_TEXT.whatNext}</div>
 
-                    <div class="result-info ${infoAnim}">
-                        <h3 class="shop-name">${shop.name || shop.shop_name || 'Heritage Shop'}</h3>
-                        <p class="shop-desc">${shop.description || 'No description available.'}</p>
+                    <div class="cta-row">
+                        <a class="cta-btn cta-primary" href="${BLIND_BOX_CONFIG.foodtrailUrl}">
+                            <span class="cta-icon">🧭</span>
+                            ${BLIND_BOX_TEXT.exploreFoodTrails}
+                            <span class="cta-arrow">→</span>
+                        </a>
 
-                        <div class="shop-meta">
-                            <span class="meta-chip"><em>Category:</em> <strong>${shop.category || 'Heritage'}</strong></span>
-                            <span class="meta-chip"><em>State:</em> <strong>${shop.state || 'Malaysia'}</strong></span>
-                        </div>
-
-                        <div class="next-steps">
-                            <div class="next-steps-label">What would you like to do next?</div>
-
-                            <div class="cta-row">
-                                <a class="cta-btn cta-primary" href="${BLIND_BOX_CONFIG.foodtrailUrl}">
-                                    <span class="cta-icon">🧭</span> Explore Food Trails <span class="cta-arrow">→</span>
-                                </a>
-
-                                <a class="cta-btn cta-outline" href="${BLIND_BOX_CONFIG.heritageShopsUrl}">
-                                    <span class="cta-icon">🏮</span> Browse Heritage Shops <span class="cta-arrow">→</span>
-                                </a>
-                            </div>
-                        </div>
+                        <a class="cta-btn cta-outline" href="${BLIND_BOX_CONFIG.heritageShopsUrl}">
+                            <span class="cta-icon">🏮</span>
+                            ${BLIND_BOX_TEXT.browseHeritageShops}
+                            <span class="cta-arrow">→</span>
+                        </a>
                     </div>
                 </div>
+            </div>
+        </div>
 
-                <p class="result-footnote">
-                    You opened this Blind Box during the
-                    <strong class="period-name">${periodKey || 'current'}</strong>
-                    period. Come back next period for another surprise!
-                </p>
-            `;
-        }
+        <p class="result-footnote">
+            ${BLIND_BOX_TEXT.openedDuring.replace(':period', periodLabel)}
+        </p>
+    `;
+}
+
 
         function renderError(message, label) {
             result.className = 'result show';
@@ -417,12 +475,12 @@
 
                 if (!response.ok) {
                     renderError(
-                        data.error || 'Something went wrong. Please try again.',
-                        'Try Again Later'
-                    );
+                        data.error || BLIND_BOX_TEXT.somethingWentWrong,
+                        BLIND_BOX_TEXT.tryAgainLater
+                );
 
                     box.querySelector('.box-question').textContent = '!';
-                    box.querySelector('.box-label').textContent = 'TRY LATER';
+                    box.querySelector('.box-label').textContent = BLIND_BOX_TEXT.tryLater;
                     box.classList.remove('box-shake');
 
                     return;
@@ -437,19 +495,19 @@
                 confettiBurst();
 
                 box.querySelector('.box-question').textContent = '✓';
-                box.querySelector('.box-label').textContent = 'OPENED';
+                box.querySelector('.box-label').textContent = BLIND_BOX_TEXT.opened;
                 box.classList.remove('box-shake');
 
             } catch (error) {
                 console.error(error);
 
-                renderError(
-                    'Something went wrong. Please try again.',
-                    'Oops'
-                );
+renderError(
+    BLIND_BOX_TEXT.somethingWentWrong,
+    BLIND_BOX_TEXT.oops
+);
 
                 box.querySelector('.box-question').textContent = '!';
-                box.querySelector('.box-label').textContent = 'TRY AGAIN';
+                box.querySelector('.box-label').textContent = BLIND_BOX_TEXT.tryAgain;
 
                 box.dataset.disabled = '';
                 box.classList.remove('box-shake');

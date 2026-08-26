@@ -17,8 +17,11 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [SetLocale::class]);
+
         $middleware->redirectGuestsTo(fn () => route('login'));
+
         $middleware->alias([
+            'set.locale' => SetLocale::class,
             'admin' => EnsureUserIsAdmin::class,
             'regular_user' => EnsureUserIsRegularUser::class,
             'active_user' => EnsureUserIsActive::class,

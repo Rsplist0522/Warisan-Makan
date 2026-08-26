@@ -63,7 +63,7 @@ class HeritageShopImageService
         return route('heritage-shops.images.show', [
             'heritageShop' => $image->shop_id,
             'image' => $image->id,
-        ]);
+        ], false);
     }
 
     /**

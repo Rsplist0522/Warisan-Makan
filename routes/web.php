@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminCommunityContributionController;
+use App\Http\Controllers\Admin\BadgeManagementController;
 use App\Http\Controllers\Admin\BlindBoxController as AdminBlindBoxController;
 use App\Http\Controllers\Admin\HeritageFoodItemAdminController;
 use App\Http\Controllers\Admin\HeritageShopAdminController;
@@ -96,6 +97,15 @@ Route::prefix('admin')
 
         Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');
         Route::post('/users/{user}/toggle-status', [UserManagementController::class, 'toggleStatus'])->name('users.toggle-status');
+
+        Route::prefix('badges')->name('badges.')->group(function (): void {
+            Route::get('/', [BadgeManagementController::class, 'index'])->name('index');
+            Route::get('/create', [BadgeManagementController::class, 'create'])->name('create');
+            Route::post('/', [BadgeManagementController::class, 'store'])->name('store');
+            Route::get('/{badge}/edit', [BadgeManagementController::class, 'edit'])->name('edit');
+            Route::put('/{badge}', [BadgeManagementController::class, 'update'])->name('update');
+            Route::patch('/{badge}/toggle', [BadgeManagementController::class, 'toggle'])->name('toggle');
+        });
 
         Route::prefix('heritage-shops')->name('heritage-shops.')->group(function () {
             Route::get('/', [HeritageShopAdminController::class, 'index'])->name('index');

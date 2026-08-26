@@ -6,12 +6,6 @@ return [
     |--------------------------------------------------------------------------
     | Third Party Services
     |--------------------------------------------------------------------------
-    |
-    | This file is for storing the credentials for third party services such
-    | as Mailgun, Postmark, AWS and more. This file provides the de facto
-    | location for this type of information, allowing packages to have
-    | a conventional file to locate the various service credentials.
-    |
     */
 
     'postmark' => [
@@ -42,23 +36,29 @@ return [
         'maps_api_key' => env('GOOGLE_MAPS_API_KEY'),
     ],
 
-    // The crawler uses Groq's OpenAI-compatible chat-completions API.  The
-    // OPENAI_* fallbacks retain compatibility with existing deployments.
+    // The crawler uses Groq's OpenAI-compatible chat-completions API.
+    // Prioritizes CHATBOX_ specific keys for your separate presentation key.
     'groq' => [
-        'key' => env('GROQ_API_KEY', env('OPENAI_API_KEY')),
-        'api_key' => env('GROQ_API_KEY', env('OPENAI_API_KEY')),
-        'model' => env('GROQ_MODEL', env('OPENAI_MODEL', 'llama-3.3-70b-versatile')),
+        'key' => env('CHATBOX_GROQ_API_KEY', env('GROQ_API_KEY', env('OPENAI_API_KEY'))),
+        'api_key' => env('CHATBOX_GROQ_API_KEY', env('GROQ_API_KEY', env('OPENAI_API_KEY'))),
+        'model' => env('CHATBOX_GROQ_MODEL', env('GROQ_MODEL', env('OPENAI_MODEL', 'openai/gpt-oss-20b'))),
         'enhancement_enabled' => env('AI_CRAWLER_ENHANCEMENT_ENABLED', true),
-        'endpoint' => env('GROQ_API_ENDPOINT', 'https://api.groq.com/openai/v1/chat/completions'),
+        'endpoint' => env('GROQ_API_ENDPOINT', 'https://api.groq.com/openai/v1/chat/completions' ),
     ],
 
-    // Tavily supplies web-search results to the crawler when the source page
-    // does not contain a required business fact. The LLM is deliberately only
-    // given these returned sources; it never fills a field from its own memory.
     'tavily' => [
         'api_key' => env('TAVILY_API_KEY'),
-        'endpoint' => env('TAVILY_API_ENDPOINT', 'https://api.tavily.com/search'),
+        'endpoint' => env('TAVILY_API_ENDPOINT', 'https://api.tavily.com/search' ),
         'research_enabled' => env('AI_CRAWLER_WEB_RESEARCH_ENABLED', true),
     ],
 
+    'chatbox_groq' => [
+        'key' => env('CHATBOX_GROQ_API_KEY'),
+        'model' => env('CHATBOX_GROQ_MODEL', 'openai/gpt-oss-20b'),
+        'endpoint' => env(
+            'CHATBOX_GROQ_API_ENDPOINT',
+            'https://api.groq.com/openai/v1/chat/completions'
+    ),
+    ],
+    
 ];

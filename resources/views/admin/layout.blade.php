@@ -183,6 +183,7 @@
     @php
         $heritageShopNavEnabled = request()->routeIs('admin.heritage-shops.*');
         $communityContributionActive = request()->routeIs('admin.community-contributions.*');
+        $foodTrailActive = request()->routeIs('admin.food-trails.*');
         $blindBoxActive = request()->routeIs('admin.blind-box-items.*');
         $placeholderModules = [
             'heritage-registry' => 'Heritage Registry',
@@ -223,8 +224,12 @@
                 <a class="nav-item {{ $blindBoxActive ? 'active' : '' }}" data-icon="◇" data-label="Blind Box" title="Blind Box" href="{{ route('admin.blind-box-items.index') }}">
                     <span>Blind Box</span>
                 </a>
+                <a class="nav-item {{ $foodTrailActive ? 'active' : '' }}" href="{{ route('admin.food-trails.index') }}">
+                    <span>Events &amp; Trails</span>
+                </a>
 
                 @foreach ($placeholderModules as $slug => $name)
+                    @continue($slug === 'events-trails')
                     <a class="nav-item placeholder {{ request()->routeIs('admin.modules.show') && request()->route('moduleSlug') === $slug ? 'active' : '' }}" data-icon="◈" data-label="{{ $name }}" title="{{ $name }}" href="{{ route('admin.modules.show', $slug) }}">
                         <span>{{ $name }}</span>
                         <small>soon</small>

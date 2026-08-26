@@ -25,6 +25,9 @@
             <p>{{ $mode === 'create' ? 'Create a verified public record and review any crawler suggestions before publishing.' : 'Update the public listing and rewrite any imported data as needed.' }}</p>
         </div>
         <div class="actions">
+            @if ($mode === 'edit')
+                <a class="button secondary small" href="{{ route('admin.heritage-shops.food-items.index', $shop) }}">Manage food catalog</a>
+            @endif
             <a class="button secondary small" href="{{ route('admin.heritage-shops.index') }}">Back to list</a>
         </div>
     </header>
@@ -151,9 +154,17 @@
                 </section>
 
                 <section class="panel">
-                    <div style="display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:14px;">
-                        <h2 style="margin:0;">Menu items</h2>
-                        <button type="button" class="button secondary small" id="add-menu-item">Add menu item</button>
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:8px;">
+                        <div>
+                            <h2 style="margin:0 0 5px;">Menu items</h2>
+                            <p class="help-text" style="margin:0;">Quick profile entries appear on the public page. For photos, availability, categories, and heritage significance, use the dedicated food catalog.</p>
+                        </div>
+                        <div class="actions">
+                            @if ($mode === 'edit')
+                                <a class="button secondary small" href="{{ route('admin.heritage-shops.food-items.index', $shop) }}">Open catalog</a>
+                            @endif
+                            <button type="button" class="button secondary small" id="add-menu-item">Add quick item</button>
+                        </div>
                     </div>
                     <div id="menu-items-container" style="display:grid; gap:12px;"></div>
                 </section>
@@ -165,8 +176,8 @@
                     <div class="field" style="margin-top:16px;">
                                                                                 <label for="images">Upload gallery images</label>
 
-                            <input id="images" name="images[]" type="file" accept="image/jpeg,image/png,image/webp" multiple data-max-bytes="1048576">
-                            <p class="help-text" id="image-upload-help">JPG, PNG, or WebP only. Each new image must be no larger than 1 MB (1024 KB).</p>
+                            <input id="images" name="images[]" type="file" accept="image/jpeg,image/png,image/webp" multiple data-max-bytes="{{ config('heritage_shop.max_image_bytes', 1048576) }}">
+                            <p class="help-text" id="image-upload-help">JPG, PNG, or WebP only. Each new image must be no larger than {{ number_format(config('heritage_shop.max_image_kb', 1024) / 1024, 2) }} MB ({{ config('heritage_shop.max_image_kb', 1024) }} KB).</p>
                             <div id="image-upload-error" class="status-banner error" style="display:none; margin:0; padding:10px 12px;"></div>
 
                     </div>
@@ -302,7 +313,8 @@
         const crawlUrlInput = document.getElementById('crawl_url');
                 const uploadInput = document.getElementById('images');
         const imageUploadError = document.getElementById('image-upload-error');
-        const maxImageBytes = 1024 * 1024;
+        const maxImageBytes = Number('{{ config('heritage_shop.max_image_bytes', 1048576) }}');
+        const maxImageLabel = '{{ number_format(config('heritage_shop.max_image_kb', 1024) / 1024, 2) }} MB';
 
         const menuItemsContainer = document.getElementById('menu-items-container');
         const addMenuItemButton = document.getElementById('add-menu-item');
@@ -496,11 +508,24 @@
                         'Accept': 'application/json',
                         'X-CSRF-TOKEN': '{{ csrf_token() }}'
                     },
-                    body: JSON.stringify({ url })
+                    body: JSON.stringify({ url, heritage_shop_id: '{{ $shop->id ?? '' }}' })
                 });
 
                 const responseData = await response.json();
                 if (!response.ok) {
+                    if (response.status === 409 && responseData.existing_shop_url) {
+                        setCrawlStatus('error', responseData.message || 'This source URL is already in the registry.');
+                        const existingLink = document.createElement('a');
+                        existingLink.href = responseData.existing_shop_url;
+                        existingLink.target = '_blank';
+                        existingLink.rel = 'noopener noreferrer';
+                        existingLink.textContent = 'Open existing shop';
+                        existingLink.style.display = 'inline-block';
+                        existingLink.style.marginTop = '6px';
+                        crawlStatus.appendChild(document.createElement('br'));
+                        crawlStatus.appendChild(existingLink);
+                        return;
+                    }
                     throw new Error(responseData.message || 'The crawler could not fetch that URL.');
                 }
 
@@ -534,7 +559,7 @@
                 const oversizedFiles = Array.from(uploadInput.files).filter((file) => file.size > maxImageBytes);
 
                 if (oversizedFiles.length) {
-                    imageUploadError.textContent = 'The image must not be larger than 1 MB.';
+                    imageUploadError.textContent = 'The image must not be larger than ' + maxImageLabel + '.';
                     imageUploadError.style.display = 'block';
                     uploadInput.value = '';
                     return;
@@ -564,7 +589,7 @@
             input.addEventListener('change', () => {
                 const file = input.files?.[0];
                 if (file && file.size > maxImageBytes) {
-                    imageUploadError.textContent = 'The image must not be larger than 1 MB.';
+                    imageUploadError.textContent = 'The image must not be larger than ' + maxImageLabel + '.';
                     imageUploadError.style.display = 'block';
                     input.value = '';
                 } else {

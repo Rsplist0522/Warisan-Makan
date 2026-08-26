@@ -89,11 +89,11 @@ class CommunityContributionController extends Controller
 
         if ($validated['submission_action'] === 'draft') {
             return redirect()->route('community-contribution.drafts')
-                ->with('status', 'Heritage shop draft saved successfully.');
+                ->with('status', __('Heritage shop draft saved successfully.'));
         }
 
         return redirect()->route('community-contribution.contributions.show', $contribution)
-            ->with('status', 'Heritage shop information submitted for review.');
+            ->with('status', __('Heritage shop information submitted for review.'));
     }
 
     public function drafts(Request $request): View
@@ -131,7 +131,7 @@ class CommunityContributionController extends Controller
 
         if ($retainedMediaCount + count($newFiles) > 6) {
             throw ValidationException::withMessages([
-                'supporting_media' => 'A contribution may contain no more than 6 media files.',
+                'supporting_media' => __('A contribution may contain no more than 6 media files.'),
             ]);
         }
 
@@ -197,17 +197,17 @@ class CommunityContributionController extends Controller
         if ($validated['submission_action'] === 'draft') {
             if ($oldStatus === HeritageShopContribution::STATUS_REVISION_REQUIRED) {
                 return redirect()->route('community-contribution.contributions.show', $contribution)
-                    ->with('status', 'Revision changes saved. Resubmit when they are ready.');
+                    ->with('status', __('Revision changes saved. Resubmit when they are ready.'));
             }
 
             return redirect()->route('community-contribution.drafts')
-                ->with('status', 'Draft updated successfully.');
+                ->with('status', __('Draft updated successfully.'));
         }
 
         return redirect()->route('community-contribution.contributions.show', $contribution)
             ->with('status', $oldStatus === HeritageShopContribution::STATUS_REVISION_REQUIRED
-                ? 'Revised contribution resubmitted successfully.'
-                : 'Draft submitted for review.');
+                ? __('Revised contribution resubmitted successfully.')
+                : __('Draft submitted for review.'));
     }
 
     public function destroyDraft(Request $request, HeritageShopContribution $contribution): RedirectResponse
@@ -220,7 +220,7 @@ class CommunityContributionController extends Controller
         Storage::disk(config('filesystems.media_disk'))->delete($media->pluck('r2_object_key')->all());
 
         return redirect()->route('community-contribution.drafts')
-            ->with('status', 'Draft deleted successfully.');
+            ->with('status', __('Draft deleted successfully.'));
     }
 
     public function submitDraft(Request $request, HeritageShopContribution $contribution): RedirectResponse
@@ -228,7 +228,7 @@ class CommunityContributionController extends Controller
         if ((int) $contribution->user_id === (int) $request->user()->id
             && $contribution->status === HeritageShopContribution::STATUS_PENDING_REVIEW) {
             return redirect()->route('community-contribution.contributions.show', $contribution)
-                ->with('status', 'This draft was already submitted for review.');
+                ->with('status', __('This draft was already submitted for review.'));
         }
 
         Gate::authorize('submitDraft', $contribution);
@@ -248,7 +248,7 @@ class CommunityContributionController extends Controller
         if ($missing->isNotEmpty()) {
             return redirect()->route('community-contribution.edit', $contribution)
                 ->withErrors([
-                    'submission' => 'Complete all required fields before submitting this draft.',
+                    'submission' => __('Complete all required fields before submitting this draft.'),
                 ]);
         }
 
@@ -262,7 +262,7 @@ class CommunityContributionController extends Controller
         });
 
         return redirect()->route('community-contribution.contributions.show', $contribution)
-            ->with('status', 'Draft submitted for review.');
+            ->with('status', __('Draft submitted for review.'));
     }
 
     public function contributions(Request $request): View
@@ -350,7 +350,7 @@ class CommunityContributionController extends Controller
         });
 
         return redirect()->route('community-contribution.contributions.show', $contribution)
-            ->with('status', 'Contribution withdrawn successfully.');
+            ->with('status', __('Contribution withdrawn successfully.'));
     }
 
     private function validateContribution(Request $request): array
@@ -517,11 +517,11 @@ class CommunityContributionController extends Controller
     {
         if ($contribution->status === HeritageShopContribution::STATUS_DRAFT) {
             return redirect()->route('community-contribution.drafts')
-                ->with('status', 'This draft was already saved.');
+                ->with('status', __('This draft was already saved.'));
         }
 
         return redirect()->route('community-contribution.contributions.show', $contribution)
-            ->with('status', 'This contribution was already submitted.');
+                ->with('status', __('This contribution was already submitted.'));
     }
 
     private function isDuplicateSubmissionTokenException(QueryException $exception): bool

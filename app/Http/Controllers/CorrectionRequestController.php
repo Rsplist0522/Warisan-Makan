@@ -111,7 +111,7 @@ class CorrectionRequestController extends Controller
         }
 
         return redirect()->route('community-contribution.correction-requests.show', $correctionRequest)
-            ->with('status', 'Correction request submitted for review.');
+            ->with('status', __('Correction request submitted for review.'));
     }
 
     public function show(Request $request, CorrectionRequest $correctionRequest): View
@@ -142,7 +142,7 @@ class CorrectionRequestController extends Controller
 
         if ($existingEvidenceCount + count($newFiles) > 8) {
             throw ValidationException::withMessages([
-                'additional_evidence' => 'A correction request may contain no more than 8 evidence files.',
+                'additional_evidence' => __('A correction request may contain no more than 8 evidence files.'),
             ]);
         }
 
@@ -183,7 +183,7 @@ class CorrectionRequestController extends Controller
         }
 
         return redirect()->route('community-contribution.correction-requests.show', $correctionRequest)
-            ->with('status', 'Additional information submitted. Your correction request is pending review again.');
+            ->with('status', __('Additional information submitted. Your correction request is pending review again.'));
     }
 
     private function validateCorrectionRequest(Request $request): array
@@ -217,7 +217,7 @@ class CorrectionRequestController extends Controller
                 ->join("\n");
         }
 
-        return filled($value) ? (string) $value : 'Not provided';
+        return filled($value) ? (string) $value : __('Not provided');
     }
 
     private function storeEvidence(Request $request, string $field, string $directory, int $userId, int $startOrder = 0): array
@@ -229,7 +229,7 @@ class CorrectionRequestController extends Controller
 
                 if ($objectKey === false) {
                     throw ValidationException::withMessages([
-                        $field => 'The evidence file could not be uploaded. Please try again.',
+                        $field => __('The evidence file could not be uploaded. Please try again.'),
                     ]);
                 }
 

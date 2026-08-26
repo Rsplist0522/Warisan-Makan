@@ -21,7 +21,7 @@ class EnsureUserIsActive
             $request->session()->regenerateToken();
 
             return redirect()->route('login')->withErrors([
-                'login' => 'You have been blocked. Please contact the administrator to regain access.',
+                'login' => __('Your account has been blocked. Please contact the administrator to regain access.'),
             ]);
         }
 

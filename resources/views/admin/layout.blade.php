@@ -23,6 +23,7 @@
         a { color: inherit; }
         button { font: inherit; }
         .shell { min-height: 100vh; display: grid; grid-template-columns: 270px 1fr; }
+        .shell.nav-collapsed { grid-template-columns: 82px 1fr; }
         .sidebar { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; overflow-y: auto; padding: 28px 20px; color: #fff5ec; background: linear-gradient(180deg, var(--sidebar), #281010); }
         .brand { display: flex; align-items: center; gap: 12px; padding: 2px 10px 28px; border-bottom: 1px solid rgba(255,255,255,.1); font-family: Georgia, serif; font-size: 1.2rem; font-weight: 800; }
         .brand-mark { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.2); border-radius: 12px; color: #3b1b16; background: var(--gold); font-family: Georgia, serif; }
@@ -40,6 +41,13 @@
         .subnav .nav-item { padding: 9px 10px; font-size: .8rem; }
         .subnav .nav-item::before { width: 5px; height: 5px; }
         .sidebar-footer { margin-top: auto; padding-top: 22px; border-top: 1px solid rgba(255,255,255,.1); }
+        .shell.nav-collapsed .brand { justify-content: center; padding-inline: 0; }
+        .shell.nav-collapsed .brand-word, .shell.nav-collapsed .nav-label, .shell.nav-collapsed .nav-item span, .shell.nav-collapsed .nav-item small, .shell.nav-collapsed .admin-name, .shell.nav-collapsed .admin-role { display: none; }
+        .shell.nav-collapsed .nav-item { justify-content: center; padding-inline: 8px; }
+        .shell.nav-collapsed .subnav { display: none; }
+        .nav-toggle { display:inline-flex; align-items:center; gap:8px; min-height:38px; border:1px solid var(--line); border-radius:10px; padding:0 12px; color:var(--ink); background:#fff; cursor:pointer; font-size:.8rem; font-weight:800; }
+        .nav-toggle:hover { border-color:rgba(163,54,54,.35); background:#fffaf4; }
+        .nav-backdrop { display:none; }
         .admin-name { margin: 0 0 3px; font-size: .88rem; font-weight: 800; }
         .admin-role { margin: 0 0 14px; color: rgba(255,245,236,.52); font-size: .76rem; }
         .logout { width: 100%; padding: 9px 12px; border: 1px solid rgba(255,255,255,.16); border-radius: 9px; color: #fff5ec; background: transparent; cursor: pointer; text-align: left; }
@@ -131,8 +139,13 @@
         .pagination { margin-top: 18px; }
         nav[role='navigation'] svg { width: 18px; height: 18px; }
         @media (max-width: 850px) {
-            .shell { grid-template-columns: 1fr; }
-            .sidebar { position: static; height: auto; }
+            .shell, .shell.nav-collapsed { display:block; }
+            .sidebar { position:fixed; z-index:40; left:0; top:0; width:min(86vw, 310px); height:100dvh; transform:translateX(-105%); transition:transform .2s ease; box-shadow:18px 0 45px rgba(44,18,12,.22); }
+            .shell.nav-open .sidebar { transform:translateX(0); }
+            .shell.nav-open .nav-backdrop { display:block; position:fixed; z-index:30; inset:0; border:0; background:rgba(34,16,12,.42); cursor:pointer; }
+            .shell.nav-collapsed .brand { justify-content:flex-start; padding-inline:10px; }
+            .shell.nav-collapsed .brand-word, .shell.nav-collapsed .nav-label, .shell.nav-collapsed .nav-item span, .shell.nav-collapsed .nav-item small, .shell.nav-collapsed .admin-name, .shell.nav-collapsed .admin-role { display:block; }
+            .shell.nav-collapsed .nav-item { justify-content:flex-start; padding-inline:12px; }
             .nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
             .subnav { grid-column: 1 / -1; margin-left: 0; }
             .sidebar-footer { margin-top: 24px; }
@@ -141,6 +154,9 @@
             .filters .filter-action { grid-column: 1 / -1; }
             .module-grid { grid-template-columns: 1fr; }
             .detail-grid { grid-template-columns: 1fr; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .sidebar { transition:none; }
         }
         @media (max-width: 520px) {
             .nav, .filters, .filters.four, .filters.six, .definition-grid { grid-template-columns: 1fr; }
@@ -152,8 +168,11 @@
 </head>
 <body>
     @php
+        $heritageShopNavEnabled = request()->routeIs('admin.heritage-shops.*');
         $communityContributionActive = request()->routeIs('admin.community-contributions.*');
+        $foodTrailActive = request()->routeIs('admin.food-trails.*');
         $blindBoxActive = request()->routeIs('admin.blind-box-items.*');
+        $badgesActive = request()->routeIs('admin.badges.*');
         $placeholderModules = [
             'heritage-registry' => 'Heritage Registry',
             'food-map' => 'Food Map',
@@ -163,8 +182,8 @@
         ];
     @endphp
     <div class="shell">
-        <aside class="sidebar">
-            <div class="brand"><span class="brand-mark">W</span> Warisan Makan</div>
+        <aside class="sidebar" id="admin-sidebar" @if($heritageShopNavEnabled) data-heritage-nav="true" @endif>
+            <div class="brand"><span class="brand-mark">W</span><span class="brand-word">Warisan Makan</span></div>
             <p class="nav-label">Admin home</p>
             <nav class="nav" aria-label="Administrator modules">
                 <a class="nav-item {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}" href="{{ route('admin.dashboard') }}">Dashboard</a>
@@ -174,6 +193,9 @@
             <nav class="nav" aria-label="Administrator modules">
                 <a class="nav-item {{ request()->routeIs('admin.users.*') ? 'active' : '' }}" href="{{ route('admin.users.index') }}">
                     <span>Users &amp; Roles</span>
+                </a>
+                <a class="nav-item {{ $badgesActive ? 'active' : '' }}" href="{{ route('admin.badges.index') }}">
+                    <span>Achievement Badges</span>
                 </a>
                 <a class="nav-item {{ request()->routeIs('admin.heritage-shops.*') ? 'active' : '' }}" href="{{ route('admin.heritage-shops.index') }}">
                     <span>Heritage Shops</span>
@@ -193,8 +215,12 @@
                 <a class="nav-item {{ $blindBoxActive ? 'active' : '' }}" href="{{ route('admin.blind-box-items.index') }}">
                     <span>Blind Box</span>
                 </a>
+                <a class="nav-item {{ $foodTrailActive ? 'active' : '' }}" href="{{ route('admin.food-trails.index') }}">
+                    <span>Events &amp; Trails</span>
+                </a>
 
                 @foreach ($placeholderModules as $slug => $name)
+                    @continue($slug === 'events-trails')
                     <a class="nav-item placeholder {{ request()->routeIs('admin.modules.show') && request()->route('moduleSlug') === $slug ? 'active' : '' }}" href="{{ route('admin.modules.show', $slug) }}">
                         <span>{{ $name }}</span>
                         <small>soon</small>
@@ -210,9 +236,15 @@
                 </form>
             </div>
         </aside>
+        @if ($heritageShopNavEnabled)
+            <button class="nav-backdrop" id="nav-backdrop" type="button" aria-label="Close navigation"></button>
+        @endif
 
         <section class="main">
             <header class="topbar">
+                @if ($heritageShopNavEnabled)
+                    <button class="nav-toggle" id="nav-toggle" type="button" aria-controls="admin-sidebar" aria-expanded="true"><span aria-hidden="true">☰</span><span id="nav-toggle-label">Collapse</span></button>
+                @endif
                 <div>
                     <h1>@yield('page-title', 'Admin Dashboard')</h1>
                     <p>Warisan Makan management portal</p>
@@ -238,5 +270,49 @@
             </main>
         </section>
     </div>
+    @if ($heritageShopNavEnabled)
+        <script>
+        (() => {
+            const shell = document.querySelector('.shell');
+            const toggle = document.getElementById('nav-toggle');
+            const label = document.getElementById('nav-toggle-label');
+            const backdrop = document.getElementById('nav-backdrop');
+            if (!shell || !toggle || !label) return;
+            const key = 'warisan-heritage-nav-collapsed';
+            const mobile = () => window.matchMedia('(max-width: 850px)').matches;
+            const sync = () => {
+                if (mobile()) {
+                    shell.classList.remove('nav-collapsed');
+                    const open = shell.classList.contains('nav-open');
+                    toggle.setAttribute('aria-expanded', String(open));
+                    label.textContent = open ? 'Close' : 'Menu';
+                    toggle.setAttribute('aria-label', open ? 'Close navigation' : 'Open navigation');
+                } else {
+                    shell.classList.remove('nav-open');
+                    const collapsed = localStorage.getItem(key) === 'true';
+                    shell.classList.toggle('nav-collapsed', collapsed);
+                    toggle.setAttribute('aria-expanded', String(!collapsed));
+                    label.textContent = collapsed ? 'Expand' : 'Collapse';
+                    toggle.setAttribute('aria-label', collapsed ? 'Expand navigation' : 'Collapse navigation');
+                }
+            };
+            toggle.addEventListener('click', () => {
+                if (mobile()) shell.classList.toggle('nav-open');
+                else {
+                    const collapsed = !shell.classList.contains('nav-collapsed');
+                    shell.classList.toggle('nav-collapsed', collapsed);
+                    localStorage.setItem(key, String(collapsed));
+                }
+                sync();
+            });
+            backdrop?.addEventListener('click', () => { shell.classList.remove('nav-open'); sync(); });
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape') { shell.classList.remove('nav-open'); sync(); }
+            });
+            window.addEventListener('resize', sync, {passive:true});
+            sync();
+        })();
+        </script>
+    @endif
 </body>
 </html>

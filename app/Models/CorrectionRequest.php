@@ -119,11 +119,11 @@ class CorrectionRequest extends Model
     public function statusLabel(): string
     {
         return match ($this->status) {
-            self::STATUS_PENDING => 'Pending',
-            self::STATUS_UNDER_REVIEW => 'Under Review',
-            self::STATUS_APPROVED => 'Approved',
-            self::STATUS_REJECTED => 'Rejected',
-            self::STATUS_NEEDS_INFORMATION => 'Needs Information',
+            self::STATUS_PENDING => __('Pending'),
+            self::STATUS_UNDER_REVIEW => __('Under Review'),
+            self::STATUS_APPROVED => __('Approved'),
+            self::STATUS_REJECTED => __('Rejected'),
+            self::STATUS_NEEDS_INFORMATION => __('Needs Information'),
             default => str($this->status)->replace('_', ' ')->title()->toString(),
         };
     }

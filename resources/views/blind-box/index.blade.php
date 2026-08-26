@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WarisanMakan | Blind Box Surprise</title>
+    <title>{{ __('Blind Box Recommendation') }} | WarisanMakan</title>
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
 
@@ -298,8 +298,10 @@
             </div>
             <div class="illustration">
                 <div class="illustration-card">
-                    <h3>"A heritage food trail, made playful."</h3>
-                    <p style="color:#fbeedc;opacity:.95;font-weight:500;">Warm spice-market energy, editorial storytelling, and one surprise discovery at a time.</p>
+                    <h3>{{ __('A heritage food trail, made playful.') }}</h3>
+                    <p style="color:#fbeedc;opacity:.95;font-weight:500;">
+                        {{ __('Warm spice-market energy, editorial storytelling, and one surprise discovery at a time.') }}
+                    </p>
                 </div>
             </div>
         </div>
@@ -328,7 +330,12 @@
                 <select id="category-filter" name="category" onchange="this.form.submit()">
                     <option value="">All food categories</option>
                     @foreach($categories as $option)
-                        <option value="{{ $option }}" @selected($activeFilters['category'] === $option)>{{ $option }}</option>
+                        <option
+                            value="{{ $option }}"
+                                @selected($activeFilters['category'] === $option)
+                        >
+                            {{ __($option) }}
+                        </option>
                     @endforeach
                 </select>
 
@@ -421,6 +428,34 @@
         alreadyDrew: @json($alreadyDrew),
         periodKey: @json($periodInfo['key']),
     };
+
+    const BLIND_BOX_TEXT = {
+    surpriseDiscoveryUnlocked: @json(__('Surprise Discovery Unlocked')),
+    heritageShop: @json(__('Heritage Shop')),
+    estimated: @json(__('Est.')),
+    noDescription: @json(__('No description available.')),
+    category: @json(__('Category')),
+    state: @json(__('State')),
+    whatNext: @json(__('What would you like to do next?')),
+    exploreFoodTrails: @json(__('Explore Food Trails')),
+    browseHeritageShops: @json(__('Browse Heritage Shops')),
+    openedDuring: @json(__('You opened this Blind Box during the :period period. Come back next period for another surprise!')),
+    current: @json(__('current')),
+    tryAgainLater: @json(__('Try Again Later')),
+    tryLater: @json(__('TRY LATER')),
+    somethingWentWrong: @json(__('Something went wrong. Please try again.')),
+    oops: @json(__('Oops')),
+    tryAgain: @json(__('TRY AGAIN')),
+    opened: @json(__('OPENED')),
+};
+
+const BLIND_BOX_PERIODS = {
+    morning: @json(__('Morning')),
+    afternoon: @json(__('Afternoon')),
+    evening: @json(__('Evening')),
+    night: @json(__('Night')),
+};
+
 
     document.addEventListener('DOMContentLoaded', function () {
         const box = document.getElementById('box');

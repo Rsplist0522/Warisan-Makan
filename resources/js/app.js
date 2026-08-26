@@ -1,5 +1,7 @@
 const foodTrailApp = (() => {
     const appData = window.foodTrailApp || {};
+    const translations = appData.translations || {};
+    const translate = (key, fallback) => translations[key] || fallback;
     const favoritesKey = appData.favoritesKey || 'foodtrails-favorites';
     const likesKey = appData.likedRestaurantsKey || 'foodtrail-liked-restaurants';
     const currentRouteKey = 'foodtrail-current-route';
@@ -80,6 +82,12 @@ const foodTrailApp = (() => {
         googleMapMarkers = [];
     };
     const fallbackPosition = (restaurant) => {
+        const latitude = Number(restaurant.coordinates?.lat);
+        const longitude = Number(restaurant.coordinates?.lng);
+        if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+            return { lat: latitude, lng: longitude };
+        }
+
         const x = Number(restaurant.coordinates?.x ?? 50);
         const y = Number(restaurant.coordinates?.y ?? 50);
         return {
@@ -92,7 +100,7 @@ const foodTrailApp = (() => {
         const restaurantsToDisplay = state.routeRestaurants.length
             ? state.routeRestaurants
             : (state.selectedRestaurant ? [state.selectedRestaurant] : []);
-        if (markerCount) markerCount.innerText = `${restaurantsToDisplay.length} marker${restaurantsToDisplay.length === 1 ? '' : 's'}`;
+        if (markerCount) markerCount.innerText = `${restaurantsToDisplay.length} ${translate(restaurantsToDisplay.length === 1 ? 'marker' : 'markers', restaurantsToDisplay.length === 1 ? 'marker' : 'markers')}`;
         if (!googleMap) return;
         clearGoogleMarkers();
         const bounds = new google.maps.LatLngBounds();
@@ -187,9 +195,20 @@ const foodTrailApp = (() => {
     };
     const loadCurrentRoute = () => {
         try {
-            state.routeRestaurants = JSON.parse(localStorage.getItem(currentRouteKey) || '[]') || [];
+            const savedRoute = JSON.parse(localStorage.getItem(currentRouteKey) || '[]') || [];
+            const databaseRestaurantIds = new Set(
+                Object.values(appData.restaurants || {}).flat().map((restaurant) => restaurant.id),
+            );
+
+            // Remove routes saved while Food Trails still used its demo data.
+            // A route can only contain records supplied by the database now.
+            state.routeRestaurants = Array.isArray(savedRoute)
+                ? savedRoute.filter((restaurant) => databaseRestaurantIds.has(restaurant.id))
+                : [];
+            saveCurrentRoute();
         } catch (error) {
             state.routeRestaurants = [];
+            localStorage.removeItem(currentRouteKey);
         }
     };
     const setPanelVisibility = (showResults) => {
@@ -206,7 +225,7 @@ const foodTrailApp = (() => {
         if (!container) return;
         container.innerHTML = '';
         if (!state.favorites.length) {
-            container.innerHTML = `<p class="text-sm leading-6 text-[#6B5B4E]">No saved food trails yet. Generate a trail and save it as a favorite.</p>`;
+            container.innerHTML = `<p class="text-sm leading-6 text-[#6B5B4E]">${translate('noSavedTrails', 'No saved food trails yet. Generate a trail and save it as a favorite.')}</p>`;
             return;
         }
         state.favorites.forEach((item) => {
@@ -218,7 +237,7 @@ const foodTrailApp = (() => {
                         <p class="text-sm font-semibold text-[#1F1B19]">${item.title}</p>
                         <p class="text-sm text-[#6B5B4E]">${item.location} · ${item.stops} stops</p>
                     </div>
-                    <button data-favorite-id="${item.id}" class="rounded-full bg-[#8A5A24] px-3 py-1 text-xs font-semibold text-white hover:bg-[#9e6d34]">Open</button>
+                    <button data-favorite-id="${item.id}" class="rounded-full bg-[#8A5A24] px-3 py-1 text-xs font-semibold text-white hover:bg-[#9e6d34]">${translate('open', 'Open')}</button>
                 </div>
                 <p class="mt-3 text-sm text-[#7B6B5F]">${item.description}</p>
             `;
@@ -243,33 +262,46 @@ const foodTrailApp = (() => {
                         <p class="text-sm uppercase tracking-[0.2em] text-[#B08B59]">${item.category}</p>
                         <h3 class="mt-2 text-lg font-semibold text-[#1F1B19]">${item.title}</h3>
                     </div>
-                    <button data-curated-id="${item.id}" class="rounded-full border border-[#D8B58F] bg-white px-3 py-1 text-xs font-semibold text-[#6B553F] hover:bg-[#f8efe5]">Try</button>
+                    <button data-curated-id="${item.id}" class="rounded-full border border-[#D8B58F] bg-white px-3 py-1 text-xs font-semibold text-[#6B553F] hover:bg-[#f8efe5]">${translate('try', 'Try')}</button>
                 </div>
                 <p class="mt-3 text-sm leading-6 text-[#6B5B4E]">${item.subtitle}</p>
                 <p class="mt-4 text-sm text-[#7B6B5F]">${item.summary}</p>
             `;
             card.querySelector('button')?.addEventListener('click', () => {
-                getElement(selectors.locationInput).value = item.location;
-                getElement(selectors.categorySelect).value = item.category === 'All' ? 'all' : item.category;
-                handleGenerateTrail();
+                state.routeRestaurants = (item.restaurants || []).map((restaurant) => ({ ...restaurant, visited: false }));
+                state.activeRestaurants = state.routeRestaurants.slice(); state.filteredRestaurants = state.routeRestaurants.slice();
+                state.selectedRestaurant = state.routeRestaurants[0] || null; saveCurrentRoute(); setPanelVisibility(true); renderRestaurantList(); renderRouteSummary(); updateRouteCompletion(); renderSelectedRestaurantDetails();
             });
             container.appendChild(card);
         });
     };
+    const normalizeLocation = (location) => {
+        const normalized = String(location || '').trim().toLowerCase();
+        if (
+            normalized.includes('kuala lumpur')
+            || normalized.includes('wilayah persekutuan')
+            || normalized.includes('federal territory of kuala lumpur')
+            || /\b(?:5\d{4}|60\d{3})\b/.test(normalized)
+        ) {
+            return 'Kuala Lumpur';
+        }
+
+        return location?.trim() || '';
+    };
     const getRestaurantsForLocation = (location) => {
-        return appData.restaurants?.[location] || [];
+        return appData.restaurants?.[normalizeLocation(location)] || [];
     };
     const updateResultsCount = () => {
         const countBadge = getElement(selectors.resultsCount);
         if (!countBadge) return;
-        countBadge.innerText = `${state.filteredRestaurants.length} restaurants`;
+        countBadge.innerText = `${state.filteredRestaurants.length} ${translate('restaurants', 'restaurants')}`;
     };
     const renderFilterOptions = () => {
         const categoryFilter = getElement(selectors.categoryFilter);
         if (!categoryFilter) return;
         const categories = ['all', ...new Set(state.activeRestaurants.map((item) => item.category))];
         categoryFilter.innerHTML = categories.map((category) => `
-            <option value="${category}">${category === 'all' ? 'All categories' : category}</option>
+            <option value="${category}">${category === 'all' ? translate('allCategories', 'All categories') : category}</option>
         `).join('');
     };
     const applyFilters = () => {
@@ -295,7 +327,7 @@ const foodTrailApp = (() => {
         if (!container) return;
         container.innerHTML = '';
         if (!state.filteredRestaurants.length) {
-            container.innerHTML = `<div class="rounded-[28px] border border-[#E9D7BF] bg-[#FEFBF7] p-6 text-sm text-[#6B5B4E]">No restaurants match the selected filters. Try another filter or location.</div>`;
+            container.innerHTML = `<div class="rounded-[28px] border border-[#E9D7BF] bg-[#FEFBF7] p-6 text-sm text-[#6B5B4E]">${translate('noRestaurantMatches', 'No restaurants match the selected filters. Try another filter or location.')}</div>`;
             return;
         }
         state.filteredRestaurants.forEach((restaurant) => {
@@ -323,7 +355,7 @@ const foodTrailApp = (() => {
                         <p class="text-sm leading-6 text-[#6B5B4E]">${restaurant.description}</p>
                         <div class="flex flex-wrap gap-2 text-sm text-[#6B5B4E]">${formatTags(restaurant.tags)}</div>
                         <div class="flex items-center justify-between gap-3">
-                            <button data-add-id="${restaurant.id}" class="rounded-full bg-[#B8874A] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#9c6f33]">${isAdded ? 'Added' : '+ Add'}</button>
+                            <button data-add-id="${restaurant.id}" class="rounded-full bg-[#B8874A] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#9c6f33]">${isAdded ? translate('added', 'Added') : translate('add', '+ Add')}</button>
                         </div>
                     </div>
                 </div>
@@ -353,8 +385,8 @@ const foodTrailApp = (() => {
         if (!content || !drawer) return;
         if (!state.selectedRestaurant) {
             content.innerHTML = `
-                <p class="font-semibold text-[#1F1B19]">Pick a restaurant</p>
-                <p class="mt-2 text-sm leading-6 text-[#6B5B4E]">Select a restaurant from the list to see details, add to your trail, or mark it as visited.</p>
+                <p class="font-semibold text-[#1F1B19]">${translate('pickRestaurant', 'Pick a restaurant')}</p>
+                <p class="mt-2 text-sm leading-6 text-[#6B5B4E]">${translate('pickRestaurantHelp', 'Select a restaurant from the list to see details, add to your trail, or mark it as visited.')}</p>
             `;
             toggleRestaurantDrawer(false);
             return;
@@ -469,26 +501,26 @@ const foodTrailApp = (() => {
         const badge = getElement(selectors.routeCompletion);
         if (!badge) return;
         if (!state.routeRestaurants.length) {
-            badge.innerText = '0% complete';
+            badge.innerText = `0% ${translate('complete', 'complete')}`;
             return;
         }
         const visitedCount = state.routeRestaurants.filter((item) => item.visited).length;
         const percent = Math.round((visitedCount / state.routeRestaurants.length) * 100);
-        badge.innerText = `${percent}% complete`;
+        badge.innerText = `${percent}% ${translate('complete', 'complete')}`;
     };
     const renderRouteSummary = () => {
         const container = getElement(selectors.routeSummary);
         if (!container) return;
         container.innerHTML = '';
         if (!state.routeRestaurants.length) {
-            container.innerHTML = `<p class="text-sm text-[#6B5B4B]">Add restaurants to your food trail and get a simple route plan with estimated travel time.</p>`;
+            container.innerHTML = `<p class="text-sm text-[#6B5B4B]">${translate('addRestaurantsToTrail', 'Add restaurants to your food trail and get a simple route plan with estimated travel time.')}</p>`;
             return;
         }
         const estimatedTime = calculateRouteTime();
         const summaryHeader = document.createElement('div');
         summaryHeader.className = 'rounded-[24px] bg-[#FFFBF7] p-4 border border-[#E7D7C0]';
         summaryHeader.innerHTML = `
-            <p class="text-sm text-[#6B5B4B]">Total estimated journey time</p>
+            <p class="text-sm text-[#6B5B4B]">${translate('totalEstimatedJourneyTime', 'Total estimated journey time')}</p>
             <p class="mt-1 text-base font-semibold text-[#1F1B19]">${estimatedTime} min</p>
         `;
         container.appendChild(summaryHeader);
@@ -513,12 +545,12 @@ const foodTrailApp = (() => {
         const categoryValue = getElement(selectors.categorySelect)?.value || 'all';
         const keywordValue = getElement(selectors.searchKeyword)?.value.trim().toLowerCase();
         if (!locationValue) {
-            getElement(selectors.selectedTrailSummary).innerText = 'Please enter a location before generating.';
+            getElement(selectors.selectedTrailSummary).innerText = translate('enterLocation', 'Please enter a location before generating.');
             return;
         }
         const allRestaurants = getRestaurantsForLocation(locationValue);
         if (!allRestaurants.length) {
-            getElement(selectors.selectedTrailSummary).innerText = 'No restaurants found for this location. Try another city.';
+            getElement(selectors.selectedTrailSummary).innerText = translate('noLocationRestaurants', 'No restaurants found for this location. Try another city.');
             return;
         }
         const filteredByCategory = categoryValue === 'all'
@@ -573,7 +605,7 @@ const foodTrailApp = (() => {
         getElement(selectors.resetFiltersButton)?.addEventListener('click', handleResetFilters);
         getElement(selectors.searchKeyword)?.addEventListener('input', applyFilters);
         getElement(selectors.clearFavoritesButton)?.addEventListener('click', () => {
-            if (!confirm('Clear all saved favourite trails?')) return;
+            if (!confirm(translate('clearSavedTrails', 'Clear all saved favourite trails?'))) return;
             state.favorites = [];
             saveFavorites();
             renderFavorites();
@@ -602,7 +634,7 @@ const foodTrailApp = (() => {
             initGoogleMapHelpers();
             if (state.routeRestaurants.length) renderMapMarkers();
         } else if (!googleApiKey) {
-            showGoogleMapMessage('Google Maps is not configured. Add GOOGLE_MAPS_API_KEY to your .env file and reload.');
+            showGoogleMapMessage(translate('mapNotConfigured', 'Google Maps is not configured. Add GOOGLE_MAPS_API_KEY to your .env file and reload.'));
         }
     };
     return {
@@ -615,7 +647,7 @@ window.addEventListener('DOMContentLoaded', () => {
 window.addEventListener('googleMapsError', (event) => {
     const messageEl = document.getElementById('googleMapMessage');
     if (messageEl) {
-        messageEl.textContent = event.detail || 'Google Maps could not be loaded.';
+        messageEl.textContent = event.detail || (window.foodTrailApp?.translations?.mapLoadFailed || 'Google Maps could not be loaded.');
         messageEl.classList.remove('hidden');
     }
 });

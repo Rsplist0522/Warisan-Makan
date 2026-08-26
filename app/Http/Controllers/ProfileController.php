@@ -57,6 +57,10 @@ class ProfileController extends Controller
         $user->fill($data);
         $user->save();
 
+        if ($request->boolean('language_only')) {
+            return redirect()->route('home');
+        }
+
         return redirect()->route('profile.show')->with('success', __('Profile updated successfully.'));
     }
 }

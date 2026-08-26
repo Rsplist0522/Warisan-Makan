@@ -139,14 +139,14 @@ class HeritageShopContribution extends Model
     public function statusLabel(): string
     {
         return match ($this->status) {
-            self::STATUS_DRAFT => 'Draft',
-            self::STATUS_PENDING_REVIEW => 'Pending Review',
-            self::STATUS_UNDER_REVIEW => 'Under Review',
-            self::STATUS_REVISION_REQUIRED => 'Revision Required',
-            self::STATUS_APPROVED => 'Approved',
-            self::STATUS_REJECTED => 'Rejected',
-            self::STATUS_WITHDRAWN => 'Withdrawn',
-            self::STATUS_DELETED => 'Deleted',
+            self::STATUS_DRAFT => __('Draft'),
+            self::STATUS_PENDING_REVIEW => __('Pending Review'),
+            self::STATUS_UNDER_REVIEW => __('Under Review'),
+            self::STATUS_REVISION_REQUIRED => __('Revision Required'),
+            self::STATUS_APPROVED => __('Approved'),
+            self::STATUS_REJECTED => __('Rejected'),
+            self::STATUS_WITHDRAWN => __('Withdrawn'),
+            self::STATUS_DELETED => __('Deleted'),
             default => str($this->status)->replace('_', ' ')->title()->toString(),
         };
     }

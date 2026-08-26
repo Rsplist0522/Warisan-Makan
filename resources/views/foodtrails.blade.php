@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Food Trails | {{ config('app.name', 'Warisan Makan') }}</title>
+    <title>{{ __('Food Trails') }} | {{ config('app.name', 'Warisan Makan') }}</title>
     <script>
         window.googleMapsApiKey = @json(config('services.google.maps_api_key'));
         window.googleMapsLoaded = false;
@@ -98,8 +98,8 @@
         <header class="mb-8 rounded-[32px] bg-white p-6 shadow-[0_18px_40px_rgba(62,44,23,0.08)]">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                    <p class="text-sm uppercase tracking-[0.32em] text-[#B8874A]">Heritage food trails</p>
-                    <h1 class="mt-3 text-3xl font-semibold text-[#1F1B19]">Explore and generate your next food trail
+                    <p class="text-sm uppercase tracking-[0.32em] text-[#B8874A]">{{ __('Heritage food trails') }}</p>
+                    <h1 class="mt-3 text-3xl font-semibold text-[#1F1B19]">{{ __('Explore and generate your next food trail') }}
                     </h1>
                     <p class="mt-3 max-w-2xl text-sm leading-7 text-[#6B5B4B]">Pick a location, filter by category, and
                         then use the map and vendor cards to navigate your trail step by step.</p>
@@ -116,8 +116,8 @@
             <div class="rounded-[32px] bg-white p-6 shadow-[0_12px_30px_rgba(46,32,16,0.08)]">
                 <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                     <div class="min-w-0">
-                        <p class="text-sm uppercase tracking-[0.35em] text-[#B8874A]">Search your food trail</p>
-                        <h2 class="mt-3 text-3xl font-semibold text-[#1F1B19]">Start by searching your location</h2>
+                        <p class="text-sm uppercase tracking-[0.35em] text-[#B8874A]">{{ __('Search your food trail') }}</p>
+                        <h2 class="mt-3 text-3xl font-semibold text-[#1F1B19]">{{ __('Start by searching your location') }}</h2>
                         <p class="mt-3 max-w-2xl text-sm leading-7 text-[#6B5B4B]">Enter a city or heritage district,
                             choose a category, and generate a curated food trail with restaurant recommendations.</p>
                     </div>
@@ -318,6 +318,36 @@
 
     <script>
         window.foodTrailApp = {
+            translations: {{ \Illuminate\Support\Js::from([
+                'noSavedTrails' => __('No saved food trails yet. Generate a trail and save it as a favorite.'),
+                'open' => __('Open'),
+                'try' => __('Try'),
+                'restaurants' => __('restaurants'),
+                'allCategories' => __('All categories'),
+                'noRestaurantMatches' => __('No restaurants match the selected filters. Try another filter or location.'),
+                'added' => __('Added'),
+                'add' => __('+ Add'),
+                'pickRestaurant' => __('Pick a restaurant'),
+                'pickRestaurantHelp' => __('Select a restaurant from the list to see details, add to your trail, or mark it as visited.'),
+                'removeFromTrail' => __('Remove from trail'),
+                'addToTrail' => __('+ Add to trail'),
+                'visited' => __('Visited'),
+                'markVisited' => __('Mark visited'),
+                'liked' => __('Liked'),
+                'love' => __('Love'),
+                'complete' => __('complete'),
+                'addRestaurantsToTrail' => __('Add restaurants to your food trail and get a simple route plan with estimated travel time.'),
+                'totalEstimatedJourneyTime' => __('Total estimated journey time'),
+                'pending' => __('Pending'),
+                'nextTravelTime' => __('Next travel time: :value min'),
+                'enterLocation' => __('Please enter a location before generating.'),
+                'noLocationRestaurants' => __('No restaurants found for this location. Try another city.'),
+                'showingRestaurants' => __('Showing :count restaurants in :location. Use filters to refine the list.'),
+                'noCriteriaRestaurants' => __('No restaurants match your criteria. Adjust the filters to see more results.'),
+                'clearSavedTrails' => __('Clear all saved favourite trails?'),
+                'mapNotConfigured' => __('Google Maps is not configured. Add GOOGLE_MAPS_API_KEY to your .env file and reload.'),
+                'mapLoadFailed' => __('Google Maps could not be loaded.'),
+            ]) }},
             locations: [
                 'Kuala Lumpur',
                 'Penang',

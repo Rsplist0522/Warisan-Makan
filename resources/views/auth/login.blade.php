@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign in - Warisan Makan</title>
+    <title>{{ __('Sign in') }} - Warisan Makan</title>
     @fonts
     <style>
         :root {
@@ -80,6 +80,9 @@
             cursor: pointer;
         }
         .button:hover { color: var(--red-dark); background: #f8f3ed; }
+        .button.google { color: #fff; border-color: var(--red); background: var(--red); }
+        .button.google:hover { color: #fff; background: var(--red-dark); }
+        .button.guest { margin-top: 10px; color: var(--red); }
         .error { margin: 0 0 18px; padding: 11px 13px; border-radius: 10px; color: #812121; background: #fde8e8; font-size: .88rem; }
 
         @media (max-width: 760px) {
@@ -94,22 +97,23 @@
         <section class="intro">
             <div class="brand">Warisan Makan</div>
             <div>
-                <h1>Preserving every flavourful story.</h1>
-                <p>Discover, document, and protect Malaysia's culinary heritage through one shared platform.</p>
+                <h1>{{ __('Preserving every flavourful story.') }}</h1>
+                <p>{{ __('Discover, document, and protect Malaysia\'s culinary heritage through one shared platform.') }}</p>
             </div>
             <div class="campaign">Visit Malaysia 2026</div>
         </section>
 
         <section class="panel">
-            <p class="eyebrow">User sign in</p>
-            <h2>Welcome back</h2>
-            <p class="lead">Continue with your Google account to submit heritage shop information, manage drafts, and track your contributions.</p>
+            <p class="eyebrow">{{ __('User sign in') }}</p>
+            <h2>{{ __('Welcome back') }}</h2>
+            <p class="lead">{{ __('Continue with your Google account to submit heritage shop information, manage drafts, and track your contributions.') }}</p>
 
             @if ($errors->any())
                 <div class="error" role="alert">{{ $errors->first() }}</div>
             @endif
 
-            <a class="button" href="{{ route('auth.google') }}">Sign in with Google</a>
+            <a class="button google" href="{{ route('auth.google') }}">{{ __('Sign in with Google') }}</a>
+            <a class="button guest" href="{{ route('guest.continue') }}">{{ __('Continue as Guest') }}</a>
         </section>
     </main>
 </body>

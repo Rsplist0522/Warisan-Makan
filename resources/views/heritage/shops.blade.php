@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ isset($shop) ? $shop->shop_name.' - Heritage Shop' : 'Heritage Shops' }} - Warisan Makan</title>
+    <title>{{ isset($shop) ? $shop->shop_name.' - '.__('Heritage Shop') : __('Heritage Shops') }} - Warisan Makan</title>
     @fonts
     <style>
         :root {
@@ -86,6 +86,8 @@
         .button { min-height: 42px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid transparent; border-radius: 10px; padding: 0 15px; font-weight: 800; text-decoration: none; cursor: pointer; }
         .button.primary { color: #3f2a0d; background: var(--wm-gold); }
         .button.secondary { border-color: var(--wm-line); color: var(--wm-ink); background: #fff; }
+        .guest-trigger { display:inline-flex; align-items:center; gap:8px; min-height:42px; padding:0 14px; border:1px solid var(--wm-line); border-radius:999px; color:var(--wm-accent); background:#fff; font-weight:800; cursor:pointer; }
+        .guest-trigger::before { content:''; width:9px; height:9px; border-radius:50%; background:var(--wm-gold); }
         .filter-actions { display: flex; gap: 8px; align-items: end; }
         .result-summary { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 0 0 14px; color: var(--wm-muted); font-size: .86rem; }
         .shop-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
@@ -138,21 +140,26 @@
     <div class="shell">
         <aside class="sidebar">
             <div class="brand"><span class="brand-mark">W</span> WarisanMakan</div>
-            <p class="nav-label">Home</p>
+            <p class="nav-label">{{ __('Home') }}</p>
             <nav class="nav" aria-label="User home navigation">
                 @auth
-                    <a class="nav-item" href="{{ route('home') }}">Dashboard</a>
-                    <a class="nav-item" href="{{ route('profile.show') }}">Profile</a>
+                    <a class="nav-item" href="{{ route('home') }}">{{ __('Dashboard') }}</a>
+                    <a class="nav-item" href="{{ route('profile.show') }}">{{ __('Profile') }}</a>
                 @else
-                    <a class="nav-item" href="{{ route('landing') }}">Landing page</a>
-                    <a class="nav-item" href="{{ route('login') }}">Log in</a>
+                    <a class="nav-item" href="{{ route('home') }}">{{ __('Dashboard') }}</a>
+                    <a class="nav-item" href="{{ route('login') }}">{{ __('Log in') }}</a>
                 @endauth
             </nav>
-            <p class="nav-label">Modules</p>
+            <p class="nav-label">{{ __('Modules') }}</p>
             <nav class="nav" aria-label="WarisanMakan modules">
-                <a class="nav-item active" href="{{ route('heritage-shops.index') }}">Heritage Shop Tracking</a>
-                <a class="nav-item" href="{{ route('passport.index') }}">Food Passport</a>
-                <a class="nav-item" href="{{ url('/foodtrails') }}">Food Trail & Navigation</a>
+                <a class="nav-item active" href="{{ route('heritage-shops.index') }}">{{ __('Heritage Shop Tracking') }}</a>
+                @guest
+                    <a class="nav-item" href="#" data-login-required="true">{{ __('Food Passport') }}</a>
+                    <a class="nav-item" href="#" data-login-required="true">{{ __('Food Trail & Navigation') }}</a>
+                @else
+                    <a class="nav-item" href="{{ route('passport.index') }}">{{ __('Food Passport') }}</a>
+                    <a class="nav-item" href="{{ url('/foodtrails') }}">{{ __('Food Trail & Navigation') }}</a>
+                @endguest
             </nav>
             @auth
                 <div class="sidebar-footer">
@@ -160,7 +167,7 @@
                     <p class="user-role">WarisanMakan member</p>
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
-                        <button class="logout" type="submit">Log out</button>
+                        <button class="logout" type="submit">{{ __('Log out') }}</button>
                     </form>
                 </div>
             @endauth
@@ -169,13 +176,13 @@
         <section class="main">
             <header class="topbar">
                 <div>
-                    <h2>Heritage Shop Tracking</h2>
-                    <p>Explore verified heritage food businesses and their cultural stories.</p>
+                    <h2>{{ __('Heritage Shop Tracking') }}</h2>
+                    <p>{{ __('Explore verified heritage food businesses and their cultural stories.') }}</p>
                 </div>
                 @auth
                     <a class="topbar-link" href="{{ route('home') }}">Back to dashboard</a>
                 @else
-                    <a class="topbar-link" href="{{ route('login') }}">Log in</a>
+                    <button class="guest-trigger" type="button" data-login-trigger>{{ __('Guest Mode') }}</button>
                 @endauth
             </header>
 
@@ -185,11 +192,11 @@
                         $primaryImage = $shop->images->first();
                         $primaryImageUrl = $primaryImage ? $imageService->url($primaryImage) : null;
                     @endphp
-                    <a class="back-link" href="{{ route('heritage-shops.index') }}">← Back to Heritage Shop list</a>
+                    <a class="back-link" href="{{ route('heritage-shops.index') }}">← {{ __('Back to Heritage Shop list') }}</a>
                     <article class="detail-panel">
                         <header class="detail-heading">
                             <div>
-                                <p class="eyebrow" style="color:var(--wm-accent);">Heritage profile</p>
+                                <p class="eyebrow" style="color:var(--wm-accent);">{{ __('Heritage profile') }}</p>
                                 <h1>{{ $shop->shop_name }}</h1>
                                 <p class="meta">{{ $shop->primary_food_category ?: 'Heritage food business' }} · {{ $shop->state ?: ($shop->city ?: 'Location not provided') }}</p>
                             </div>
@@ -360,7 +367,9 @@
                                             <div><strong>Location:</strong> {{ $shop->location ?: 'Not provided' }}</div>
                                                             @if ($shop->operating_hours)<div><strong>Hours:</strong> {{ is_array($shop->operating_hours) ? implode('; ', $shop->operating_hours) : $shop->operating_hours }}</div>@endif
                                         </div>
-                                        <div class="card-actions"><a class="button primary" href="{{ route('heritage-shops.show', ['id' => $shop->id]) }}">View details</a></div>
+                                        <div class="card-actions">
+                                            <a class="button primary" href="{{ auth()->check() ? route('heritage-shops.show', ['id' => $shop->id]) : '#' }}" @guest data-login-required="true" @endguest>View details</a>
+                                        </div>
                                     </div>
                                 </article>
                             @endforeach
@@ -371,5 +380,8 @@
             </main>
         </section>
     </div>
+    @guest
+        @include('partials.login-required-modal')
+    @endguest
 </body>
 </html>

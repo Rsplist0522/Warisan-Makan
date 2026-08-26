@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Food Passport</title>
+    <title>{{ __('Food Passport') }}</title>
     <style>
         :root {
             --primary: #8C1F1F;
@@ -910,10 +910,10 @@
                 <span class="brand-mark">W</span>
                 <span>Warisan Makan</span>
             </div>
-            <nav class="nav" aria-label="Main navigation">
-                <a href="#">Map</a>
-                <a href="#">Passport</a>
-                <a href="#">Rewards</a>
+            <nav class="nav" aria-label="{{ __('Main navigation') }}">
+                <a href="#">{{ __('Map') }}</a>
+                <a href="#">{{ __('Passport') }}</a>
+                <a href="#">{{ __('Rewards') }}</a>
                 <a href="#leaderboard">Leaderboard</a>
                 <span class="chip">Heritage Trail</span>
             </nav>
@@ -922,28 +922,28 @@
         <main>
             <section class="hero" aria-label="Heritage passport hero section">
                 <div class="hero-copy">
-                    <p class="eyebrow">Food Passport</p>
-                    <h1>Your Heritage Passport</h1>
+                    <p class="eyebrow">{{ __('Food Passport') }}</p>
+                    <h1>{{ __('Your Heritage Passport') }}</h1>
                     <p>Collect stamps from authentic heritage food stops, uncover founder stories, and unlock rewards as you explore the city’s living culinary heritage.</p>
 
                     <div class="action-row">
-                        <a href="#check-in" class="btn primary">Check In</a>
-                        <a href="#nearby" class="btn secondary">Nearby Stops</a>
+                        <a href="#check-in" class="btn primary">{{ __('Check In') }}</a>
+                        <a href="#nearby" class="btn secondary">{{ __('Nearby Stops') }}</a>
                         <a href="#leaderboard" class="btn secondary">Leaderboard</a>
                     </div>
 
                     <div class="stats-row" aria-label="Passport progress statistics">
                         <div class="stat">
                             <strong>{{ $stats['visited'] ?? 0 }}</strong>
-                            <span>Visited</span>
+                            <span>{{ __('Visited') }}</span>
                         </div>
                         <div class="stat">
                             <strong>{{ $stats['completion'] ?? 0 }}%</strong>
-                            <span>Progress</span>
+                            <span>{{ __('Progress') }}</span>
                         </div>
                         <div class="stat">
                             <strong>{{ $stats['badges'] ?? 0 }}</strong>
-                            <span>Badges</span>
+                            <span>{{ __('Badges') }}</span>
                         </div>
                     </div>
                 </div>
@@ -954,7 +954,7 @@
                             <img id="featuredShopImage" src="{{ $shops[0]['image'] }}" alt="{{ $shops[0]['name'] }}">
                         @endif
                         <div class="floating-card">
-                            <span class="label">Featured stop</span>
+                            <span class="label">{{ __('Featured stop') }}</span>
                             <h3 id="featuredShopName">{{ $shops[0]['name'] }}</h3>
                             <p id="featuredShopFounder">{{ $shops[0]['founder'] }}</p>
                         </div>
@@ -966,8 +966,8 @@
                 <div class="panel">
                     <div class="panel-inner">
                         <div class="section-header">
-                            <h2>Nearby heritage stop</h2>
-                            <span class="tag">Live</span>
+                            <h2>{{ __('Nearby heritage stop') }}</h2>
+                            <span class="tag">{{ __('Live') }}</span>
                         </div>
 
                         @if (!empty($shops))
@@ -982,7 +982,7 @@
                                                 <span>{{ $shop['status'] }}</span>
                                             </div>
                                         </div>
-                                        <button type="button" class="mini-action select-shop">Check In</button>
+                                        <button type="button" class="mini-action select-shop">{{ __('Check In') }}</button>
                                     </article>
                                 @endforeach
                             </div>
@@ -994,26 +994,26 @@
 
                 <aside class="panel check-in-panel" id="check-in">
                     <div class="section-header">
-                        <h2>Check In</h2>
+                        <h2>{{ __('Check In') }}</h2>
                         <span class="tag">GPS</span>
                     </div>
 
                     @if (!empty($shops))
                         <div class="selected-shop">
                             <div>
-                                <p class="label">Selected stop</p>
+                                <p class="label">{{ __('Selected stop') }}</p>
                                 <h3 id="selectedShopName">{{ $shops[0]['name'] }}</h3>
                                 <p id="selectedShopFounder">{{ $shops[0]['founder'] }}</p>
                             </div>
                         </div>
 
                         <div class="button-row">
-                            <button type="button" id="btnCheckIn" class="btn primary">Use my location</button>
-                            <button type="button" id="btnDemoCheckIn" class="btn secondary">Use demo location</button>
-                            <button type="button" id="btnRefresh" class="btn secondary">Reset demo</button>
+                            <button type="button" id="btnCheckIn" class="btn primary">{{ __('Use my location') }}</button>
+                            <button type="button" id="btnDemoCheckIn" class="btn secondary">{{ __('Use demo location') }}</button>
+                            <button type="button" id="btnRefresh" class="btn secondary">{{ __('Reset demo') }}</button>
                         </div>
 
-                        <pre id="result" class="result-box">Ready to check in. Select a shop and allow location access.</pre>
+                        <pre id="result" class="result-box">{{ __('Ready to check in. Select a shop and allow location access.') }}</pre>
                     @else
                         <p style="margin: 16px 0 0; color: var(--muted);">Check-in will be available after an approved Heritage Shop has latitude and longitude coordinates.</p>
                     @endif
@@ -1023,8 +1023,8 @@
             <section class="panel" style="margin-top: 26px;">
                 <div class="panel-inner">
                     <div class="section-header">
-                        <h2>Visited locations</h2>
-                        <span class="tag">History</span>
+                        <h2>{{ __('Visited locations') }}</h2>
+                        <span class="tag">{{ __('History') }}</span>
                     </div>
 
                     @if ($visitedLocations->isNotEmpty())
@@ -1044,15 +1044,15 @@
                         @if ($visitedLocations->total() > 0)
                             <nav class="pagination" aria-label="Visited locations pages">
                                 @if ($visitedLocations->onFirstPage())
-                                    <span aria-disabled="true">Previous</span>
+                                    <span aria-disabled="true">{{ __('Previous') }}</span>
                                 @else
-                                    <a href="{{ $visitedLocations->previousPageUrl() }}">Previous</a>
+                                    <a href="{{ $visitedLocations->previousPageUrl() }}">{{ __('Previous') }}</a>
                                 @endif
                                 <span class="active">Page {{ $visitedLocations->currentPage() }}</span>
                                 @if ($visitedLocations->hasMorePages())
-                                    <a href="{{ $visitedLocations->nextPageUrl() }}">Next</a>
+                                    <a href="{{ $visitedLocations->nextPageUrl() }}">{{ __('Next') }}</a>
                                 @else
-                                    <span aria-disabled="true">Next</span>
+                                    <span aria-disabled="true">{{ __('Next') }}</span>
                                 @endif
                             </nav>
                         @endif
@@ -1065,28 +1065,28 @@
             <section class="panel" style="margin-top: 26px;">
                 <div class="panel-inner">
                     <div class="section-header">
-                        <h2>Passport progress & statistics</h2>
-                        <span class="tag">Live</span>
+                        <h2>{{ __('Passport progress & statistics') }}</h2>
+                        <span class="tag">{{ __('Live') }}</span>
                     </div>
 
                     <div class="stats-row" style="margin-top: 0;">
                         <div class="stat">
                             <strong>{{ $stats['visited'] ?? 0 }}</strong>
-                            <span>Visited</span>
+                            <span>{{ __('Visited') }}</span>
                         </div>
                         <div class="stat">
                             <strong>{{ $stats['completion'] ?? 0 }}%</strong>
-                            <span>Completion</span>
+                            <span>{{ __('Completion') }}</span>
                         </div>
                         <div class="stat">
                             <strong>{{ $stats['stamps'] ?? 0 }}</strong>
-                            <span>Stamps</span>
+                            <span>{{ __('Stamps') }}</span>
                         </div>
                     </div>
 
                     <div style="margin-top: 16px; padding: 14px 16px; border-radius: 14px; background: rgba(140,31,31,0.04); border: 1px solid rgba(140,31,31,0.08);">
                         <div style="display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 8px; color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em;">
-                            <span>Progress</span>
+                            <span>{{ __('Progress') }}</span>
                             <strong style="color: var(--primary);">{{ $stats['visited'] ?? 0 }}/{{ $stats['goal'] ?? 0 }}</strong>
                         </div>
                         <div style="height: 12px; background: rgba(86,59,48,0.08); border-radius: 999px; overflow: hidden;">
@@ -1099,8 +1099,8 @@
             <section class="panel" style="margin-top: 26px;">
                 <div class="panel-inner">
                     <div class="section-header">
-                        <h2>Passport rewards</h2>
-                        <span class="tag">Unlocked</span>
+                        <h2>{{ __('Passport rewards') }}</h2>
+                        <span class="tag">{{ __('Unlocked') }}</span>
                     </div>
 
                     <div class="badge-grid">

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WarisanMakan | Blind Box Surprise</title>
+    <title>{{ __('Blind Box Recommendation') }} | WarisanMakan</title>
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
 
@@ -169,7 +169,7 @@
     </section>
 
     <section id="discover" class="section">
-        <h2>{{ __('Heritage Shop Discovery') }}</h2>
+                <h2>{{ __('Heritage Shop Discovery') }}</h2>
         <p class="lead">All heritage shops currently in the Blind Box pool — the surprise pick comes from this list.</p>
 
         @if(empty($shops))

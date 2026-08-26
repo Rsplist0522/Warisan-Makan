@@ -1,16 +1,16 @@
 @extends('community-contributions.layout')
 
-@section('title', $contribution ? 'Edit Heritage Shop' : 'Submit Heritage Shop')
+@section('title', $contribution ? __('Edit Heritage Shop') : __('Submit Heritage Shop'))
 
 @section('content')
     <header class="page-header">
         <div>
-            <p class="eyebrow">Community contribution</p>
-            <h1>{{ $contribution ? 'Edit Heritage Shop' : 'Submit Heritage Shop' }}</h1>
+            <p class="eyebrow">{{ __('Community Contribution') }}</p>
+            <h1>{{ $contribution ? __('Edit Heritage Shop') : __('Submit Heritage Shop') }}</h1>
             <p>
                 {{ $contribution?->status === \App\Models\HeritageShopContribution::STATUS_REVISION_REQUIRED
                     ? 'Read the administrator feedback, make the requested changes, and resubmit.'
-                    : 'Document a Malaysian heritage food business for administrator review.' }}
+                    : __('Document a Malaysian heritage food business for administrator review.') }}
             </p>
         </div>
         <div class="actions">

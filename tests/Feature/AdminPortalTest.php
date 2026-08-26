@@ -4,7 +4,9 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class AdminPortalTest extends TestCase
@@ -93,6 +95,91 @@ class AdminPortalTest extends TestCase
             ->assertSee('Food Map')
             ->assertSee('Coming soon')
             ->assertSee('planned map and discovery module');
+    }
+
+    public function test_admin_dashboard_lists_user_management_module(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)
+            ->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertSee('Users & Roles')
+            ->assertSee(route('admin.users.index'), false);
+    }
+
+    public function test_admin_can_activate_and_deactivate_regular_users(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $user = User::factory()->create(['role' => 'user', 'status' => 'active']);
+
+        $this->actingAs($admin)
+            ->post(route('admin.users.toggle-status', $user))
+            ->assertRedirect(route('admin.users.index'))
+            ->assertSessionHas('status', 'User account deactivated.');
+
+        $this->assertSame('inactive', $user->fresh()->status);
+        $this->assertNotNull($user->fresh()->deactivated_at);
+
+        $this->actingAs($admin)
+            ->post(route('admin.users.toggle-status', $user))
+            ->assertRedirect(route('admin.users.index'))
+            ->assertSessionHas('status', 'User account activated.');
+
+        $this->assertSame('active', $user->fresh()->status);
+        $this->assertNull($user->fresh()->deactivated_at);
+    }
+
+    public function test_blocked_user_cannot_access_member_routes(): void
+    {
+        $user = User::factory()->create(['role' => 'user', 'status' => 'inactive']);
+
+        $this->actingAs($user)
+            ->get(route('home'))
+            ->assertRedirect(route('login'))
+            ->assertSessionHasErrors('login');
+    }
+
+    public function test_profile_photo_upload_uses_public_storage_url_for_profile_and_dashboard(): void
+    {
+        Storage::fake('public');
+
+        $user = User::factory()->create([
+            'name' => 'Aisha Noor',
+            'role' => 'user',
+            'status' => 'active',
+        ]);
+
+        $imagePath = tempnam(sys_get_temp_dir(), 'profile-test-');
+        file_put_contents($imagePath, base64_decode(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII='
+        ));
+        $file = new UploadedFile($imagePath, 'profile.png', 'image/png', null, true);
+
+        $this->actingAs($user)
+            ->from(route('profile.edit'))
+            ->post(route('profile.update'), [
+                'name' => 'Aisha Noor',
+                'email' => $user->email,
+                'phone' => '0123456789',
+                'city' => 'Kuala Lumpur',
+                'bio' => 'Food heritage enthusiast',
+                'profile_photo' => $file,
+            ])
+            ->assertRedirect(route('profile.show'));
+
+        $user->refresh();
+
+        $this->assertNotNull($user->profile_photo);
+        $this->assertStringContainsString('/storage/', $user->profilePhotoUrl());
+
+        $this->get(route('profile.show'))
+            ->assertOk()
+            ->assertSee('/storage/', false);
+
+        $this->get(route('home'))
+            ->assertOk()
+            ->assertSee('/storage/', false);
     }
 
     public function test_database_seeder_only_creates_the_default_admin_account(): void

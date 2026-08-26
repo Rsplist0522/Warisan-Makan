@@ -1,9 +1,12 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminCommunityContributionController;
-use App\Http\Controllers\Admin\FoodTrailSuggestionController;
+use App\Http\Controllers\Admin\BlindBoxController as AdminBlindBoxController;
+use App\Http\Controllers\Admin\HeritageShopAdminController;
+use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BlindBoxController;
+use App\Http\Controllers\ChatController;
 use App\Http\Controllers\CommunityContributionController;
 use App\Http\Controllers\CorrectionRequestController;
 use App\Http\Controllers\HeritageShopController;
@@ -22,7 +25,7 @@ Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->n
 
 Route::view('/landing', 'landing')->name('landing');
 
-Route::middleware('auth')->group(function (): void {
+Route::middleware(['auth', 'active_user'])->group(function (): void {
     Route::middleware('regular_user')->group(function (): void {
         Route::get('/', function () {
             return view('user-home', ['userName' => auth()->user()->name]);
@@ -65,6 +68,7 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/heritage-shops/{heritageShop}/correction-requests', [CorrectionRequestController::class, 'store'])
         ->name('heritage-shops.correction-requests.store');
     Route::get('/community-contributions/{contribution}', [CommunityContributionController::class, 'show'])
+        ->withTrashed()
         ->name('community-contribution.contributions.show');
     Route::post('/community-contributions/{contribution}/withdraw', [CommunityContributionController::class, 'withdraw'])
         ->name('community-contribution.contributions.withdraw');
@@ -77,7 +81,7 @@ Route::middleware('auth')->group(function (): void {
             Route::get('/correction-requests/{correctionRequest}', [AdminCommunityContributionController::class, 'showCorrectionRequest'])->name('correction-requests.show');
             Route::post('/correction-requests/{correctionRequest}/start-review', [AdminCommunityContributionController::class, 'startCorrectionReview'])->name('correction-requests.start-review');
             Route::post('/correction-requests/{correctionRequest}/moderate', [AdminCommunityContributionController::class, 'moderateCorrectionRequest'])->name('correction-requests.moderate');
-            Route::get('/{contribution}', [AdminCommunityContributionController::class, 'show'])->name('show');
+            Route::get('/{contribution}', [AdminCommunityContributionController::class, 'show'])->withTrashed()->name('show');
             Route::post('/{contribution}/start-review', [AdminCommunityContributionController::class, 'startReview'])->name('start-review');
             Route::post('/{contribution}/moderate', [AdminCommunityContributionController::class, 'moderate'])->name('moderate');
     });
@@ -88,7 +92,26 @@ Route::prefix('admin')
     ->middleware('admin')
     ->group(function () {
         Route::view('/', 'admin.dashboard')->name('dashboard');
-        Route::resource('food-trails', FoodTrailSuggestionController::class)->except('show');
+
+        Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');
+        Route::post('/users/{user}/toggle-status', [UserManagementController::class, 'toggleStatus'])->name('users.toggle-status');
+
+        Route::prefix('heritage-shops')->name('heritage-shops.')->group(function () {
+            Route::get('/', [HeritageShopAdminController::class, 'index'])->name('index');
+            Route::get('/create', [HeritageShopAdminController::class, 'create'])->name('create');
+            Route::post('/', [HeritageShopAdminController::class, 'store'])->name('store');
+            Route::get('/{heritageShop}/edit', [HeritageShopAdminController::class, 'edit'])->name('edit');
+            Route::put('/{heritageShop}', [HeritageShopAdminController::class, 'update'])->name('update');
+            Route::post('/crawl', [HeritageShopAdminController::class, 'crawl'])->name('crawl');
+        });
+
+        Route::prefix('blind-box-items')->name('blind-box-items.')->group(function (): void {
+            Route::get('/', [AdminBlindBoxController::class, 'index'])->name('index');
+            Route::get('/{shop}/edit', [AdminBlindBoxController::class, 'edit'])->whereNumber('shop')->name('edit');
+            Route::post('/available/{sourceShop}', [AdminBlindBoxController::class, 'add'])->whereNumber('sourceShop')->name('add');
+            Route::put('/{shop}', [AdminBlindBoxController::class, 'update'])->whereNumber('shop')->name('update');
+            Route::patch('/{shop}/toggle', [AdminBlindBoxController::class, 'toggle'])->whereNumber('shop')->name('toggle');
+        });
 
         Route::get('/modules/{moduleSlug}', function (string $moduleSlug) {
             $modules = [
@@ -129,7 +152,7 @@ Route::prefix('admin')
 // Blind Box routes
 Route::get('/blind-box', [BlindBoxController::class, 'index'])->middleware('auth')->name('blind-box.index');
 Route::post('/blind-box/draw', [BlindBoxController::class, 'draw'])->name('blind-box.draw');
-Route::get('/blind-box/history', [BlindBoxController::class, 'history'])->name('blind-box.history');
+Route::post('/chat', [ChatController::class, 'respond'])->name('chat.respond');
 
 // Module-only shop check-in page (public for development)
 Route::get('/foodPassport/shop/{id}', [PassportController::class, 'showShop'])
@@ -146,16 +169,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/passport/check-in', [PassportController::class, 'checkIn'])
         ->name('passport.checkin');
 
-    Route::post('/passport/demo-reset', [PassportController::class, 'resetDemoData'])
-        ->name('passport.demo.reset');
-
+    Route::post('/passport/reset-demo', [PassportController::class, 'resetDemoData'])
+        ->name('passport.reset-demo');
 });
 
-// Public test endpoint for local development: simulate a logged-in user
-Route::post('/passport/check-in-test', [PassportController::class, 'checkInTest'])
-    ->name('passport.checkin.test');
-Route::post('/passport/demo-reset', [PassportController::class, 'resetDemoData'])
-    ->name('passport.demo.reset.public');
 
 // Food trails page
 Route::get('/foodtrails', function () {
@@ -171,4 +188,8 @@ Route::get('/start_trail', function () {
 });
 
 Route::get('/heritage-shops', [HeritageShopController::class, 'index'])->name('heritage-shops.index');
+Route::get('/heritage-shops/{heritageShop}/images/{image}', [HeritageShopController::class, 'image'])
+    ->whereNumber('heritageShop')
+    ->whereNumber('image')
+    ->name('heritage-shops.images.show');
 Route::get('/heritage-shops/{id}', [HeritageShopController::class, 'show'])->whereNumber('id')->name('heritage-shops.show');

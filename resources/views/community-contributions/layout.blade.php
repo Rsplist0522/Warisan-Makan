@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@yield('title', 'Community Contribution') - Warisan Makan</title>
+    <title>@yield('title', __('Community Contribution')) - Warisan Makan</title>
     @fonts
     <style>
         :root {
@@ -105,6 +105,15 @@
             border-radius: 24px;
             background: linear-gradient(135deg, #fff8ef 0%, #f4e1c5 100%);
             box-shadow: 0 18px 38px rgba(104, 71, 42, .08);
+        }
+
+        .home-back {
+            width: min(1120px, calc(100% - 32px));
+            margin: 24px auto -14px;
+        }
+
+        .home-back .button {
+            background: rgba(255, 248, 240, .7);
         }
 
         .page-header {
@@ -282,6 +291,7 @@
             .brand { margin: 0; }
             .nav-links { justify-content: start; }
             .page-shell { width: min(100% - 24px, 1120px); padding: 18px; margin-top: 18px; }
+            .home-back { width: min(100% - 24px, 1120px); margin-top: 16px; margin-bottom: -4px; }
             .page-header, .record-card { display: grid; }
             .record-actions { justify-content: start; }
             .field-grid, .field-grid.three, .definition-grid, .filters, .filters.four { grid-template-columns: 1fr; }
@@ -295,18 +305,28 @@
     <header class="topbar">
         <div class="topbar-inner">
             <a class="brand" href="{{ route('home') }}">Warisan Makan</a>
-            <nav class="nav-links" aria-label="Community contribution navigation">
-                <a class="nav-link {{ request()->routeIs('community-contribution.create', 'community-contribution.edit') ? 'active' : '' }}" href="{{ route('community-contribution.create') }}">Submit shop</a>
-                <a class="nav-link {{ request()->routeIs('community-contribution.drafts*') ? 'active' : '' }}" href="{{ route('community-contribution.drafts') }}">Drafts</a>
-                <a class="nav-link {{ request()->routeIs('community-contribution.contributions*') ? 'active' : '' }}" href="{{ route('community-contribution.contributions') }}">My contributions</a>
-                <a class="nav-link {{ request()->routeIs('community-contribution.correction-requests*') ? 'active' : '' }}" href="{{ route('community-contribution.correction-requests') }}">My correction requests</a>
+            <nav class="nav-links" aria-label="{{ __('Community contribution navigation') }}">
+                <a class="nav-link {{ request()->routeIs('community-contribution.create', 'community-contribution.edit') ? 'active' : '' }}" href="{{ route('community-contribution.create') }}">{{ __('Submit shop') }}</a>
+                <a class="nav-link {{ request()->routeIs('community-contribution.drafts*') ? 'active' : '' }}" href="{{ route('community-contribution.drafts') }}">{{ __('Drafts') }}</a>
+                <a class="nav-link {{ request()->routeIs('community-contribution.contributions*') ? 'active' : '' }}" href="{{ route('community-contribution.contributions') }}">{{ __('My contributions') }}</a>
+                <a class="nav-link {{ request()->routeIs('community-contribution.correction-requests*') ? 'active' : '' }}" href="{{ route('community-contribution.correction-requests') }}">{{ __('My correction requests') }}</a>
                 <form class="inline-form" method="POST" action="{{ route('logout') }}">
                     @csrf
-                    <button class="logout-button" type="submit">Log out</button>
+                    <button class="logout-button" type="submit">{{ __('Log out') }}</button>
                 </form>
             </nav>
         </div>
     </header>
+
+    @php
+        $backToHomeRoute = trim($__env->yieldContent('back_to_home', 'home'));
+    @endphp
+
+    @if ($backToHomeRoute !== '')
+        <div class="home-back">
+            <a class="button secondary small" href="{{ route($backToHomeRoute) }}">&larr; Back to Home</a>
+        </div>
+    @endif
 
     <main class="page-shell">
         @if (session('status'))
@@ -315,7 +335,7 @@
 
         @if ($errors->any())
             <div class="status-banner error" role="alert">
-                <strong>Please fix the following:</strong>
+                <strong>{{ __('Please fix the following:') }}</strong>
                 <ul>
                     @foreach ($errors->all() as $error)
                         <li>{{ $error }}</li>

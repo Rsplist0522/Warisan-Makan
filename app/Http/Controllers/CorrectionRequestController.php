@@ -42,13 +42,19 @@ class CorrectionRequestController extends Controller
         $correctionRequests = $query->paginate(10)->withQueryString();
         $notifications = $request->user()->notifications()
             ->whereNotNull('data->correction_request_id')
+            ->whereNull('read_at')
             ->latest()
             ->limit(5)
             ->get();
+        $notificationCorrectionRequests = CorrectionRequest::query()
+            ->whereIn('id', $notifications->pluck('data.correction_request_id')->filter()->unique()->all())
+            ->get()
+            ->keyBy('id');
 
         return view('community-contributions.correction-requests.index', compact(
             'allowedStatuses',
             'correctionRequests',
+            'notificationCorrectionRequests',
             'notifications'
         ));
     }

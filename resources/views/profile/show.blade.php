@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Profile - Warisan Makan</title>
+    <title>{{ __('Profile - Warisan Makan') }}</title>
     @fonts
     <style>
         :root {
@@ -233,12 +233,12 @@
     <div class="page">
         <header class="topbar">
             <div>
-                <h1 class="section-heading">Profile</h1>
-                <p class="section-copy">Manage your WarisanMakan identity, update your contact details, and keep your profile photo current for a personalized experience.</p>
+                <h1 class="section-heading">{{ __('Profile') }}</h1>
+                <p class="section-copy">{{ __('Manage your WarisanMakan identity, update your contact details, and keep your profile photo current for a personalized experience.') }}</p>
             </div>
             <div class="section-actions">
-                <a class="button-secondary" href="{{ route('profile.edit') }}">Edit Profile</a>
-                <a class="button" href="{{ route('home') }}">Back to dashboard</a>
+                <a class="button-secondary" href="{{ route('profile.edit') }}">{{ __('Edit Profile') }}</a>
+                <a class="button" href="{{ route('home') }}">{{ __('Back to dashboard') }}</a>
             </div>
         </header>
 
@@ -258,34 +258,34 @@
                 <div class="identity-text">
                     <p class="identity-name">{{ $user->name }}</p>
                     <p class="identity-email">{{ $user->email }}</p>
-                    <span class="identity-badge">{{ $user->isAdmin() ? 'Admin' : 'Member' }}</span>
+                    <span class="identity-badge">{{ __($user->isAdmin() ? 'Admin' : 'Member') }}</span>
                 </div>
             </div>
 
             <div class="profile-fields">
                 <div class="profile-field">
-                    <label>Phone</label>
-                    <span class="{{ $user->phone ? '' : 'empty' }}">{{ $user->phone ?: 'Not provided' }}</span>
+                    <label>{{ __('Phone') }}</label>
+                    <span class="{{ $user->phone ? '' : 'empty' }}">{{ $user->phone ?: __('Not provided') }}</span>
                 </div>
 
                 <div class="profile-field">
-                    <label>City</label>
-                    <span class="{{ $user->city ? '' : 'empty' }}">{{ $user->city ?: 'Not provided' }}</span>
+                    <label>{{ __('City') }}</label>
+                    <span class="{{ $user->city ? '' : 'empty' }}">{{ $user->city ?: __('Not provided') }}</span>
                 </div>
 
                 <div class="profile-field">
-                    <label>Member since</label>
+                    <label>{{ __('Member since') }}</label>
                     <span>{{ $user->created_at->format('F j, Y') }}</span>
                 </div>
 
                 <div class="profile-field">
-                    <label>Role</label>
-                    <span>{{ $user->isAdmin() ? 'Admin' : 'Member' }}</span>
+                    <label>{{ __('Role') }}</label>
+                    <span>{{ __($user->isAdmin() ? 'Admin' : 'Member') }}</span>
                 </div>
 
                 <div class="profile-field span-2">
-                    <label>Bio</label>
-                    <span class="{{ $user->bio ? '' : 'empty' }}">{{ $user->bio ?: 'Share a little about your food heritage interests.' }}</span>
+                    <label>{{ __('Bio') }}</label>
+                    <span class="{{ $user->bio ? '' : 'empty' }}">{{ $user->bio ?: __('Share a little about your food heritage interests.') }}</span>
                 </div>
             </div>
         </section>

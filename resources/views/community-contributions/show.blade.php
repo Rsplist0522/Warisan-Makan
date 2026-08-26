@@ -7,7 +7,7 @@
         <div>
             <p class="eyebrow">Contribution details</p>
             <h1>{{ $contribution->contribution_title ?: $contribution->shop_name }}</h1>
-            <p>Submitted {{ optional($contribution->submitted_at)->format('d M Y, g:i A') ?: 'as a draft' }}</p>
+            <p>Submitted {{ $contribution->formatDateTime($contribution->submitted_at, 'as a draft') }}</p>
         </div>
         <div class="actions">
             <span class="badge badge-{{ $contribution->status }}">{{ $contribution->statusLabel() }}</span>
@@ -15,7 +15,12 @@
         </div>
     </header>
 
-    @if ($contribution->admin_feedback)
+    @if ($contribution->status === \App\Models\HeritageShopContribution::STATUS_DELETED)
+        <section class="status-banner error">
+            <strong>Deleted by administrator</strong><br>
+            {{ $contribution->admin_feedback ?: 'No deletion reason was provided.' }}
+        </section>
+    @elseif ($contribution->admin_feedback)
         <section class="status-banner {{ $contribution->status === \App\Models\HeritageShopContribution::STATUS_APPROVED ? 'success' : 'error' }}">
             <strong>Administrator feedback</strong><br>
             {{ $contribution->admin_feedback }}
@@ -110,7 +115,7 @@
                     @forelse ($contribution->versions as $version)
                         <div class="timeline-item">
                             <strong>Version {{ $version->version_number }} · {{ str($version->reason)->replace('_', ' ')->title() }}</strong>
-                            <p>{{ $version->created_at->format('d M Y, g:i A') }} by {{ $version->user?->name ?? 'Unknown user' }}</p>
+                            <p>{{ $contribution->formatDateTime($version->created_at) }} by {{ $version->user?->name ?? 'Unknown user' }}</p>
                         </div>
                     @empty
                         <p class="muted">No version records are available.</p>
@@ -125,7 +130,8 @@
                         @foreach ($contribution->moderationActivities as $activity)
                             <div class="timeline-item">
                                 <strong>{{ str($activity->action)->replace('_', ' ')->title() }}</strong>
-                                <p>{{ $activity->created_at->format('d M Y, g:i A') }}</p>
+                                <p>{{ $contribution->formatDateTime($activity->created_at) }}</p>
+                                @if ($activity->comment)<p>{{ $activity->comment }}</p>@endif
                             </div>
                         @endforeach
                     </div>

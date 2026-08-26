@@ -44,13 +44,25 @@ class AuthController extends Controller
 
         $request->session()->regenerate();
 
-        if (! $request->user()->isAdmin()) {
+        $user = $request->user();
+
+        if (! $user?->isAdmin()) {
             Auth::logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
             throw ValidationException::withMessages([
                 'username' => 'This account does not have administrator access.',
+            ]);
+        }
+
+        if ($user->isBlocked()) {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            throw ValidationException::withMessages([
+                'username' => 'This account has been deactivated. Please contact the administrator.',
             ]);
         }
 
@@ -80,6 +92,16 @@ class AuthController extends Controller
         }
 
         $user->save();
+
+        if ($user->isBlocked()) {
+            Auth::logout();
+            request()->session()->invalidate();
+            request()->session()->regenerateToken();
+
+            return redirect()->route('login')->withErrors([
+                'login' => 'Your account has been blocked. Please contact the administrator to regain access.',
+            ]);
+        }
 
         Auth::login($user);
         request()->session()->regenerate();

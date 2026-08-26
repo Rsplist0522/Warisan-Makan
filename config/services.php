@@ -42,4 +42,23 @@ return [
         'maps_api_key' => env('GOOGLE_MAPS_API_KEY'),
     ],
 
+    // The crawler uses Groq's OpenAI-compatible chat-completions API.  The
+    // OPENAI_* fallbacks retain compatibility with existing deployments.
+    'groq' => [
+        'key' => env('GROQ_API_KEY', env('OPENAI_API_KEY')),
+        'api_key' => env('GROQ_API_KEY', env('OPENAI_API_KEY')),
+        'model' => env('GROQ_MODEL', env('OPENAI_MODEL', 'llama-3.3-70b-versatile')),
+        'enhancement_enabled' => env('AI_CRAWLER_ENHANCEMENT_ENABLED', true),
+        'endpoint' => env('GROQ_API_ENDPOINT', 'https://api.groq.com/openai/v1/chat/completions'),
+    ],
+
+    // Tavily supplies web-search results to the crawler when the source page
+    // does not contain a required business fact. The LLM is deliberately only
+    // given these returned sources; it never fills a field from its own memory.
+    'tavily' => [
+        'api_key' => env('TAVILY_API_KEY'),
+        'endpoint' => env('TAVILY_API_ENDPOINT', 'https://api.tavily.com/search'),
+        'research_enabled' => env('AI_CRAWLER_WEB_RESEARCH_ENABLED', true),
+    ],
+
 ];

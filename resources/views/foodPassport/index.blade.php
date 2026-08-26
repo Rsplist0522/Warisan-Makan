@@ -308,7 +308,7 @@
 
         .shop-item {
             display: grid;
-            grid-template-columns: 108px 1fr auto;
+            grid-template-columns: minmax(0, 1fr) auto;
             gap: 14px;
             align-items: center;
             padding: 10px;
@@ -321,13 +321,6 @@
         .shop-item.active {
             border-color: rgba(140,31,31,0.24);
             box-shadow: inset 0 0 0 1px rgba(140,31,31,0.08);
-        }
-
-        .shop-item img {
-            width: 108px;
-            height: 88px;
-            object-fit: cover;
-            border-radius: 14px;
         }
 
         .shop-body {
@@ -440,6 +433,27 @@
             margin-top: 12px;
         }
 
+        .pagination {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 16px;
+        }
+
+        .pagination a,
+        .pagination span {
+            padding: 8px 12px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .pagination .active {
+            background: var(--primary);
+            color: white;
+        }
+
         .result-box {
             margin-top: 18px;
             background: #f8f2ea;
@@ -450,8 +464,8 @@
             white-space: pre-wrap;
             word-break: break-word;
             min-height: 120px;
-            font-family: "SFMono-Regular", Consolas, monospace;
-            font-size: 0.82rem;
+            font-size: 0.95rem;
+            line-height: 1.5;
         }
 
         .badge-grid {
@@ -467,6 +481,29 @@
             border-radius: 18px;
             padding: 16px 14px;
             text-align: center;
+        }
+
+        .badge-card-shareable {
+            cursor: pointer;
+            transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+        }
+
+        .badge-card-shareable:hover {
+            transform: translateY(-3px);
+            border-color: rgba(212,160,23,0.65);
+            box-shadow: 0 12px 24px rgba(86,59,48,0.1);
+        }
+
+        .badge-card-shareable:focus-visible {
+            outline: 3px solid rgba(212,160,23,0.5);
+            outline-offset: 3px;
+        }
+
+        .badge-share-hint {
+            margin-top: 10px !important;
+            color: var(--primary) !important;
+            font-size: 0.74rem !important;
+            font-weight: 800;
         }
 
         .badge-crest {
@@ -491,6 +528,327 @@
             margin: 0;
             color: var(--muted);
             font-size: 0.8rem;
+        }
+
+        .leaderboard-intro {
+            margin: 0;
+            color: var(--muted);
+            line-height: 1.6;
+        }
+
+        .leaderboard-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 18px;
+        }
+
+        .leaderboard-row {
+            display: grid;
+            grid-template-columns: 54px minmax(0, 1fr) auto;
+            align-items: center;
+            gap: 14px;
+            padding: 12px;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            background: rgba(255,255,255,0.54);
+        }
+
+        .leaderboard-rank {
+            display: grid;
+            place-items: center;
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            background: rgba(212,160,23,0.14);
+            color: var(--primary);
+            font-weight: 800;
+        }
+
+        .leaderboard-user h3 {
+            margin: 0 0 4px;
+            font-size: 1.05rem;
+            color: var(--ink);
+        }
+
+        .leaderboard-user p {
+            margin: 0;
+            color: var(--muted);
+            font-size: 0.78rem;
+        }
+
+        .leaderboard-metrics {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .leaderboard-metrics span {
+            padding: 7px 9px;
+            border-radius: 999px;
+            background: rgba(140,31,31,0.07);
+            color: var(--primary);
+            font-size: 0.76rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .leaderboard-empty {
+            margin: 18px 0 0;
+            color: var(--muted);
+        }
+
+        body.modal-open {
+            overflow: hidden;
+        }
+
+        .badge-modal[hidden] {
+            display: none;
+        }
+
+        .badge-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+            display: grid;
+            place-items: center;
+            padding: 20px;
+        }
+
+        .badge-modal-backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(47, 37, 31, 0.56);
+            backdrop-filter: blur(4px);
+        }
+
+        .badge-modal-card {
+            position: relative;
+            width: min(100%, 560px);
+            max-height: min(680px, calc(100vh - 40px));
+            overflow: auto;
+            padding: 30px 26px 24px;
+            border-radius: 24px;
+            background: var(--panel);
+            border: 1px solid rgba(212,160,23,0.3);
+            box-shadow: 0 28px 70px rgba(47,37,31,0.25);
+            text-align: center;
+        }
+
+        .badge-modal-close {
+            position: absolute;
+            top: 12px;
+            right: 14px;
+            width: 34px;
+            height: 34px;
+            border: 0;
+            border-radius: 50%;
+            background: rgba(140,31,31,0.08);
+            color: var(--primary);
+            font-size: 1.35rem;
+            cursor: pointer;
+        }
+
+        .badge-modal-icon {
+            display: grid;
+            place-items: center;
+            width: 76px;
+            height: 76px;
+            margin: 4px auto 14px;
+            border-radius: 24px;
+            background: linear-gradient(135deg, rgba(212,160,23,0.24), rgba(140,31,31,0.1));
+            color: var(--primary);
+            font-size: 2rem;
+            font-weight: 800;
+        }
+
+        .badge-modal-card h2 {
+            margin-bottom: 8px;
+            color: var(--primary);
+            font-size: 2rem;
+        }
+
+        .badge-modal-card p {
+            margin: 0;
+            color: var(--muted);
+            line-height: 1.6;
+        }
+
+        .achievement-card-preview {
+            position: relative;
+            overflow: hidden;
+            min-height: 280px;
+            margin-top: 18px;
+            padding: 24px;
+            border-radius: 22px;
+            background: linear-gradient(135deg, #8C1F1F 0%, #4A211C 58%, #2E1815 100%);
+            color: #FBF6EE;
+            text-align: left;
+            box-shadow: 0 18px 30px rgba(86,59,48,0.18);
+        }
+
+        .achievement-card-preview::before,
+        .achievement-card-preview::after {
+            position: absolute;
+            content: '';
+            width: 180px;
+            height: 180px;
+            border: 1px solid rgba(212,160,23,0.35);
+            border-radius: 50%;
+        }
+
+        .achievement-card-preview::before {
+            top: -92px;
+            right: -54px;
+        }
+
+        .achievement-card-preview::after {
+            bottom: -120px;
+            left: -64px;
+        }
+
+        .achievement-card-kicker,
+        .achievement-card-footer {
+            position: relative;
+            z-index: 1;
+            color: rgba(251,246,238,0.72);
+            font-size: 0.7rem;
+            font-weight: 800;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        .achievement-card-main {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            grid-template-columns: 86px minmax(0, 1fr);
+            gap: 16px;
+            align-items: center;
+            margin: 30px 0 24px;
+        }
+
+        .achievement-card-icon {
+            display: grid;
+            place-items: center;
+            width: 82px;
+            height: 82px;
+            border: 2px solid rgba(212,160,23,0.75);
+            border-radius: 26px;
+            background: rgba(251,246,238,0.12);
+            color: #F2D37B;
+            font-size: 2.4rem;
+            font-weight: 800;
+        }
+
+        .achievement-card-title {
+            margin: 0 0 6px;
+            color: #F2D37B;
+            font-family: Georgia, "Times New Roman", serif;
+            font-size: clamp(1.35rem, 4vw, 2rem);
+        }
+
+        .achievement-card-description {
+            margin: 0;
+            color: rgba(251,246,238,0.9) !important;
+            font-size: 0.88rem;
+        }
+
+        .achievement-card-progress {
+            position: relative;
+            z-index: 1;
+            display: inline-flex;
+            margin-bottom: 18px;
+            padding: 7px 11px;
+            border: 1px solid rgba(212,160,23,0.38);
+            border-radius: 999px;
+            color: #F2D37B;
+            font-size: 0.78rem;
+            font-weight: 800;
+        }
+
+        .achievement-card-footer {
+            position: relative;
+            z-index: 1;
+        }
+
+        .share-download-actions {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .share-download-btn {
+            padding: 10px 11px;
+            border: 1px solid rgba(212,160,23,0.38);
+            border-radius: 11px;
+            background: rgba(212,160,23,0.1);
+            color: var(--primary);
+            font: inherit;
+            font-size: 0.82rem;
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        .share-download-btn:hover {
+            background: rgba(212,160,23,0.2);
+        }
+
+        .badge-modal-badge-name {
+            margin: 12px 0 6px !important;
+            color: var(--ink) !important;
+            font-family: Georgia, "Times New Roman", serif;
+            font-size: 1.45rem;
+            font-weight: 700;
+        }
+
+        .share-label {
+            margin-top: 22px !important;
+            font-size: 0.78rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .share-actions {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .share-btn {
+            padding: 11px 12px;
+            border: 1px solid rgba(140,31,31,0.14);
+            border-radius: 11px;
+            background: rgba(140,31,31,0.05);
+            color: var(--primary);
+            font: inherit;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .share-btn:hover {
+            background: rgba(212,160,23,0.15);
+        }
+
+        .share-status {
+            min-height: 24px;
+            margin-top: 12px !important;
+            font-size: 0.82rem;
+        }
+
+        .share-note {
+            margin-top: 12px !important;
+            color: var(--muted);
+            font-size: 0.76rem;
+        }
+
+        .badge-modal-continue {
+            width: 100%;
+            margin-top: 16px;
         }
 
         footer {
@@ -525,8 +883,17 @@
                 grid-template-columns: 1fr;
             }
 
+            .leaderboard-row {
+                grid-template-columns: 46px minmax(0, 1fr);
+            }
+
+            .leaderboard-metrics {
+                grid-column: 2;
+                justify-content: flex-start;
+            }
+
             .shop-item {
-                grid-template-columns: 88px 1fr;
+                grid-template-columns: 1fr;
             }
 
             .mini-action {
@@ -547,6 +914,7 @@
                 <a href="#">Map</a>
                 <a href="#">Passport</a>
                 <a href="#">Rewards</a>
+                <a href="#leaderboard">Leaderboard</a>
                 <span class="chip">Heritage Trail</span>
             </nav>
         </header>
@@ -561,6 +929,7 @@
                     <div class="action-row">
                         <a href="#check-in" class="btn primary">Check In</a>
                         <a href="#nearby" class="btn secondary">Nearby Stops</a>
+                        <a href="#leaderboard" class="btn secondary">Leaderboard</a>
                     </div>
 
                     <div class="stats-row" aria-label="Passport progress statistics">
@@ -579,14 +948,18 @@
                     </div>
                 </div>
 
-                <div class="hero-media" aria-label="Featured heritage shop image">
-                    <img src="{{ $shops[0]['image'] }}" alt="{{ $shops[0]['name'] }}">
-                    <div class="floating-card">
-                        <span class="label">Featured stop</span>
-                        <h3>{{ $shops[0]['name'] }}</h3>
-                        <p>{{ $shops[0]['founder'] }}</p>
+                @if (!empty($shops))
+                    <div class="hero-media" aria-label="Featured heritage shop image">
+                            @if ($shops[0]['image'])
+                            <img id="featuredShopImage" src="{{ $shops[0]['image'] }}" alt="{{ $shops[0]['name'] }}">
+                        @endif
+                        <div class="floating-card">
+                            <span class="label">Featured stop</span>
+                            <h3 id="featuredShopName">{{ $shops[0]['name'] }}</h3>
+                            <p id="featuredShopFounder">{{ $shops[0]['founder'] }}</p>
+                        </div>
                     </div>
-                </div>
+                @endif
             </section>
 
             <section class="content-grid" id="nearby">
@@ -597,22 +970,25 @@
                             <span class="tag">Live</span>
                         </div>
 
-                        <div class="shop-list" id="shopList">
-                            @foreach ($shops as $shop)
-                                <article class="shop-item {{ $loop->first ? 'active' : '' }}" data-id="{{ $shop['id'] }}" data-name="{{ $shop['name'] }}" data-founder="{{ $shop['founder'] }}" data-lat="{{ $shop['lat'] }}" data-lng="{{ $shop['lng'] }}" data-image="{{ $shop['image'] }}">
-                                    <img src="{{ $shop['image'] }}" alt="{{ $shop['name'] }}">
-                                    <div class="shop-body">
-                                        <h3>{{ $shop['name'] }}</h3>
-                                        <p>{{ $shop['founder'] }}</p>
-                                        <div class="shop-meta">
-                                            <span>{{ $shop['distance'] }}</span>
-                                            <span>{{ $shop['status'] }}</span>
+                        @if (!empty($shops))
+                            <div class="shop-list" id="shopList">
+                                @foreach ($shops as $shop)
+                                    <article class="shop-item {{ $loop->first ? 'active' : '' }}" data-id="{{ $shop['id'] }}" data-name="{{ $shop['name'] }}" data-founder="{{ $shop['founder'] }}" data-lat="{{ $shop['lat'] }}" data-lng="{{ $shop['lng'] }}" data-image="{{ $shop['image'] }}">
+                                        <div class="shop-body">
+                                            <h3>{{ $shop['name'] }}</h3>
+                                            <p>{{ $shop['founder'] }}</p>
+                                            <div class="shop-meta">
+                                                <span>{{ $shop['distance'] }}</span>
+                                                <span>{{ $shop['status'] }}</span>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <button type="button" class="mini-action select-shop">Check In</button>
-                                </article>
-                            @endforeach
-                        </div>
+                                        <button type="button" class="mini-action select-shop">Check In</button>
+                                    </article>
+                                @endforeach
+                            </div>
+                        @else
+                            <p style="margin: 0; color: var(--muted);">No approved heritage shops with GPS coordinates are available for check-in yet. Add the shop location and approve it in the Heritage Shop module.</p>
+                        @endif
                     </div>
                 </div>
 
@@ -622,34 +998,25 @@
                         <span class="tag">GPS</span>
                     </div>
 
-                    <div class="selected-shop">
-                        <img id="selectedShopImage" src="{{ $shops[0]['image'] }}" alt="Selected heritage shop">
-                        <div>
-                            <p class="label">Selected stop</p>
-                            <h3 id="selectedShopName">{{ $shops[0]['name'] }}</h3>
-                            <p id="selectedShopFounder">{{ $shops[0]['founder'] }}</p>
+                    @if (!empty($shops))
+                        <div class="selected-shop">
+                            <div>
+                                <p class="label">Selected stop</p>
+                                <h3 id="selectedShopName">{{ $shops[0]['name'] }}</h3>
+                                <p id="selectedShopFounder">{{ $shops[0]['founder'] }}</p>
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="form-row">
-                        <div>
-                            <label for="radius">Radius (m)</label>
-                            <input id="radius" type="number" value="100" min="10" step="10">
+                        <div class="button-row">
+                            <button type="button" id="btnCheckIn" class="btn primary">Use my location</button>
+                            <button type="button" id="btnDemoCheckIn" class="btn secondary">Use demo location</button>
+                            <button type="button" id="btnRefresh" class="btn secondary">Reset demo</button>
                         </div>
-                        <div>
-                            <label for="shopId">Shop ID</label>
-                            <input id="shopId" type="number" value="{{ $shops[0]['id'] }}" readonly>
-                        </div>
-                    </div>
 
-                    <div class="button-row">
-                        <button type="button" id="btnCheckIn" class="btn primary">Use my location</button>
-                        <button type="button" id="btnDemoCheckIn" class="btn secondary">Use demo location</button>
-                        <button type="button" id="btnResetDemo" class="btn secondary">Reset demo</button>
-                        <button type="button" id="btnRefresh" class="btn secondary">Refresh</button>
-                    </div>
-
-                    <pre id="result" class="result-box">Ready to check in. Select a shop and allow location access.</pre>
+                        <pre id="result" class="result-box">Ready to check in. Select a shop and allow location access.</pre>
+                    @else
+                        <p style="margin: 16px 0 0; color: var(--muted);">Check-in will be available after an approved Heritage Shop has latitude and longitude coordinates.</p>
+                    @endif
                 </aside>
             </section>
 
@@ -660,11 +1027,10 @@
                         <span class="tag">History</span>
                     </div>
 
-                    @if (!empty($visitedLocations))
+                    @if ($visitedLocations->isNotEmpty())
                         <div class="shop-list">
                             @foreach ($visitedLocations as $location)
-                                <article class="shop-item active" style="grid-template-columns: 90px 1fr;">
-                                    <img src="{{ $location['image'] ?? asset('images/shop1.jpg') }}" alt="{{ $location['shop_name'] }}">
+                                <article class="shop-item active" data-visited-location>
                                     <div class="shop-body">
                                         <h3>{{ $location['shop_name'] }}</h3>
                                         <p>{{ $location['founder'] }}</p>
@@ -675,6 +1041,21 @@
                                 </article>
                             @endforeach
                         </div>
+                        @if ($visitedLocations->total() > 0)
+                            <nav class="pagination" aria-label="Visited locations pages">
+                                @if ($visitedLocations->onFirstPage())
+                                    <span aria-disabled="true">Previous</span>
+                                @else
+                                    <a href="{{ $visitedLocations->previousPageUrl() }}">Previous</a>
+                                @endif
+                                <span class="active">Page {{ $visitedLocations->currentPage() }}</span>
+                                @if ($visitedLocations->hasMorePages())
+                                    <a href="{{ $visitedLocations->nextPageUrl() }}">Next</a>
+                                @else
+                                    <span aria-disabled="true">Next</span>
+                                @endif
+                            </nav>
+                        @endif
                     @else
                         <p style="margin: 0; color: var(--muted);">No visited heritage locations yet. Complete a check-in to start building your food passport.</p>
                     @endif
@@ -724,16 +1105,78 @@
 
                     <div class="badge-grid">
                         @foreach ($badges as $badge)
-                            <div class="badge-card">
+                            <div
+                                class="badge-card {{ $badge['earned'] ? 'badge-card-shareable' : '' }}"
+                                @if ($badge['earned'])
+                                    role="button"
+                                    tabindex="0"
+                                    data-badge-share
+                                    data-badge-name="{{ $badge['name'] }}"
+                                    data-badge-description="{{ $badge['description'] }}"
+                                    data-badge-icon="{{ $badge['icon'] }}"
+                                    data-badge-progress="{{ $badge['progress'] }}"
+                                    data-badge-threshold="{{ $badge['threshold'] }}"
+                                    aria-label="Share your {{ $badge['name'] }} badge"
+                                @endif
+                            >
                                 <div class="badge-crest">{{ $badge['icon'] }}</div>
                                 <h4>{{ $badge['name'] }}</h4>
                                 <p>{{ $badge['description'] }}</p>
                                 <p style="margin-top: 8px; color: {{ $badge['earned'] ? '#3E6C4F' : '#675B54' }}; font-weight: 700;">
                                     {{ $badge['earned'] ? 'Unlocked' : ($badge['eligible'] ? 'Ready' : 'Need ' . $badge['threshold'] . ' visits') }}
                                 </p>
+                                @if ($badge['earned'])
+                                    <p class="badge-share-hint">Click to share</p>
+                                @endif
                             </div>
                         @endforeach
                     </div>
+                </div>
+            </section>
+
+            <section class="panel" id="leaderboard" style="margin-top: 26px;">
+                <div class="panel-inner">
+                    <div class="section-header">
+                        <h2>Leaderboard</h2>
+                        <span class="tag">Top 10</span>
+                    </div>
+                    <p class="leaderboard-intro">Ranked by badges received, then total check-ins. Recent check-ins decide ties.</p>
+
+                    @if ($leaderboard->isNotEmpty())
+                        <div class="leaderboard-list">
+                            @foreach ($leaderboard as $entry)
+                                <article class="leaderboard-row">
+                                    <div class="leaderboard-rank">#{{ $entry->rank }}</div>
+                                    <div class="leaderboard-user">
+                                        <h3>{{ $entry->name ?: 'Heritage Explorer' }}</h3>
+                                        <p>Last check-in: {{ $entry->last_check_in_label }}</p>
+                                    </div>
+                                    <div class="leaderboard-metrics">
+                                        <span>{{ $entry->badges_received }} badges</span>
+                                        <span>{{ $entry->check_ins }} check-ins</span>
+                                    </div>
+                                </article>
+                            @endforeach
+                        </div>
+
+                        @if ($leaderboard->total() > 0)
+                            <nav class="pagination" aria-label="Leaderboard pages">
+                                @if ($leaderboard->onFirstPage())
+                                    <span aria-disabled="true">Previous</span>
+                                @else
+                                    <a href="{{ $leaderboard->previousPageUrl() }}#leaderboard">Previous</a>
+                                @endif
+                                <span class="active">Page {{ $leaderboard->currentPage() }}</span>
+                                @if ($leaderboard->hasMorePages())
+                                    <a href="{{ $leaderboard->nextPageUrl() }}#leaderboard">Next</a>
+                                @else
+                                    <span aria-disabled="true">Next</span>
+                                @endif
+                            </nav>
+                        @endif
+                    @else
+                        <p class="leaderboard-empty">The leaderboard will appear after users start checking in and earning badges.</p>
+                    @endif
                 </div>
             </section>
         </main>
@@ -743,16 +1186,61 @@
         </footer>
     </div>
 
+    <div id="badgeModal" class="badge-modal" hidden role="dialog" aria-modal="true" aria-labelledby="badgeModalTitle">
+        <div class="badge-modal-backdrop" data-close-badge-modal></div>
+        <div class="badge-modal-card">
+            <button type="button" class="badge-modal-close" data-close-badge-modal aria-label="Close badge announcement">&times;</button>
+            <h2 id="badgeModalTitle">Achievement unlocked</h2>
+            <p>Save this moment and share your heritage-food journey.</p>
+            <div id="achievementCardPreview" class="achievement-card-preview">
+                <div class="achievement-card-kicker">Warisan Makan · Heritage Passport</div>
+                <div class="achievement-card-main">
+                    <div id="badgeModalIcon" class="achievement-card-icon">★</div>
+                    <div>
+                        <h3 id="badgeModalBadgeName" class="achievement-card-title">Heritage Explorer</h3>
+                        <p id="badgeModalBadgeDescription" class="achievement-card-description">Keep exploring and sharing the stories behind local food.</p>
+                    </div>
+                </div>
+                <div id="badgeModalProgress" class="achievement-card-progress">A new story added to my food journey</div>
+                <div class="achievement-card-footer">Every dish has a story. Discover yours.</div>
+            </div>
+            <p class="share-label">Share your achievement</p>
+            <div class="share-actions">
+                <button type="button" class="share-btn" data-share="instagram">Prepare Instagram Story</button>
+                <button type="button" class="share-btn" data-share="facebook">Prepare Facebook Post</button>
+                <button type="button" class="share-btn" data-share="whatsapp">Share to WhatsApp</button>
+                <button type="button" class="share-btn" data-share="copy">Copy caption</button>
+            </div>
+            <div class="share-download-actions">
+                <button type="button" class="share-download-btn" data-share="download-square">Download square card</button>
+                <button type="button" class="share-download-btn" data-share="download-story">Download story card</button>
+            </div>
+            <p id="shareStatus" class="share-status" aria-live="polite"></p>
+            <p class="share-note">Instagram and Facebook may ask you to log in and upload the downloaded card. WhatsApp can attach the card automatically on supported devices.</p>
+            <button type="button" class="btn primary badge-modal-continue" data-close-badge-modal>Continue exploring</button>
+        </div>
+    </div>
+
     <script>
         const shops = @json($shops);
-        let activeShop = shops[0];
+        let activeShop = shops[0] || null;
 
         function setActiveShop(shop) {
             activeShop = shop;
+
             document.getElementById('selectedShopName').textContent = shop.name;
             document.getElementById('selectedShopFounder').textContent = shop.founder;
-            document.getElementById('selectedShopImage').src = shop.image;
-            document.getElementById('shopId').value = shop.id;
+
+            const featuredShopName = document.getElementById('featuredShopName');
+            const featuredShopFounder = document.getElementById('featuredShopFounder');
+            const featuredShopImage = document.getElementById('featuredShopImage');
+
+            if (featuredShopName) featuredShopName.textContent = shop.name;
+            if (featuredShopFounder) featuredShopFounder.textContent = shop.founder;
+            if (featuredShopImage && shop.image) {
+                featuredShopImage.src = shop.image;
+                featuredShopImage.alt = shop.name;
+            }
 
             document.querySelectorAll('.shop-item').forEach(item => {
                 item.classList.toggle('active', Number(item.dataset.id) === Number(shop.id));
@@ -768,15 +1256,311 @@
         });
 
         const out = document.getElementById('result');
+        const badgeModal = document.getElementById('badgeModal');
+        const badgeModalIcon = document.getElementById('badgeModalIcon');
+        const badgeModalBadgeName = document.getElementById('badgeModalBadgeName');
+        const badgeModalBadgeDescription = document.getElementById('badgeModalBadgeDescription');
+        const badgeModalProgress = document.getElementById('badgeModalProgress');
+        const shareStatus = document.getElementById('shareStatus');
+        let activeBadgeForShare = null;
+        let badgeShareText = '';
+        let reloadAfterBadgeModal = false;
 
         function setResult(value) {
-            out.textContent = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+            if (typeof value === 'string') {
+                out.textContent = value;
+                return;
+            }
+
+            out.textContent = value.message || 'We could not complete the request. Please try again.';
         }
+
+        function openBadgeModal(unlockedBadges, refreshOnClose = false) {
+            const primaryBadge = unlockedBadges[0];
+            const badgeNames = unlockedBadges.map(badge => badge.name).join(', ');
+            const additionalBadges = unlockedBadges.length > 1
+                ? ' Also unlocked: ' + unlockedBadges.slice(1).map(badge => badge.name).join(', ') + '.'
+                : '';
+            const milestone = primaryBadge.threshold || primaryBadge.progress || 'new';
+
+            activeBadgeForShare = primaryBadge;
+            badgeModalIcon.textContent = primaryBadge.icon || '★';
+            badgeModalBadgeName.textContent = primaryBadge.name;
+            badgeModalBadgeDescription.textContent = (primaryBadge.description || 'Keep exploring local food heritage.') + additionalBadges;
+            badgeModalProgress.textContent = primaryBadge.threshold || primaryBadge.progress
+                ? 'Milestone reached: ' + milestone + ' heritage visits'
+                : 'A new story added to my food journey';
+            badgeShareText = 'I just earned the ' + badgeNames + ' badge on the Warisan Makan Heritage Passport after discovering ' + milestone + ' heritage food stories. What should I explore next?';
+            shareStatus.textContent = '';
+            badgeModal.hidden = false;
+            document.body.classList.add('modal-open');
+            reloadAfterBadgeModal = refreshOnClose;
+        }
+
+        function closeBadgeModal() {
+            badgeModal.hidden = true;
+            document.body.classList.remove('modal-open');
+
+            if (reloadAfterBadgeModal) {
+                reloadAfterBadgeModal = false;
+                window.setTimeout(() => window.location.reload(), 250);
+            }
+        }
+
+        async function copyShareText() {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(badgeShareText);
+                return true;
+            }
+
+            const helper = document.createElement('textarea');
+            helper.value = badgeShareText;
+            helper.setAttribute('readonly', '');
+            helper.style.position = 'fixed';
+            helper.style.opacity = '0';
+            document.body.appendChild(helper);
+            helper.select();
+            const copied = document.execCommand('copy');
+            helper.remove();
+            return copied;
+        }
+
+        function wrapCanvasText(context, text, x, y, maxWidth, lineHeight, maxLines = 3) {
+            const words = String(text || '').split(' ');
+            let line = '';
+            let lineCount = 0;
+
+            words.forEach((word, index) => {
+                const testLine = line + (line ? ' ' : '') + word;
+                if (context.measureText(testLine).width > maxWidth && line) {
+                    context.fillText(line, x, y + lineCount * lineHeight);
+                    line = word;
+                    lineCount += 1;
+                } else {
+                    line = testLine;
+                }
+
+                if (index === words.length - 1 && lineCount < maxLines) {
+                    context.fillText(line, x, y + lineCount * lineHeight);
+                }
+            });
+
+            return lineCount + 1;
+        }
+
+        function drawAchievementCard(format) {
+            if (!activeBadgeForShare) {
+                return null;
+            }
+
+            const width = 1080;
+            const height = format === 'story' ? 1920 : 1080;
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const context = canvas.getContext('2d');
+            const badge = activeBadgeForShare;
+            const story = format === 'story';
+
+            context.fillStyle = '#2E1815';
+            context.fillRect(0, 0, width, height);
+            const gradient = context.createLinearGradient(0, 0, width, height);
+            gradient.addColorStop(0, '#8C1F1F');
+            gradient.addColorStop(0.58, '#4A211C');
+            gradient.addColorStop(1, '#2E1815');
+            context.fillStyle = gradient;
+            context.fillRect(28, 28, width - 56, height - 56);
+
+            context.strokeStyle = 'rgba(242,211,123,0.38)';
+            context.lineWidth = 3;
+            context.beginPath();
+            context.arc(width - 80, 92, 180, 0, Math.PI * 2);
+            context.stroke();
+            context.beginPath();
+            context.arc(56, height - 80, 180, 0, Math.PI * 2);
+            context.stroke();
+
+            context.fillStyle = 'rgba(251,246,238,0.78)';
+            context.font = '800 26px Arial, sans-serif';
+            context.letterSpacing = '4px';
+            context.fillText('WARISAN MAKAN  ·  HERITAGE PASSPORT', 78, story ? 118 : 100);
+
+            const centerY = story ? 720 : 490;
+            context.fillStyle = 'rgba(251,246,238,0.12)';
+            context.fillRect(78, centerY - 230, width - 156, story ? 520 : 440);
+            context.strokeStyle = 'rgba(242,211,123,0.75)';
+            context.lineWidth = 5;
+            context.strokeRect(78, centerY - 230, width - 156, story ? 520 : 440);
+
+            context.fillStyle = '#F2D37B';
+            context.font = story ? '800 116px Arial, sans-serif' : '800 100px Arial, sans-serif';
+            context.textAlign = 'center';
+            context.fillText(badge.icon || '★', width / 2, centerY - 54);
+            context.font = story ? '700 58px Georgia, serif' : '700 52px Georgia, serif';
+            wrapCanvasText(context, badge.name, width / 2, centerY + 52, width - 240, 70, 2);
+            context.fillStyle = 'rgba(251,246,238,0.92)';
+            context.font = story ? '32px Arial, sans-serif' : '28px Arial, sans-serif';
+            wrapCanvasText(context, badge.description || 'A new heritage-food milestone.', width / 2, centerY + 150, width - 260, 42, 3);
+
+            context.textAlign = 'center';
+            context.fillStyle = '#F2D37B';
+            context.font = story ? '800 30px Arial, sans-serif' : '800 26px Arial, sans-serif';
+            context.fillText(badge.progress ? 'MILESTONE  ' + badge.progress + '  VISITS' : 'A NEW STORY ADDED TO MY FOOD JOURNEY', width / 2, centerY + (story ? 260 : 238));
+
+            context.fillStyle = 'rgba(251,246,238,0.82)';
+            context.font = story ? '30px Arial, sans-serif' : '26px Arial, sans-serif';
+            context.fillText('Every dish has a story. Discover yours.', width / 2, height - (story ? 150 : 98));
+            context.fillStyle = 'rgba(251,246,238,0.58)';
+            context.font = '22px Arial, sans-serif';
+            context.fillText('warisan makan  ·  explore local heritage food', width / 2, height - (story ? 100 : 58));
+            context.textAlign = 'start';
+
+            return canvas;
+        }
+
+        function downloadAchievementCard(format) {
+            const canvas = drawAchievementCard(format);
+            if (!canvas) {
+                return;
+            }
+
+            const slug = (activeBadgeForShare.name || 'badge').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+            const link = document.createElement('a');
+            link.download = 'warisan-makan-' + slug + '-' + format + '.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            shareStatus.textContent = format === 'story'
+                ? 'Story card downloaded. Upload it to Instagram Story or WhatsApp Status.'
+                : 'Square card downloaded. It is ready for your social feed.';
+        }
+
+        async function shareAchievementFile(format) {
+            const canvas = drawAchievementCard(format);
+            if (!canvas || !navigator.share || !navigator.canShare || typeof File === 'undefined') {
+                return false;
+            }
+
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+            if (!blob) {
+                return false;
+            }
+
+            const slug = (activeBadgeForShare.name || 'badge').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+            const file = new File([blob], 'warisan-makan-' + slug + '-' + format + '.png', { type: 'image/png' });
+            const shareData = {
+                files: [file],
+                title: activeBadgeForShare.name + ' · Warisan Makan',
+                text: badgeShareText
+            };
+
+            if (!navigator.canShare({ files: [file] })) {
+                return false;
+            }
+
+            await navigator.share(shareData);
+            shareStatus.textContent = 'Achievement card shared successfully.';
+            return true;
+        }
+
+        async function shareBadge(channel) {
+            try {
+                if (channel === 'copy') {
+                    await copyShareText();
+                    shareStatus.textContent = 'Caption copied. Add it with your achievement card.';
+                    return;
+                }
+
+                if (channel === 'download-square') {
+                    downloadAchievementCard('square');
+                    return;
+                }
+
+                if (channel === 'download-story') {
+                    downloadAchievementCard('story');
+                    return;
+                }
+
+                if (channel === 'instagram') {
+                    await copyShareText();
+                    downloadAchievementCard('story');
+                    window.open('https://www.instagram.com/', '_blank', 'noopener');
+                    shareStatus.textContent = 'Instagram opened. The story card was downloaded and the caption was copied—upload the PNG after logging in.';
+                    return;
+                }
+
+                if (channel === 'facebook') {
+                    await copyShareText();
+                    downloadAchievementCard('square');
+                    const url = 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(window.location.href) + '&quote=' + encodeURIComponent(badgeShareText);
+                    window.open(url, '_blank', 'noopener');
+                    shareStatus.textContent = 'Facebook opened. The square card was downloaded and the caption was copied—attach the PNG if needed.';
+                    return;
+                }
+
+                if (channel === 'whatsapp') {
+                    shareStatus.textContent = 'Preparing your WhatsApp achievement card...';
+
+                    const isTouchDevice = 'ontouchstart' in window || (window.navigator.maxTouchPoints || 0) > 0;
+                    if (isTouchDevice) {
+                        const shared = await shareAchievementFile('square');
+                        if (shared) return;
+                    }
+
+                    const whatsappUrl = isTouchDevice
+                        ? 'https://wa.me/?text=' + encodeURIComponent(badgeShareText)
+                        : 'https://web.whatsapp.com/send?text=' + encodeURIComponent(badgeShareText);
+                    downloadAchievementCard('square');
+                    const whatsappWindow = window.open(whatsappUrl, '_blank', 'noopener');
+                    await copyShareText();
+                    if (!whatsappWindow) {
+                        shareStatus.textContent = 'The card was downloaded and the caption was copied, but the browser blocked WhatsApp. Allow pop-ups or open WhatsApp Web manually.';
+                    } else {
+                        shareStatus.textContent = isTouchDevice
+                            ? 'WhatsApp opened. Attach the downloaded card if your device did not include it automatically.'
+                            : 'WhatsApp Web opened. The square card was downloaded and the caption was copied—attach the PNG in the chat.';
+                    }
+                }
+            } catch (error) {
+                if (error && error.name === 'AbortError') {
+                    shareStatus.textContent = 'Sharing cancelled.';
+                    return;
+                }
+                shareStatus.textContent = 'We could not prepare the share card. Please use the download buttons instead.';
+            }
+        }
+
+        document.querySelectorAll('[data-close-badge-modal]').forEach(element => {
+            element.addEventListener('click', closeBadgeModal);
+        });
+
+        document.querySelectorAll('[data-share]').forEach(button => {
+            button.addEventListener('click', () => shareBadge(button.dataset.share));
+        });
+
+        document.querySelectorAll('[data-badge-share]').forEach(badgeCard => {
+            const shareSelectedBadge = () => {
+                openBadgeModal([{
+                    name: badgeCard.dataset.badgeName,
+                    description: badgeCard.dataset.badgeDescription,
+                    icon: badgeCard.dataset.badgeIcon,
+                    progress: badgeCard.dataset.badgeProgress,
+                    threshold: Number(badgeCard.dataset.badgeThreshold || 0)
+                }], false);
+            };
+
+            badgeCard.addEventListener('click', shareSelectedBadge);
+            badgeCard.addEventListener('keydown', event => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    shareSelectedBadge();
+                }
+            });
+        });
 
         function submitCheckIn(payload) {
             setResult('Sending check-in request...');
 
-            const endpoint = payload.demo_mode ? '/passport/check-in-test' : '/passport/check-in';
+            const endpoint = '/passport/check-in';
 
             return fetch(endpoint, {
                 method: 'POST',
@@ -791,60 +1575,69 @@
                 setResult(json);
 
                 if (json && json.success) {
-                    window.location.reload();
+                    const newlyUnlockedBadges = Array.isArray(json.newly_unlocked_badges)
+                        ? json.newly_unlocked_badges
+                        : [];
+
+                    if (newlyUnlockedBadges.length > 0) {
+                        openBadgeModal(newlyUnlockedBadges, true);
+                    } else {
+                        window.setTimeout(() => window.location.reload(), 1200);
+                    }
                 }
             }).catch(error => {
                 setResult('Network or server error: ' + error.message);
             });
         }
 
-        function resetDemoPassport() {
-            setResult('Resetting demo passport...');
+        document.getElementById('btnRefresh')?.addEventListener('click', async () => {
+            if (!window.confirm('Reset the demo passport and start again?')) {
+                return;
+            }
 
-            fetch('/passport/demo-reset', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({ demo_mode: true })
-            }).then(async response => {
+            setResult('Resetting the demo passport...');
+
+            try {
+                const response = await fetch('/passport/reset-demo', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                        'Accept': 'application/json'
+                    }
+                });
                 const json = await response.json();
                 setResult(json);
-                window.location.reload();
-            }).catch(error => {
-                setResult('Demo reset failed: ' + error.message);
-            });
-        }
 
-        document.getElementById('btnRefresh').addEventListener('click', () => {
-            setResult('Ready to check in. Select a shop and allow location access.');
+                if (response.ok && json.success) {
+                    window.setTimeout(() => window.location.reload(), 700);
+                }
+            } catch (error) {
+                setResult('We could not reset the demo right now. Please try again.');
+            }
         });
 
-        document.getElementById('btnResetDemo').addEventListener('click', resetDemoPassport);
+        document.getElementById('btnDemoCheckIn')?.addEventListener('click', function () {
+            if (!activeShop) {
+                setResult('Please select a heritage shop first.');
+                return;
+            }
 
-        document.getElementById('btnDemoCheckIn').addEventListener('click', function () {
-            const payload = {
+            setResult('Using a demo location near the selected shop...');
+            submitCheckIn({
                 shop_id: Number(activeShop.id),
-                shop_latitude: Number(activeShop.lat),
-                shop_longitude: Number(activeShop.lng),
-                user_latitude: Number((Number(activeShop.lat) + 0.00025).toFixed(6)),
-                user_longitude: Number((Number(activeShop.lng) + 0.00025).toFixed(6)),
-                radius_meters: Number(document.getElementById('radius').value || 100),
-                is_participating: true,
-                is_published: true,
-                demo_mode: true,
-                allow_repeat: true
-            };
-
-            submitCheckIn(payload);
+                user_latitude: Number((Number(activeShop.lat) + 0.0002).toFixed(6)),
+                user_longitude: Number((Number(activeShop.lng) + 0.0002).toFixed(6)),
+                demo_mode: true
+            });
         });
 
-        document.getElementById('btnCheckIn').addEventListener('click', function () {
+        document.getElementById('btnCheckIn')?.addEventListener('click', function () {
+            if (!activeShop) {
+                setResult('Please select a heritage shop first.');
+                return;
+            }
             if (!navigator.geolocation) {
-                setResult('Geolocation is not supported by this browser. Using demo mode instead.');
-                document.getElementById('btnDemoCheckIn').click();
+                setResult('Geolocation is not supported by this browser.');
                 return;
             }
 
@@ -853,20 +1646,13 @@
             navigator.geolocation.getCurrentPosition(function (position) {
                 const payload = {
                     shop_id: Number(activeShop.id),
-                    shop_latitude: Number(activeShop.lat),
-                    shop_longitude: Number(activeShop.lng),
                     user_latitude: position.coords.latitude,
-                    user_longitude: position.coords.longitude,
-                    radius_meters: Number(document.getElementById('radius').value || 100),
-                    is_participating: true,
-                    is_published: true,
-                    demo_mode: false
+                    user_longitude: position.coords.longitude
                 };
 
                 submitCheckIn(payload);
             }, function (error) {
-                setResult('Failed to get location: ' + (error.message || error.code) + '. Using demo coordinates instead.');
-                document.getElementById('btnDemoCheckIn').click();
+                setResult('Failed to get location: ' + (error.message || error.code));
             }, { enableHighAccuracy: true, timeout: 10000 });
         });
     </script>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>User Home - Warisan Makan</title>
+    <title>{{ __('User Dashboard') }} - Warisan Makan</title>
     @fonts
     <style>
         :root {
@@ -413,27 +413,27 @@
         <aside class="sidebar">
             <div class="brand"><span class="brand-mark">W</span> WarisanMakan</div>
 
-            <p class="nav-label">Home</p>
+            <p class="nav-label">{{ __('Home') }}</p>
             <nav class="nav" aria-label="User home navigation">
-                <a class="nav-item active" href="{{ route('home') }}">Dashboard</a>
-                <a class="nav-item" href="{{ route('profile.show') }}">Profile</a>
+                <a class="nav-item active" href="{{ route('home') }}">{{ __('Dashboard') }}</a>
+                <a class="nav-item" href="{{ route('profile.show') }}">{{ __('Profile') }}</a>
             </nav>
 
-            <p class="nav-label">Modules</p>
+            <p class="nav-label">{{ __('Modules') }}</p>
             <nav class="nav" aria-label="WarisanMakan modules">
                 @foreach ($modules as $module)
                     <a class="nav-item" href="{{ isset($module['route']) ? route($module['route']) : $module['url'] }}">
-                        <span>{{ $module['name'] }}</span>
+                        <span>{{ __($module['name']) }}</span>
                     </a>
                 @endforeach
             </nav>
 
             <div class="sidebar-footer">
                 <p class="user-name">{{ $userName }}</p>
-                <p class="user-role">WarisanMakan member</p>
+                <p class="user-role">{{ __('WarisanMakan member') }}</p>
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
-                    <button class="logout" type="submit">Log out</button>
+                    <button class="logout" type="submit">{{ __('Log out') }}</button>
                 </form>
             </div>
         </aside>
@@ -441,8 +441,8 @@
         <section class="main">
             <header class="topbar">
                 <div>
-                    <h2>User Dashboard</h2>
-                    <p>WarisanMakan heritage food portal</p>
+                    <h2>{{ __('User Dashboard') }}</h2>
+                    <p>{{ __('WarisanMakan heritage food portal') }}</p>
                 </div>
                 <div style="display:flex;align-items:center;gap:14px">
                     <a href="{{ route('profile.show') }}" style="display:inline-flex;align-items:center;gap:10px;padding:10px 14px;border-radius:999px;border:1px solid rgba(46, 36, 32, .14);background:#fff;">
@@ -459,11 +459,11 @@
             <main class="content">
                 <header class="page-header">
                     <div>
-                        <p class="eyebrow">User home</p>
-                        <h1>Welcome back, {{ $userName }}</h1>
-                        <p>Explore Malaysian heritage food culture, preserve local food stories, and follow new WarisanMakan modules as they open.</p>
-                    </div>
-                    <span class="header-pill">Heritage food explorer</span>
+                        <p class="eyebrow">{{ __('User home') }}</p>
+                                <h1>{{ __('Welcome back, :name', ['name' => $userName]) }}</h1>
+                                <p>{{ __('Explore Malaysian heritage food culture, preserve local food stories, and follow new WarisanMakan modules as they open.') }}</p>
+                            </div>
+                            <span class="header-pill">{{ __('Heritage food explorer') }}</span>
                 </header>
 
                 <section class="module-grid" aria-label="WarisanMakan modules">
@@ -473,18 +473,18 @@
                                 <span class="module-icon" aria-hidden="true">
                                     @include('partials.module-icon', ['icon' => $module['icon']])
                                 </span>
-                                <h3>{{ $module['name'] }}</h3>
-                                <p>{{ $module['description'] }}</p>
-                                <strong class="module-status">{{ $module['status'] }}</strong>
+                                <h3>{{ __($module['name']) }}</h3>
+                                <p>{{ __($module['description']) }}</p>
+                                <strong class="module-status">{{ __($module['status']) }}</strong>
                             </a>
                         @else
                             <article class="module-card is-static" aria-disabled="true">
                                 <span class="module-icon" aria-hidden="true">
                                     @include('partials.module-icon', ['icon' => $module['icon']])
                                 </span>
-                                <h3>{{ $module['name'] }}</h3>
-                                <p>{{ $module['description'] }}</p>
-                                <strong class="module-status">{{ $module['status'] }}</strong>
+                                <h3>{{ __($module['name']) }}</h3>
+                                <p>{{ __($module['description']) }}</p>
+                                <strong class="module-status">{{ __($module['status']) }}</strong>
                             </article>
                         @endif
                     @endforeach

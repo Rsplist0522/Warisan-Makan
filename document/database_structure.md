@@ -15,7 +15,7 @@ Codex should use this file as the main reference before changing migrations, mod
 5. MySQL should store only the Cloudflare R2 object key/path and media metadata.
 6. Do not create speculative tables for teammates' modules unless their implementation actually requires them.
 7. Existing teammate tables should not be deleted unless confirmed unused.
-8. The previous standalone **Heritage Food Story Contribution** feature is no longer part of the current Community Contribution database plan.
+8. A standalone food-story submission workflow is not part of the current Community Contribution database plan.
 9. Keep naming consistent across migrations, Eloquent models, validation rules, controllers, Blade views, seeders, and tests.
 
 ---
@@ -673,14 +673,13 @@ state
 
 ---
 
-## 6.2 Heritage Food Story Contribution
+## 6.2 Standalone Food-Story Contribution Tables
 
-Do not create a new table such as:
+Do not create a new standalone story-submission table.
 
 ```text
-heritage_food_story_contributions
-food_story_contributions
-contribution_food_story_details
+standalone story submission table
+standalone story detail table
 ```
 
 unless the project requirements are changed again later.

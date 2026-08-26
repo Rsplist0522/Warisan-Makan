@@ -194,8 +194,12 @@
                 <a class="nav-item {{ $blindBoxActive ? 'active' : '' }}" href="{{ route('admin.blind-box-items.index') }}">
                     <span>Blind Box</span>
                 </a>
+                <a class="nav-item {{ $foodTrailActive ? 'active' : '' }}" href="{{ route('admin.food-trails.index') }}">
+                    <span>Events &amp; Trails</span>
+                </a>
 
                 @foreach ($placeholderModules as $slug => $name)
+                    @continue($slug === 'events-trails')
                     <a class="nav-item placeholder {{ request()->routeIs('admin.modules.show') && request()->route('moduleSlug') === $slug ? 'active' : '' }}" href="{{ route('admin.modules.show', $slug) }}">
                         <span>{{ $name }}</span>
                         <small>soon</small>

@@ -9,6 +9,8 @@ use App\Http\Controllers\BlindBoxController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\CommunityContributionController;
 use App\Http\Controllers\CorrectionRequestController;
+use App\Http\Controllers\FoodTrailController;
+use App\Http\Controllers\Admin\FoodTrailSuggestionController;
 use App\Http\Controllers\HeritageShopController;
 use App\Http\Controllers\PassportController;
 use Illuminate\Support\Facades\Route;
@@ -94,6 +96,7 @@ Route::prefix('admin')
         Route::view('/', 'admin.dashboard')->name('dashboard');
 
         Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');
+        Route::resource('food-trails', FoodTrailSuggestionController::class)->except('show');
         Route::post('/users/{user}/toggle-status', [UserManagementController::class, 'toggleStatus'])->name('users.toggle-status');
 
         Route::prefix('heritage-shops')->name('heritage-shops.')->group(function () {
@@ -114,6 +117,9 @@ Route::prefix('admin')
         });
 
         Route::get('/modules/{moduleSlug}', function (string $moduleSlug) {
+            if ($moduleSlug === 'events-trails') {
+                return redirect()->route('admin.food-trails.index');
+            }
             $modules = [
                 'heritage-registry' => [
                     'name' => 'Heritage Registry',
@@ -175,12 +181,7 @@ Route::middleware('auth')->group(function () {
 
 
 // Food trails page
-Route::get('/foodtrails', function () {
-    return view('foodtrails', [
-        'curatedSuggestions' => \App\Models\FoodTrailSuggestion::query()
-            ->where('is_published', true)->latest()->get(['id', 'title', 'subtitle', 'summary', 'category', 'location']),
-    ]);
-});
+Route::get('/foodtrails', [FoodTrailController::class, 'index'])->name('foodtrails.index');
 
 // Start trail page
 Route::get('/start_trail', function () {

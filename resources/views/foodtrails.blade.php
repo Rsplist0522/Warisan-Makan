@@ -132,21 +132,18 @@
                             class="w-full rounded-3xl border border-[#E6D8C4] bg-[#FFFBF6] px-4 py-4 text-sm text-[#1F1B19] shadow-sm outline-none"
                             placeholder="Search location or heritage district" />
                         <datalist id="locations">
-                            <option value="Kuala Lumpur"></option>
-                            <option value="Penang"></option>
-                            <option value="Melaka"></option>
-                            <option value="Johor Bahru"></option>
-                            <option value="Ipoh"></option>
+                            @foreach ($locations as $location)
+                                <option value="{{ $location }}"></option>
+                            @endforeach
                         </datalist>
                     </div>
                     <div class="grid gap-4 sm:grid-cols-2">
                         <select id="categorySelect"
                             class="rounded-3xl border border-[#E6D8C4] bg-[#FFFBF6] px-4 py-4 text-sm text-[#1F1B19] shadow-sm outline-none">
                             <option value="all">All food categories</option>
-                            <option value="Street Food">Street Food</option>
-                            <option value="Dessert">Dessert</option>
-                            <option value="Seafood">Seafood</option>
-                            <option value="Snacks">Snacks</option>
+                            @foreach ($categories as $category)
+                                <option value="{{ $category }}">{{ $category }}</option>
+                            @endforeach
                         </select>
                         <input id="searchKeyword" type="search"
                             class="rounded-3xl border border-[#E6D8C4] bg-[#FFFBF6] px-4 py-4 text-sm text-[#1F1B19] shadow-sm outline-none"
@@ -318,47 +315,14 @@
 
     <script>
         window.foodTrailApp = {
-            locations: [
-                'Kuala Lumpur',
-                'Penang',
-                'Melaka',
-                'Johor Bahru',
-                'Ipoh',
-            ],
-            categories: ['all', 'Street Food', 'Dessert', 'Seafood', 'Snacks'],
+            locations: @json($locations),
+            categories: @json(array_merge(['all'], $categories)),
             defaultFavorites: [
                 { id: 'fav-1', title: 'KL Heritage Walk', location: 'Kuala Lumpur', description: 'A classic route for local favorites and street food.', tags: ['Street Food', 'Local'], stops: 3 },
                 { id: 'fav-2', title: 'Penang Sweet Tour', location: 'Penang', description: 'A dessert-focused trail for local heritage sweets.', tags: ['Dessert', 'Heritage'], stops: 3 },
             ],
             curated: @json($curatedSuggestions),
-            restaurants: {
-                'Kuala Lumpur': [
-                    { id: 'kl-1', name: 'Nasi Lemak Warisan', category: 'Street Food', location: 'Bukit Bintang', rating: 4.7, reviewCount: 218, price: 'RM 8 - RM 15', distance: 0.4, waitTime: '15 min', tags: ['Local', 'Spicy'], description: 'Iconic coconut rice with sambal, chicken, and crispy anchovies.', picture: 'https://images.unsplash.com/photo-1543353071-873f17a7a088?auto=format&fit=crop&w=1200&q=80', coordinates: { x: 18, y: 28 } },
-                    { id: 'kl-2', name: 'Satay Stall Jaya', category: 'Street Food', location: 'Jalan Alor', rating: 4.8, reviewCount: 312, price: 'RM 16 - RM 30', distance: 0.9, waitTime: '20 min', tags: ['Grilled', 'Night Market'], description: 'Charcoal satay with rich peanut sauce and local rice cakes.', picture: 'https://images.unsplash.com/photo-1542219550-c1f36a97a991?auto=format&fit=crop&w=1200&q=80', coordinates: { x: 48, y: 38 } },
-                    { id: 'kl-3', name: 'Roti Canai Corner', category: 'Snacks', location: 'Imbi', rating: 4.5, reviewCount: 184, price: 'RM 8 - RM 15', distance: 1.2, waitTime: '10 min', tags: ['Comfort Food', 'Quick'], description: 'Crispy roti canai served with dhal and curry on the side.', picture: 'https://images.unsplash.com/photo-1534939561126-855b8675edd7?auto=format&fit=crop&w=1200&q=80', coordinates: { x: 68, y: 22 } },
-                    { id: 'kl-4', name: 'Cendol Heritage', category: 'Dessert', location: 'Chinatown', rating: 4.9, reviewCount: 259, price: 'RM 8 - RM 15', distance: 1.6, waitTime: '12 min', tags: ['Sweet', 'Traditional'], description: 'Classic shaved ice dessert with gula Melaka and pandan jelly.', picture: 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=1200&q=80', coordinates: { x: 27, y: 64 } },
-                ],
-                Penang: [
-                    { id: 'pg-1', name: 'Char Koay Teow Master', category: 'Street Food', location: 'Lebuh Cintra', rating: 4.7, reviewCount: 198, price: 'RM 16 - RM 30', distance: 0.3, waitTime: '18 min', tags: ['Fiery', 'Popular'], description: 'Stir-fried flat rice noodles prepared over high heat with smoky flavor.', picture: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1200&q=80', coordinates: { x: 20, y: 18 } },
-                    { id: 'pg-2', name: 'Penang Laksa Corner', category: 'Seafood', location: 'Lebuh Keng Kwee', rating: 4.6, reviewCount: 154, price: 'RM 8 - RM 15', distance: 0.8, waitTime: '15 min', tags: ['Heritage', 'Sour'], description: 'Asam laksa with tangy fish broth, noodles and fresh herbs.', picture: 'https://images.unsplash.com/photo-1553621042-f6e147245754?auto=format&fit=crop&w=1200&q=80', coordinates: { x: 45, y: 42 } },
-                    { id: 'pg-3', name: 'Cendol House', category: 'Dessert', location: 'Lebuh Armenian', rating: 4.5, reviewCount: 212, price: 'RM 8 - RM 15', distance: 1.0, waitTime: '10 min', tags: ['Chilled', 'Sweet'], description: 'Refreshing cendol topped with coconut milk and palm sugar.', picture: 'https://images.unsplash.com/photo-1544511916-0148ccdeb877?auto=format&fit=crop&w=1200&q=80', coordinates: { x: 62, y: 28 } },
-                ],
-                Melaka: [
-                    { id: 'mk-1', name: 'Nyonya Laksa Stall', category: 'Seafood', location: 'Jonker Walk', rating: 4.8, reviewCount: 173, price: 'RM 16 - RM 30', distance: 0.5, waitTime: '22 min', tags: ['Spicy', 'Heritage'], description: 'Rich coconut laksa with local noodles and herbs.', picture: 'https://images.unsplash.com/photo-1478145046317-39f10e56b5e9?auto=format&fit=crop&w=1200&q=80', coordinates: { x: 22, y: 30 } },
-                    { id: 'mk-2', name: 'Putu Piring Cart', category: 'Dessert', location: 'Jonker Walk', rating: 4.6, reviewCount: 139, price: 'RM 8 - RM 15', distance: 0.6, waitTime: '8 min', tags: ['Sweet', 'Local'], description: 'Steamed rice cakes with palm sugar and grated coconut.', picture: 'https://images.unsplash.com/photo-1498654896293-37aacf113fd9?auto=format&fit=crop&w=1200&q=80', coordinates: { x: 52, y: 33 } },
-                    { id: 'mk-3', name: 'Satay Celup Booth', category: 'Street Food', location: 'A Famosa', rating: 4.4, reviewCount: 121, price: 'RM 16 - RM 30', distance: 2.2, waitTime: '20 min', tags: ['Unique', 'Shared'], description: 'Skewers dipped into flavorful peanut broth to cook at the table.', picture: 'https://images.unsplash.com/photo-1458642849426-cfb724f15ef7?auto=format&fit=crop&w=1200&q=80', coordinates: { x: 70, y: 60 } },
-                ],
-                'Johor Bahru': [
-                    { id: 'jb-1', name: 'Laksa Johor Corner', category: 'Street Food', location: 'Stulang', rating: 4.6, reviewCount: 142, price: 'RM 16 - RM 30', distance: 0.7, waitTime: '16 min', tags: ['Spicy', 'Local'], description: 'Rich fish laksa with coconut and local noodles.', picture: 'https://images.unsplash.com/photo-1543353071-873f17a7a088?auto=format&fit=crop&w=1200&q=80', coordinates: { x: 24, y: 34 } },
-                    { id: 'jb-2', name: 'Kueh Tutu Stand', category: 'Snacks', location: 'City Square', rating: 4.5, reviewCount: 98, price: 'RM 8 - RM 15', distance: 1.1, waitTime: '12 min', tags: ['Sweet', 'Bite-size'], description: 'Steamed rice cakes filled with coconut and peanut.', picture: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1200&q=80', coordinates: { x: 42, y: 58 } },
-                    { id: 'jb-3', name: 'BBQ Seafood Walk', category: 'Seafood', location: 'Permas Jaya', rating: 4.7, reviewCount: 176, price: 'RM 16 - RM 30', distance: 2.8, waitTime: '25 min', tags: ['Grilled', 'Ocean'], description: 'Fresh seafood grilled over charcoal with local sauces.', picture: 'https://images.unsplash.com/photo-1553621042-f6e147245754?auto=format&fit=crop&w=1200&q=80', coordinates: { x: 68, y: 24 } },
-                ],
-                Ipoh: [
-                    { id: 'ip-1', name: 'Bean Sprout Chicken', category: 'Street Food', location: 'Old Town', rating: 4.8, reviewCount: 204, price: 'RM 16 - RM 30', distance: 0.3, waitTime: '18 min', tags: ['Classic', 'Savory'], description: 'Poached chicken and rice with crunchy bean sprouts.', picture: 'https://images.unsplash.com/photo-1478145046317-39f10e56b5e9?auto=format&fit=crop&w=1200&q=80', coordinates: { x: 18, y: 26 } },
-                    { id: 'ip-2', name: 'White Coffee Cafe', category: 'Snacks', location: 'Jalan Bandar Timah', rating: 4.5, reviewCount: 168, price: 'RM 8 - RM 15', distance: 0.9, waitTime: '10 min', tags: ['Coffee', 'Relaxed'], description: 'Smooth local white coffee served with kaya toast.', picture: 'https://images.unsplash.com/photo-1544511916-0148ccdeb877?auto=format&fit=crop&w=1200&q=80', coordinates: { x: 45, y: 48 } },
-                    { id: 'ip-3', name: 'Tau Fu Fah Corner', category: 'Dessert', location: 'Jalan Sultan Iskandar', rating: 4.4, reviewCount: 130, price: 'RM 8 - RM 15', distance: 1.7, waitTime: '9 min', tags: ['Soft', 'Sweet'], description: 'Silky tofu pudding with sweet ginger syrup.', picture: 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=1200&q=80', coordinates: { x: 73, y: 32 } },
-                ],
-            },
+            restaurants: @json($restaurants),
             favoritesKey: 'foodtrails-favorites',
             likedRestaurantsKey: 'foodtrail-liked-restaurants',
         };

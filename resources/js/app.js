@@ -80,6 +80,12 @@ const foodTrailApp = (() => {
         googleMapMarkers = [];
     };
     const fallbackPosition = (restaurant) => {
+        const latitude = Number(restaurant.coordinates?.lat);
+        const longitude = Number(restaurant.coordinates?.lng);
+        if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+            return { lat: latitude, lng: longitude };
+        }
+
         const x = Number(restaurant.coordinates?.x ?? 50);
         const y = Number(restaurant.coordinates?.y ?? 50);
         return {
@@ -187,9 +193,20 @@ const foodTrailApp = (() => {
     };
     const loadCurrentRoute = () => {
         try {
-            state.routeRestaurants = JSON.parse(localStorage.getItem(currentRouteKey) || '[]') || [];
+            const savedRoute = JSON.parse(localStorage.getItem(currentRouteKey) || '[]') || [];
+            const databaseRestaurantIds = new Set(
+                Object.values(appData.restaurants || {}).flat().map((restaurant) => restaurant.id),
+            );
+
+            // Remove routes saved while Food Trails still used its demo data.
+            // A route can only contain records supplied by the database now.
+            state.routeRestaurants = Array.isArray(savedRoute)
+                ? savedRoute.filter((restaurant) => databaseRestaurantIds.has(restaurant.id))
+                : [];
+            saveCurrentRoute();
         } catch (error) {
             state.routeRestaurants = [];
+            localStorage.removeItem(currentRouteKey);
         }
     };
     const setPanelVisibility = (showResults) => {
@@ -249,15 +266,28 @@ const foodTrailApp = (() => {
                 <p class="mt-4 text-sm text-[#7B6B5F]">${item.summary}</p>
             `;
             card.querySelector('button')?.addEventListener('click', () => {
-                getElement(selectors.locationInput).value = item.location;
-                getElement(selectors.categorySelect).value = item.category === 'All' ? 'all' : item.category;
-                handleGenerateTrail();
+                state.routeRestaurants = (item.restaurants || []).map((restaurant) => ({ ...restaurant, visited: false }));
+                state.activeRestaurants = state.routeRestaurants.slice(); state.filteredRestaurants = state.routeRestaurants.slice();
+                state.selectedRestaurant = state.routeRestaurants[0] || null; saveCurrentRoute(); setPanelVisibility(true); renderRestaurantList(); renderRouteSummary(); updateRouteCompletion(); renderSelectedRestaurantDetails();
             });
             container.appendChild(card);
         });
     };
+    const normalizeLocation = (location) => {
+        const normalized = String(location || '').trim().toLowerCase();
+        if (
+            normalized.includes('kuala lumpur')
+            || normalized.includes('wilayah persekutuan')
+            || normalized.includes('federal territory of kuala lumpur')
+            || /\b(?:5\d{4}|60\d{3})\b/.test(normalized)
+        ) {
+            return 'Kuala Lumpur';
+        }
+
+        return location?.trim() || '';
+    };
     const getRestaurantsForLocation = (location) => {
-        return appData.restaurants?.[location] || [];
+        return appData.restaurants?.[normalizeLocation(location)] || [];
     };
     const updateResultsCount = () => {
         const countBadge = getElement(selectors.resultsCount);

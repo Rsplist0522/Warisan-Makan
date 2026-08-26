@@ -25,13 +25,14 @@
     <style>
         .trail-stop-card {
             display: grid;
-            grid-template-columns: auto 72px minmax(0, 1fr) auto;
-            gap: 14px;
-            align-items: center;
+            grid-template-columns: 32px 30px 72px minmax(0, 1fr) auto;
+            grid-template-rows: auto auto;
+            gap: 12px 14px;
+            align-items: start;
             border: 1px solid #E9D7BF;
             border-radius: 24px;
             background: #FEFBF7;
-            padding: 14px;
+            padding: 16px;
             box-shadow: 0 10px 24px rgba(62, 44, 23, 0.06);
             transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
         }
@@ -48,6 +49,9 @@
         }
 
         .trail-drag-handle {
+            grid-column: 1;
+            grid-row: 1;
+            align-self: center;
             display: inline-flex;
             width: 32px;
             height: 32px;
@@ -62,6 +66,8 @@
         }
 
         .trail-stop-image {
+            grid-column: 3;
+            grid-row: 1 / span 2;
             width: 72px;
             height: 72px;
             border-radius: 18px;
@@ -71,6 +77,8 @@
         }
 
         .trail-stop-content {
+            grid-column: 4;
+            grid-row: 1;
             min-width: 0;
         }
 
@@ -111,6 +119,9 @@
         }
 
         .trail-stop-number {
+            grid-column: 2;
+            grid-row: 1;
+            align-self: center;
             width: 30px;
             height: 30px;
             background: #B8874A;
@@ -128,18 +139,29 @@
         }
 
         .trail-stop-actions {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-            justify-content: flex-start;
-            grid-column: 4;
+            grid-column: 4 / 6;
             grid-row: 2;
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 12px;
+            align-items: center;
+            margin-top: 4px;
+        }
+
+        .trail-visit-button {
+            grid-column: 1;
+            justify-self: start;
+        }
+
+        .trail-remove-button {
+            grid-column: 3;
+            justify-self: end;
         }
 
         .trail-visit-button,
         .trail-remove-button {
             display: inline-flex;
-            height: 36px;
+            height: 38px;
             align-items: center;
             justify-content: center;
             border-radius: 999px;
@@ -149,7 +171,7 @@
         }
 
         .trail-visit-button {
-            min-width: 92px;
+            min-width: 108px;
             background: #FFF0D9;
             color: #8A5A24;
             padding: 0 12px;
@@ -161,7 +183,7 @@
         }
 
         .trail-remove-button {
-            min-width: 76px;
+            min-width: 120px;
             border: 1px solid #E9D7BF;
             background: #FFFFFF;
             color: #6B553F;
@@ -170,25 +192,33 @@
 
         @media (max-width: 640px) {
             .trail-stop-card {
-                grid-template-columns: auto minmax(0, 1fr);
+                grid-template-columns: 32px 30px 64px minmax(0, 1fr);
+                gap: 10px;
+                padding: 14px;
             }
 
             .trail-stop-image {
-                grid-column: 1;
-                grid-row: 2;
                 width: 64px;
                 height: 64px;
             }
 
             .trail-stop-content {
-                grid-column: 2;
-                grid-row: 1 / span 2;
+                grid-column: 4;
+                grid-row: 1;
             }
 
             .trail-stop-actions {
-                grid-column: 1 / -1;
-                grid-row: auto;
+                grid-column: 3 / -1;
+                grid-row: 2;
+                display: flex;
                 justify-content: space-between;
+                gap: 10px;
+                margin-top: 4px;
+            }
+
+            .trail-visit-button,
+            .trail-remove-button {
+                min-width: 96px;
             }
         }
 
@@ -290,6 +320,163 @@
         .trail-complete-modal.is-hidden {
             display: none;
         }
+
+        /* Larger, clearer trail action controls */
+        .trail-preview-controls {
+            display: grid !important;
+            grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+            gap: 10px !important;
+            margin-top: 14px !important;
+            padding: 8px !important;
+            border-radius: 20px !important;
+            background: #F7F0E6 !important;
+        }
+
+        .trail-preview-btn {
+            display: flex !important;
+            min-width: 0 !important;
+            height: 48px !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 6px !important;
+            border: 0 !important;
+            border-radius: 15px !important;
+            padding: 0 12px !important;
+            font-size: 13px !important;
+            font-weight: 700 !important;
+            cursor: pointer;
+            transition: 160ms ease;
+        }
+
+        .trail-preview-btn.previous {
+            background: #FFFDFC !important;
+            color: #6B553F !important;
+        }
+
+        .trail-preview-btn.all {
+            background: #FFF0D9 !important;
+            color: #8A5A24 !important;
+            box-shadow: 0 4px 12px rgba(138, 90, 36, 0.10);
+        }
+
+        .trail-preview-btn.next {
+            background: #EED8B9 !important;
+            color: #6E481F !important;
+        }
+
+        .trail-preview-btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+            filter: brightness(0.98);
+        }
+
+        .trail-preview-btn:disabled {
+            background: #F2EEE8 !important;
+            color: #B8AB9A !important;
+            opacity: 0.65 !important;
+            cursor: not-allowed !important;
+        }
+
+        .trail-complete-stop-btn {
+            display: flex !important;
+            width: 100% !important;
+            height: 50px !important;
+            margin-top: 14px !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 9px !important;
+            border: 1px solid #CFE4C9 !important;
+            border-radius: 16px !important;
+            background: #EDF7EA !important;
+            color: #41622F !important;
+            font-size: 14px !important;
+            font-weight: 700 !important;
+        }
+
+        .trail-share-grid {
+            display: grid !important;
+            grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+            gap: 10px !important;
+            margin-top: 12px !important;
+        }
+
+        .trail-share-btn {
+            display: flex !important;
+            min-width: 0 !important;
+            height: 74px !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 7px !important;
+            border: 0 !important;
+            border-radius: 18px !important;
+            padding: 8px !important;
+            font-size: 12px !important;
+            font-weight: 700 !important;
+            transition: 160ms ease;
+        }
+
+        .trail-share-btn.whatsapp {
+            background: #EAF8EE !important;
+            color: #16883B !important;
+        }
+
+        .trail-share-btn.copy {
+            background: #EEF4FB !important;
+            color: #285E9E !important;
+        }
+
+        .trail-share-btn.maps {
+            background: #EEF5FF !important;
+            color: #2463A9 !important;
+        }
+
+        .trail-share-btn:hover {
+            transform: translateY(-1px);
+            filter: brightness(0.98);
+        }
+
+        .trail-share-icon {
+            display: flex !important;
+            width: 32px !important;
+            height: 32px !important;
+            align-items: center !important;
+            justify-content: center !important;
+            border-radius: 999px !important;
+            background: #FFFFFF !important;
+            box-shadow: 0 3px 8px rgba(31, 27, 25, 0.08);
+        }
+
+        .trail-favourite-btn {
+            display: flex !important;
+            width: 100% !important;
+            height: 48px !important;
+            margin-top: 16px !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 8px !important;
+            border: 0 !important;
+            border-radius: 16px !important;
+            background: #FFF2D8 !important;
+            color: #93601D !important;
+            font-size: 14px !important;
+            font-weight: 700 !important;
+        }
+
+        .trail-exit-btn {
+            display: flex !important;
+            width: 100% !important;
+            height: 44px !important;
+            margin-top: 10px !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 8px !important;
+            border: 0 !important;
+            border-radius: 14px !important;
+            background: #FFF4F1 !important;
+            color: #A65A50 !important;
+            font-size: 13px !important;
+            font-weight: 700 !important;
+        }
     </style>
 </head>
 
@@ -356,7 +543,9 @@
                             class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(255,210,146,0.35),_transparent_40%),radial-gradient(circle_at_bottom_right,_rgba(222,164,95,0.16),_transparent_35%)] pointer-events-none">
                         </div>
                         <div id="routeMapFrame" class="h-full w-full"></div>
-                        <div id="trailMapMessage" class="absolute inset-x-4 bottom-4 hidden rounded-2xl bg-white/95 px-4 py-3 text-sm text-[#6B5B4B] shadow-lg"></div>
+                        <div id="trailMapMessage"
+                            class="absolute inset-x-4 bottom-4 hidden rounded-2xl bg-white/95 px-4 py-3 text-sm text-[#6B5B4B] shadow-lg">
+                        </div>
                     </div>
                     <div class="mt-5 grid gap-4 sm:grid-cols-3">
                         <div class="rounded-[24px] border border-[#F0D6C4] bg-[#FEFBF8] p-4">
@@ -440,7 +629,8 @@
             </div>
 
             <aside class="space-y-6">
-                <section class="trail-actions-card rounded-[32px] bg-white p-6 shadow-[0_18px_40px_rgba(62,44,23,0.08)]">
+                <section
+                    class="trail-actions-card rounded-[32px] bg-white p-6 shadow-[0_18px_40px_rgba(62,44,23,0.08)]">
                     <div class="flex items-start justify-between gap-4">
                         <div>
                             <p class="text-xs uppercase tracking-[0.24em] text-[#B08B59]">Trail actions</p>
@@ -464,97 +654,123 @@
                             <p id="routeNextStop" class="mt-2 text-2xl font-semibold text-[#1F1B19]">None yet</p>
                         </div>
                     </div>
-                    <button id="showAllStopsButton"
-                        class="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-full border border-transparent bg-[#B8874A] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#9c6f33]">
+                    <div class="mt-4 rounded-[20px] border border-[#E9D7BF] bg-white px-4 py-4">
+                        <label for="travelModeSelect"
+                            class="block text-[11px] uppercase tracking-[0.22em] text-[#B08B59]">Travel by</label>
+                        <select id="travelModeSelect" class="mt-2 w-full bg-transparent text-sm outline-none">
+                            <option value="WALKING">Walking</option>
+                            <option value="DRIVING" selected>Driving</option>
+                            <option value="TRANSIT">Public Transport</option>
+                            <option value="BICYCLING">Cycling</option>
+                        </select>
+                    </div>
+                    <button id="showCurrentRouteButton"
+                        class="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#B8874A] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#9c6f33]">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M4 12h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
                             <path d="M14 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                 stroke-linejoin="round" />
                         </svg>
-                        Show All Stops
+                        Navigate to Next Stop
                     </button>
-                    <button id="completeAllButton"
-                        class="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#B8874A] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#9c6f33]">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="m5 12 4 4L19 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                        Mark all as complete
+                    <div class="trail-preview-controls">
+                        <button id="showPreviousRouteButton" class="trail-preview-btn previous">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path d="M20 12H4" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                                <path d="M10 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                            </svg>
+                            <span class="truncate">Previous</span>
+                        </button>
+
+                        <button id="showAllStopsButton" class="trail-preview-btn all">
+                            <span class="truncate">All Stops</span>
+                        </button>
+
+                        <button id="showCurrentRouteShortcutButton" class="trail-preview-btn next">
+                            <span class="truncate">Next</span>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path d="M4 12h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                                <path d="M14 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                            </svg>
+                        </button>
+                    </div>
+                    <button id="completeAllButton" class="trail-complete-stop-btn">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="m5 12 4 4L19 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                        </svg>
+                        Mark Stop Complete
                     </button>
                     <button id="closeTrailButton"
-                        class="mt-3 hidden h-12 w-full items-center justify-center gap-2 rounded-full bg-[#3D6F55] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#315A45]">
-                        Complete Trail
+                        class="mt-3 hidden h-12 w-full items-center justify-center gap-2 rounded-full bg-[#B8874A] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#9c6f33]">
+                        Complete Food Trail
                     </button>
-                    <div class="mt-3 grid gap-3 sm:grid-cols-2">
-                        <button id="showPreviousRouteButton"
-                            class="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-[#E9D7BF] bg-white px-4 text-sm font-semibold text-[#1F1B19] transition hover:bg-[#F8F0E6]">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-                                xmlns="http://www.w3.org/2000/svg">
-                                <path d="M20 12H4" stroke="#1F1B19" stroke-width="2" stroke-linecap="round" />
-                                <path d="M10 18l-6-6 6-6" stroke="#1F1B19" stroke-width="2" stroke-linecap="round"
-                                    stroke-linejoin="round" />
-                            </svg>
-                            Previous Route
-                        </button>
-                        <button id="showCurrentRouteButton"
-                            class="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-[#E9D7BF] bg-white px-4 text-sm font-semibold text-[#1F1B19] transition hover:bg-[#F8F0E6]">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-                                xmlns="http://www.w3.org/2000/svg">
-                                <path d="M4 12h16" stroke="#1F1B19" stroke-width="2" stroke-linecap="round" />
-                                <path d="M14 6l6 6-6 6" stroke="#1F1B19" stroke-width="2" stroke-linecap="round"
-                                    stroke-linejoin="round" />
-                            </svg>
-                            Current Route
-                        </button>
+                    <div class="mt-5">
+                        <p class="text-[11px] uppercase tracking-[0.22em] text-[#B08B59]">Share trail</p>
+
+                        <div class="trail-share-grid">
+                            <button id="whatsappShareButton" type="button" class="trail-share-btn whatsapp">
+                                <span class="trail-share-icon" style="background:#25D366 !important;">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                                        xmlns="http://www.w3.org/2000/svg">
+                                        <path
+                                            d="M7.5 4.5C8 4 9 4.2 9.4 5L10.5 7.2C10.8 7.8 10.7 8.4 10.3 8.9L9.5 9.8C10.4 11.6 11.8 13 13.6 13.9L14.5 13.1C15 12.7 15.6 12.6 16.2 12.9L18.4 14C19.2 14.4 19.4 15.4 18.9 16.1C18 17.4 16.6 18.2 15.1 18.2C10.2 18.2 5.8 13.8 5.8 8.9C5.8 7.4 6.4 5.8 7.5 4.5Z"
+                                            fill="white" />
+                                    </svg>
+                                </span>
+                                <span>WhatsApp</span>
+                            </button>
+
+                            <button id="copyLinkButton" type="button" class="trail-share-btn copy">
+                                <span class="trail-share-icon">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                                        xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M10 13a5 5 0 0 0 7.1.1l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1"
+                                            stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                                        <path d="M14 11a5 5 0 0 0-7.1-.1l-2 2A5 5 0 0 0 12 20l1.1-1.1"
+                                            stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                                    </svg>
+                                </span>
+                                <span>Copy Link</span>
+                            </button>
+
+                            <button id="openMapsButton" type="button" class="trail-share-btn maps">
+                                <span class="trail-share-icon">
+                                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
+                                        xmlns="http://www.w3.org/2000/svg">
+                                        <path
+                                            d="M12 21C12 21 18 15.5 18 9.5C18 6.2 15.3 3.5 12 3.5C8.7 3.5 6 6.2 6 9.5C6 15.5 12 21 12 21Z"
+                                            fill="#4285F4" />
+                                        <circle cx="12" cy="9.5" r="2.2" fill="white" />
+                                    </svg>
+                                </span>
+                                <span>Maps</span>
+                            </button>
+                        </div>
                     </div>
-                    <button id="whatsappShareButton"
-                        class="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#25D366] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1da851]">
-                        <span
-                            class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#25D366]">W</span>
-                        Share on WhatsApp
+
+                    <button id="addFavoriteButton" type="button" class="trail-favourite-btn">
+                        <span class="text-xl">★</span>
+                        <span>Add to Favourite</span>
                     </button>
-                    <button id="copyLinkButton"
-                        class="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#F7E4C1] px-4 text-sm font-semibold text-[#1F1B19] shadow-sm transition hover:bg-[#E6D2A1]">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M8 8h8M8 12h8M8 16h5" stroke="#B8874A" stroke-width="2" stroke-linecap="round" />
-                        </svg>
-                        Copy Link
-                    </button>
-                    <button id="openMapsButton"
-                        class="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#4285F4] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#3367d6]">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M6 3h12l3 3v15l-3 3H6l-3-3V6l3-3Z" stroke="white" stroke-width="2"
+
+                    <button id="exitTrailButton" type="button" class="trail-exit-btn">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M9 5H5C3.9 5 3 5.9 3 7V17C3 18.1 3.9 19 5 19H9" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" />
+                            <path d="M14 8L18 12L14 16" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                 stroke-linejoin="round" />
-                            <path d="M9 13h6" stroke="white" stroke-width="2" stroke-linecap="round" />
+                            <path d="M8 12H18" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
                         </svg>
-                        Open in Google Maps
+                        <span>Exit Trail</span>
                     </button>
-                    <button id="addFavoriteButton"
-                        class="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#B8874A] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#9c6f33]">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M12 20l-7.5 4 2-8.5L1 9.5l8.75-1.3L12 1l2.25 7.2L23 9.5l-5.5 6.1 2 8.5L12 20Z"
-                                fill="white" />
-                        </svg>
-                        Add to Favourite
-                    </button>
-                    <div class="mt-4 rounded-[20px] border border-[#E9D7BF] bg-white px-4 py-4">
-                        <label for="travelModeSelect"
-                            class="block text-[11px] uppercase tracking-[0.22em] text-[#B08B59]">Travel mode</label>
-                        <select id="travelModeSelect" class="mt-2 w-full bg-transparent text-sm outline-none">
-                            <option value="WALKING">Walking</option>
-                            <option value="DRIVING">Driving</option>
-                            <option value="TRANSIT">Public Transport</option>
-                            <option value="BICYCLING">Cycling</option>
-                        </select>
-                    </div>
-                    <button id="exitTrailButton"
-                        class="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-full border border-[#E9D7BF] bg-white px-4 text-sm font-semibold text-[#6B553F] shadow-sm transition hover:bg-[#FBF2E4]">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M9 18l6-6-6-6" stroke="#6B553F" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round" />
-                            <path d="M15 12H4" stroke="#6B553F" stroke-width="2" stroke-linecap="round" />
-                        </svg>
-                        Exit
-                    </button>
+
                     <div id="trailDirectionsPanel"
-                        class="mt-4 rounded-[24px] border border-[#F0D6C4] bg-[#FFF9F1] px-4 py-4 text-sm text-[#6B5B4B]">
+                        class="mt-4 rounded-[18px] border border-[#F0DDC8] bg-[#FFF9F1] px-4 py-3 text-sm text-[#6B5B4B]">
                         <p class="font-semibold text-[#1F1B19]">Showing all destinations in your food trail.</p>
                         <p class="mt-1">Directions will appear after the route is loaded.</p>
                     </div>
@@ -562,7 +778,8 @@
             </aside>
         </div>
 
-        <div class="trail-tip mt-6 rounded-[24px] border border-[#EADCC8] bg-[#FFFAF5] p-4 text-sm text-[#6B5B4B] shadow-sm sm:flex sm:items-center sm:justify-between">
+        <div
+            class="trail-tip mt-6 rounded-[24px] border border-[#EADCC8] bg-[#FFFAF5] p-4 text-sm text-[#6B5B4B] shadow-sm sm:flex sm:items-center sm:justify-between">
             <div class="flex items-center gap-3">
                 <span class="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-[#FDE7CA] text-[#D98F4F]">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -583,14 +800,21 @@
         class="fixed bottom-6 right-6 z-50 hidden max-w-sm rounded-[28px] border border-[#D8B58F] bg-white px-5 py-4 text-sm shadow-[0_16px_30px_rgba(62,44,23,0.12)]">
         <p id="trailToastText" class="text-[#1F1B19]"></p>
     </div>
-    <div id="trailCompleteModal" class="trail-complete-modal is-hidden" role="dialog" aria-modal="true" aria-labelledby="trailCompleteTitle">
+    <div id="trailCompleteModal" class="trail-complete-modal is-hidden" role="dialog" aria-modal="true"
+        aria-labelledby="trailCompleteTitle">
         <div class="w-full max-w-md rounded-[28px] bg-white p-6 shadow-[0_24px_60px_rgba(31,27,25,0.22)]">
             <p class="text-xs font-semibold uppercase tracking-[0.24em] text-[#B08B59]">Trail complete</p>
-            <h2 id="trailCompleteTitle" class="mt-3 text-2xl font-semibold text-[#1F1B19]">Would you like to save this food trail as a favourite?</h2>
-            <p class="mt-3 text-sm leading-6 text-[#6B5B4B]">You finished all selected destinations. Save this route so you can open it again from Food Trails.</p>
+            <h2 id="trailCompleteTitle" class="mt-3 text-2xl font-semibold text-[#1F1B19]">Would you like to save this
+                food trail as a favourite?</h2>
+            <p class="mt-3 text-sm leading-6 text-[#6B5B4B]">You finished all selected destinations. Save this route so
+                you can open it again from Food Trails.</p>
             <div class="mt-6 grid gap-3 sm:grid-cols-2">
-                <button id="saveCompletedTrailButton" class="h-12 rounded-full bg-[#B8874A] px-4 text-sm font-semibold text-white hover:bg-[#9c6f33]">Save as Favourite</button>
-                <button id="discardCompletedTrailButton" class="h-12 rounded-full border border-[#E9D7BF] bg-white px-4 text-sm font-semibold text-[#6B553F] hover:bg-[#FBF2E4]">Not Now</button>
+                <button id="saveCompletedTrailButton"
+                    class="h-12 rounded-full bg-[#B8874A] px-4 text-sm font-semibold text-white hover:bg-[#9c6f33]">Save
+                    as Favourite</button>
+                <button id="discardCompletedTrailButton"
+                    class="h-12 rounded-full border border-[#E9D7BF] bg-white px-4 text-sm font-semibold text-[#6B553F] hover:bg-[#FBF2E4]">Not
+                    Now</button>
             </div>
         </div>
     </div>
@@ -617,8 +841,8 @@
         let directionsRendererPrev = null;
         let infoWindow = null;
         let selectedMarkerId = null;
-        let routeDisplayMode = 'all';
-        let travelMode = 'WALKING';
+        let previewStopCount = 1;
+        let travelMode = 'DRIVING';
         let currentLocation = null;
         let hasOptimizedRouteOrder = false;
         const geocodeCache = new Map();
@@ -731,15 +955,10 @@
             }
         };
 
-        const getRouteStops = (mode = routeDisplayMode) => {
-            if (mode === 'all') return routeData.slice();
-            if (mode === 'current' || mode === 'next') return routeData.filter((item) => !item.visited);
-            if (mode === 'previous') return routeData.filter((item) => item.visited);
-            return routeData.slice();
-        };
+        const getPreviewStops = () => routeData.slice(0, Math.min(previewStopCount, routeData.length));
 
-        const setRouteDisplayMode = (mode) => {
-            routeDisplayMode = mode;
+        const setPreviewStopCount = (count) => {
+            previewStopCount = Math.max(1, Math.min(count, routeData.length || 1));
             updateRouteModeButtons();
             renderTrailMap();
         };
@@ -751,18 +970,23 @@
         };
 
         const updateRouteModeButtons = () => {
-            const baseClasses = 'rounded-full border px-4 py-2 text-sm font-semibold whitespace-nowrap flex-1 min-w-[120px] text-center transition duration-200';
-            const activeClasses = 'bg-[#B8874A] text-white border-transparent shadow-[0_8px_20px_rgba(46,32,16,0.12)] hover:bg-[#986f34]';
-            const inactiveClasses = 'bg-[#FCF6EA] text-[#6B553F] border-[#D8B58F] hover:bg-[#F3E7D0]';
+            const previousButton = getElement('showPreviousRouteButton');
+            const nextButton = getElement('showCurrentRouteShortcutButton');
+            const allStopsButton = getElement('showAllStopsButton');
+            const atFirstStop = previewStopCount <= 1;
+            const atAllStops = !routeData.length || previewStopCount >= routeData.length;
 
-            const setButtonState = (btn, isActive) => {
-                if (!btn) return;
-                btn.className = `${baseClasses} ${isActive ? activeClasses : inactiveClasses}`;
-            };
-
-            setButtonState(getElement('showAllStopsButton'), routeDisplayMode === 'all');
-            setButtonState(getElement('showCurrentRouteButton'), routeDisplayMode === 'current' || routeDisplayMode === 'next');
-            setButtonState(getElement('showPreviousRouteButton'), routeDisplayMode === 'previous');
+            [
+                [previousButton, atFirstStop],
+                [nextButton, atAllStops],
+            ].forEach(([button, disabled]) => {
+                if (!button) return;
+                button.disabled = disabled;
+                button.classList.toggle('cursor-not-allowed', disabled);
+                button.classList.toggle('opacity-50', disabled);
+                button.setAttribute('aria-disabled', String(disabled));
+            });
+            allStopsButton?.setAttribute('aria-pressed', String(atAllStops));
         };
 
         const getCurrentPosition = () => {
@@ -798,24 +1022,36 @@
 
         const geocodeRouteItem = (item, locationHint = '') => {
             if (!trailGoogleGeocoder) return Promise.resolve(null);
-            const address = `${item.name}, ${item.location}${locationHint ? `, ${locationHint}` : ''}`.trim();
-            if (geocodeCache.has(address)) {
-                return Promise.resolve({ item, position: geocodeCache.get(address) });
-            }
-            return new Promise((resolve) => {
-                trailGoogleGeocoder.geocode({ address }, (results, status) => {
-                    if (status === 'OK' && results[0]) {
+
+            const location = locationHint || item.location || '';
+            const addresses = [
+                [item.name, location].filter(Boolean).join(', '),
+                location,
+            ].filter((address, index, all) => address && all.indexOf(address) === index);
+
+            const geocodeAddress = (address) => {
+                if (geocodeCache.has(address)) return Promise.resolve(geocodeCache.get(address));
+
+                return new Promise((resolve) => {
+                    trailGoogleGeocoder.geocode({ address }, (results, status) => {
+                        if (status !== 'OK' || !results[0]) return resolve(null);
                         const position = {
                             lat: results[0].geometry.location.lat(),
                             lng: results[0].geometry.location.lng(),
                         };
                         geocodeCache.set(address, position);
-                        resolve({ item, position });
-                    } else {
-                        resolve(null);
-                    }
+                        resolve(position);
+                    });
                 });
-            });
+            };
+
+            return (async () => {
+                for (const address of addresses) {
+                    const position = await geocodeAddress(address);
+                    if (position) return { item, position };
+                }
+                return null;
+            })();
         };
 
         const getStopLabel = (item) => `${item.name}, ${item.location}`;
@@ -1137,15 +1373,7 @@
                 showToast('Trail route ordered from your current location.');
             }
 
-            // compute stops depending on selected display mode
-            const prevStops = getRouteStops('previous');
-            const currStops = getRouteStops('current');
-
-            if (!prevStops.length && !currStops.length) {
-                showTrailMessage('All destinations are completed. Great job!');
-                placeCurrentLocationMarker(currentLocation);
-                return;
-            }
+            const previewStops = getPreviewStops();
 
             const computeAndRender = (stops, renderer, opts = {}) => {
                 if (!stops.length) return;
@@ -1182,41 +1410,15 @@
                 }
             };
 
-            // when viewing previous route only
-            if (routeDisplayMode === 'previous') {
-                if (prevStops.length) {
-                    computeAndRender(prevStops, directionsRendererPrev, { useCurrentAsOrigin: false, polylineOptions: { strokeColor: '#6C757D', strokeOpacity: 0.9, strokeWeight: 6 } });
-                    showTrailMessage('Showing previously completed route.');
-                } else {
-                    showTrailMessage('No previous route available yet.');
-                }
-                await placeStopMarkers(routeData);
-                return;
-            }
-
-            // when viewing current route only (upcoming stops)
-            if (routeDisplayMode === 'current' || routeDisplayMode === 'next') {
-                if (currStops.length) {
-                    computeAndRender(currStops, directionsRenderer, { useCurrentAsOrigin: true, showDirections: true, polylineOptions: { strokeColor: '#D98F4F', strokeOpacity: 0.9, strokeWeight: 6 } });
-                    showTrailMessage('Showing current route to your next stops.');
-                } else {
-                    showTrailMessage('No upcoming stops.');
-                }
-                await placeStopMarkers(routeData);
-                return;
-            }
-
-            // 'all' mode: render previous and current separately (if any)
-            if (routeDisplayMode === 'all') {
-                if (prevStops.length) computeAndRender(prevStops, directionsRendererPrev, { useCurrentAsOrigin: false, polylineOptions: { strokeColor: '#6C757D', strokeOpacity: 0.9, strokeWeight: 6 } });
-                if (currStops.length) computeAndRender(currStops, directionsRenderer, { useCurrentAsOrigin: true, showDirections: true, polylineOptions: { strokeColor: '#D98F4F', strokeOpacity: 0.9, strokeWeight: 6 } });
-                showTrailMessage(currentLocation ? 'Showing all destinations from your current location.' : 'Showing all destinations in your food trail.');
-                await placeStopMarkers(routeData);
-                return;
-            }
-
-            // fallback: show markers only
-            await placeStopMarkers(routeData);
+            computeAndRender(previewStops, directionsRenderer, {
+                useCurrentAsOrigin: true,
+                showDirections: true,
+                polylineOptions: { strokeColor: '#D98F4F', strokeOpacity: 0.9, strokeWeight: 6 },
+            });
+            showTrailMessage(previewStopCount >= routeData.length
+                ? 'Showing all destinations from your current location.'
+                : `Showing the next ${previewStops.length} stop${previewStops.length === 1 ? '' : 's'} from your current location.`);
+            await placeStopMarkers(previewStops);
         };
 
         const toggleRestaurantVisited = (restaurantId) => {
@@ -1256,6 +1458,8 @@
             routeData = JSON.parse(localStorage.getItem(currentRouteKey) || '[]');
             visitedCount = routeData.filter((item) => item.visited).length;
             estimatedTime = routeData.reduce((total, item) => total + Math.max(8, Math.round(item.distance * 7)), 0);
+            previewStopCount = Math.max(1, Math.min(previewStopCount, routeData.length || 1));
+            updateRouteModeButtons();
         };
 
         const updateHeaderStatus = () => {
@@ -1295,8 +1499,12 @@
                         </div>
                     </div>
                     <div class="trail-stop-actions">
-                        <button data-visit-id="${item.id}" class="trail-visit-button ${item.visited ? 'is-visited' : ''}">${item.visited ? 'Visited' : 'Pending'}</button>
-                        <button data-remove-id="${item.id}" class="trail-remove-button" aria-label="Remove ${item.name}">x</button>
+                        <button data-visit-id="${item.id}" class="trail-visit-button ${item.visited ? 'is-visited' : ''}">
+                            ${item.visited ? '✓ Visited' : 'Pending'}
+                        </button>
+                        <button data-remove-id="${item.id}" class="trail-remove-button" aria-label="Remove ${item.name}">
+                            × Remove
+                        </button>
                     </div>
                 `;
                 const visitButton = card.querySelector('[data-visit-id]');
@@ -1357,23 +1565,40 @@
         };
 
         const getRouteOriginParam = async (showStatus = false) => {
+            // Always use the user's live/current GPS position for shared routes.
+            // Do not fall back to a restaurant, hostel, saved address, or first stop.
             const origin = await getCurrentPositionForRoute(showStatus);
-            return origin ? encodeURIComponent(`${origin.lat},${origin.lng}`) : '';
+
+            if (!origin) {
+                if (showStatus) {
+                    showToast('Please allow location access so the route can start from your current location.');
+                    showTrailMessage('Location access is required to create a route starting from your current location.');
+                }
+                return '';
+            }
+
+            return encodeURIComponent(`${origin.lat},${origin.lng}`);
         };
 
         const getGoogleMapsRouteLink = async (showStatus = false) => {
             if (!routeData.length) return '';
 
-            const currentOrigin = await getRouteOriginParam(showStatus);
-            const origin = currentOrigin || encodeURIComponent(getStopLabel(routeData[0]));
             const destination = encodeURIComponent(getStopLabel(routeData[routeData.length - 1]));
-            const waypointStops = currentOrigin ? routeData.slice(0, -1) : routeData.slice(1, -1);
+
+            // Deliberately omit `origin`: Google Maps then fills the first
+            // field with the current location of the person opening the link
+            // ("Your location"), instead of showing a saved GPS coordinate
+            // as an address. The restaurant order remains Stop 1 → Stop N.
+            const waypointStops = routeData.slice(0, -1);
             const waypointList = waypointStops.map((item) => encodeURIComponent(getStopLabel(item)));
             const waypoints = waypointList.join('%7C');
-            let mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=${travelMode.toLowerCase()}`;
+
+            let mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=${travelMode.toLowerCase()}`;
+
             if (waypoints) {
                 mapsUrl += `&waypoints=${waypoints}`;
             }
+
             return mapsUrl;
         };
 
@@ -1383,7 +1608,9 @@
                 return;
             }
             const mapsLink = await getGoogleMapsRouteLink(true);
-            const text = encodeURIComponent(`Here is my WarisanMakan Food Trail route:\n\n${routeData.map((item) => item.name).join(' -> ')}\n\nOpen the route in Google Maps:\n${mapsLink}`);
+            if (!mapsLink) return;
+
+            const text = encodeURIComponent(`Here is my WarisanMakan Food Trail route:\n\nCurrent Location -> ${routeData.map((item) => item.name).join(' -> ')}\n\nOpen the route in Google Maps:\n${mapsLink}`);
             window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
         };
 
@@ -1393,7 +1620,9 @@
                 return;
             }
             const mapsLink = await getGoogleMapsRouteLink(true);
-            const shareText = `My WarisanMakan route: ${routeData.map((item) => item.name).join(' -> ')}\nOpen in Google Maps: ${mapsLink}`;
+            if (!mapsLink) return;
+
+            const shareText = `My WarisanMakan route: Current Location -> ${routeData.map((item) => item.name).join(' -> ')}\nOpen in Google Maps: ${mapsLink}`;
             try {
                 await navigator.clipboard.writeText(shareText);
                 showToast('Route link copied to clipboard.');
@@ -1409,6 +1638,7 @@
                 return;
             }
             const mapsUrl = await getGoogleMapsRouteLink(true);
+            if (!mapsUrl) return;
             window.open(mapsUrl, '_blank');
         };
 
@@ -1470,15 +1700,15 @@
 
         const toggleCompleteTrail = () => {
             if (!routeData.length) return;
-            const allVisited = routeData.every((item) => item.visited);
-            routeData = routeData.map((item) => ({ ...item, visited: !allVisited }));
+            const nextStop = routeData.find((item) => !item.visited);
+            if (!nextStop) return;
+            routeData = routeData.map((item) => item.id === nextStop.id ? { ...item, visited: true } : item);
             localStorage.setItem(currentRouteKey, JSON.stringify(routeData));
             updateRouteData();
             renderRouteItems();
             updateHeaderStatus();
-            const message = allVisited ? 'Trail completion reset.' : 'Trail marked as complete.';
             renderTrailMap();
-            showToast(message);
+            showToast(`${nextStop.name} marked as complete.`);
         };
 
         const clearTrail = () => {
@@ -1523,9 +1753,10 @@
             getElement('discardCompletedTrailButton')?.addEventListener('click', () => finishCompletedTrail(false));
             getElement('clearTrailButton')?.addEventListener('click', clearTrail);
             getElement('exitTrailButton')?.addEventListener('click', exitTrail);
-            getElement('showAllStopsButton')?.addEventListener('click', () => setRouteDisplayMode('all'));
-            getElement('showCurrentRouteButton')?.addEventListener('click', () => setRouteDisplayMode('current'));
-            getElement('showPreviousRouteButton')?.addEventListener('click', () => setRouteDisplayMode('previous'));
+            getElement('showAllStopsButton')?.addEventListener('click', () => setPreviewStopCount(routeData.length));
+            getElement('showCurrentRouteButton')?.addEventListener('click', () => setPreviewStopCount(previewStopCount));
+            getElement('showCurrentRouteShortcutButton')?.addEventListener('click', () => setPreviewStopCount(previewStopCount + 1));
+            getElement('showPreviousRouteButton')?.addEventListener('click', () => setPreviewStopCount(previewStopCount - 1));
             getElement('travelModeSelect')?.addEventListener('change', (event) => setTravelMode(event.target.value));
             updateRouteStats();
         });

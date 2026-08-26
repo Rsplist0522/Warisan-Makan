@@ -12,7 +12,7 @@
     <section class="record-list">
         @forelse ($suggestions as $suggestion)
             <article class="record-card">
-                <div><span class="badge {{ $suggestion->is_published ? 'badge-approved' : 'badge-draft' }}">{{ $suggestion->is_published ? 'Published' : 'Hidden' }}</span><h2>{{ $suggestion->title }}</h2><p>{{ $suggestion->subtitle }}</p><div class="record-meta"><span>{{ $suggestion->location }}</span><span>{{ $suggestion->category }}</span></div></div>
+                <div><span class="badge {{ $suggestion->is_published ? 'badge-approved' : 'badge-draft' }}">{{ $suggestion->is_published ? 'Published' : 'Hidden' }}</span><h2>{{ $suggestion->title }}</h2><p>{{ $suggestion->summary }}</p><div class="record-meta"><span>{{ $suggestion->restaurants_count }} stops</span></div></div>
                 <div class="record-actions"><a class="button secondary small" href="{{ route('admin.food-trails.edit', $suggestion) }}">Edit</a><form method="POST" action="{{ route('admin.food-trails.destroy', $suggestion) }}">@csrf @method('DELETE')<button class="button danger small" onclick="return confirm('Remove this suggestion?')">Remove</button></form></div>
             </article>
         @empty

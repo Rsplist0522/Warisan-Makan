@@ -94,6 +94,16 @@ class HeritageShop extends Model
         return $this->hasMany(ShopImage::class, 'shop_id')->orderBy('is_primary', 'desc')->orderBy('id');
     }
 
+    public function foodItems()
+    {
+        return $this->hasMany(HeritageFoodItem::class, 'heritage_shop_id')->orderBy('display_order')->orderBy('id');
+    }
+
+    public function activeFoodItems()
+    {
+        return $this->foodItems()->where('is_active', true);
+    }
+
     public function media()
     {
         return $this->morphMany(Media::class, 'attachable')->orderBy('display_order');

@@ -25,6 +25,9 @@
             <p>{{ $mode === 'create' ? 'Create a verified public record and review any crawler suggestions before publishing.' : 'Update the public listing and rewrite any imported data as needed.' }}</p>
         </div>
         <div class="actions">
+            @if ($mode === 'edit')
+                <a class="button secondary small" href="{{ route('admin.heritage-shops.food-items.index', $shop) }}">Manage food catalog</a>
+            @endif
             <a class="button secondary small" href="{{ route('admin.heritage-shops.index') }}">Back to list</a>
         </div>
     </header>
@@ -151,9 +154,17 @@
                 </section>
 
                 <section class="panel">
-                    <div style="display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:14px;">
-                        <h2 style="margin:0;">Menu items</h2>
-                        <button type="button" class="button secondary small" id="add-menu-item">Add menu item</button>
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:8px;">
+                        <div>
+                            <h2 style="margin:0 0 5px;">Menu items</h2>
+                            <p class="help-text" style="margin:0;">Quick profile entries appear on the public page. For photos, availability, categories, and heritage significance, use the dedicated food catalog.</p>
+                        </div>
+                        <div class="actions">
+                            @if ($mode === 'edit')
+                                <a class="button secondary small" href="{{ route('admin.heritage-shops.food-items.index', $shop) }}">Open catalog</a>
+                            @endif
+                            <button type="button" class="button secondary small" id="add-menu-item">Add quick item</button>
+                        </div>
                     </div>
                     <div id="menu-items-container" style="display:grid; gap:12px;"></div>
                 </section>

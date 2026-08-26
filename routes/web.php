@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AdminCommunityContributionController;
 use App\Http\Controllers\Admin\BlindBoxController as AdminBlindBoxController;
+use App\Http\Controllers\Admin\HeritageFoodItemAdminController;
 use App\Http\Controllers\Admin\HeritageShopAdminController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\AuthController;
@@ -28,10 +29,10 @@ Route::view('/landing', 'landing')->name('landing');
 Route::middleware(['auth', 'active_user'])->group(function (): void {
     Route::middleware('regular_user')->group(function (): void {
         Route::get('/', function () {
-            return view('user-home', ['userName' => auth()->user()->name]);
+            return view('user-home', ['userName' => request()->user()->name]);
         })->name('home');
         Route::get('/dashboard', function () {
-            return view('user-home', ['userName' => auth()->user()->name]);
+            return view('user-home', ['userName' => request()->user()->name]);
         })->name('user.dashboard');
     });
 
@@ -103,6 +104,12 @@ Route::prefix('admin')
             Route::get('/{heritageShop}/edit', [HeritageShopAdminController::class, 'edit'])->name('edit');
             Route::put('/{heritageShop}', [HeritageShopAdminController::class, 'update'])->name('update');
             Route::post('/crawl', [HeritageShopAdminController::class, 'crawl'])->name('crawl');
+            Route::get('/{heritageShop}/food-items', [HeritageFoodItemAdminController::class, 'index'])->name('food-items.index');
+            Route::get('/{heritageShop}/food-items/{foodItem}/image', [HeritageFoodItemAdminController::class, 'image'])->name('food-items.image');
+            Route::post('/{heritageShop}/food-items', [HeritageFoodItemAdminController::class, 'store'])->name('food-items.store');
+            Route::put('/{heritageShop}/food-items/{foodItem}', [HeritageFoodItemAdminController::class, 'update'])->name('food-items.update');
+            Route::patch('/{heritageShop}/food-items/{foodItem}/toggle', [HeritageFoodItemAdminController::class, 'toggle'])->name('food-items.toggle');
+            Route::delete('/{heritageShop}/food-items/{foodItem}', [HeritageFoodItemAdminController::class, 'destroy'])->name('food-items.destroy');
         });
 
         Route::prefix('blind-box-items')->name('blind-box-items.')->group(function (): void {
@@ -189,6 +196,14 @@ Route::get('/heritage-shops/{heritageShop}/images/{image}', [HeritageShopControl
     ->whereNumber('heritageShop')
     ->whereNumber('image')
     ->name('heritage-shops.images.show');
+Route::get('/heritage-shops/{heritageShop}/food-items/{foodItem}', [HeritageShopController::class, 'foodItem'])
+    ->whereNumber('heritageShop')
+    ->whereNumber('foodItem')
+    ->name('heritage-shops.food-items.show');
+Route::get('/heritage-shops/{heritageShop}/food-items/{foodItem}/image', [HeritageShopController::class, 'foodImage'])
+    ->whereNumber('heritageShop')
+    ->whereNumber('foodItem')
+    ->name('heritage-shops.food-images.show');
 Route::post('/heritage-shops/{heritageShop}/ai-guide', [HeritageShopController::class, 'aiGuide'])
     ->middleware('throttle:30,1')
     ->whereNumber('heritageShop')

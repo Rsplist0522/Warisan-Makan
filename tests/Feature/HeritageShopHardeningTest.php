@@ -32,9 +32,9 @@ class HeritageShopHardeningTest extends TestCase
         $image = $shop->images()->firstOrFail();
 
         $this->assertSame('heritage-shops', dirname($image->path));
-        Storage::disk('public')->assertExists($image->path);
+        $this->assertTrue(Storage::disk('public')->exists($image->path));
 
-        auth()->logout();
+        auth()->guard()->logout();
         $this->get(route('heritage-shops.images.show', [
             'heritageShop' => $shop->id,
             'image' => $image->id,
@@ -54,8 +54,8 @@ class HeritageShopHardeningTest extends TestCase
         );
 
         $this->assertStringStartsWith('heritage-shops/', $path);
-        Storage::disk('r2')->assertExists($path);
-        Storage::disk('public')->assertMissing($path);
+        $this->assertTrue(Storage::disk('r2')->exists($path));
+        $this->assertFalse(Storage::disk('public')->exists($path));
     }
 
     public function test_legacy_public_images_remain_readable_after_disk_migration(): void
@@ -120,8 +120,8 @@ class HeritageShopHardeningTest extends TestCase
 
         $this->assertDatabaseHas('shop_images', ['id' => $firstImage->id, 'deleted_at' => null]);
         $this->assertDatabaseHas('shop_images', ['id' => $secondImage->id, 'deleted_at' => null]);
-        Storage::disk('public')->assertExists($firstPath);
-        Storage::disk('public')->assertExists($secondPath);
+        $this->assertTrue(Storage::disk('public')->exists($firstPath));
+        $this->assertTrue(Storage::disk('public')->exists($secondPath));
     }
 
     public function test_replacing_primary_image_removes_the_old_blob_and_preserves_primary_status(): void
@@ -142,10 +142,10 @@ class HeritageShopHardeningTest extends TestCase
         ])->assertRedirect();
 
         $this->assertDatabaseMissing('shop_images', ['id' => $oldImage->id]);
-        Storage::disk('public')->assertMissing($oldPath);
+        $this->assertFalse(Storage::disk('public')->exists($oldPath));
         $replacement = $shop->fresh()->images()->firstOrFail();
         $this->assertTrue($replacement->is_primary);
-        Storage::disk('public')->assertExists($replacement->path);
+        $this->assertTrue(Storage::disk('public')->exists($replacement->path));
     }
 
     public function test_crawler_rejects_private_page_targets_before_making_a_request(): void
@@ -203,7 +203,7 @@ class HeritageShopHardeningTest extends TestCase
         $response->assertOk();
         $path = $response->json('images.0');
         $this->assertIsString($path);
-        Storage::disk('public')->assertExists($path);
+        $this->assertTrue(Storage::disk('public')->exists($path));
     }
 
     private function admin(): User

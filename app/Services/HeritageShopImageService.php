@@ -6,6 +6,7 @@ use App\Models\ShopImage;
 use Illuminate\Http\File;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Filesystem\FilesystemAdapter;
 use RuntimeException;
 
 class HeritageShopImageService
@@ -70,16 +71,23 @@ class HeritageShopImageService
      * New records use the configured HeritageShop disk; older records are read
      * from the public and legacy media disks when that file still exists.
      */
-    public function response(ShopImage $image)
+        public function response(ShopImage $image)
     {
-        $disk = $this->diskForPath($image->path);
+        return $this->responseForPath($image->path);
+    }
+
+    public function responseForPath(string $path, ?string $downloadName = null)
+    {
+        $disk = $this->diskForPath($path);
 
         abort_unless($disk !== null, 404);
 
-        return $disk->response($image->path, basename($image->path), [
+        return $disk->response($path, $downloadName ?: basename($path), [
             'Cache-Control' => 'public, max-age=86400',
         ]);
     }
+
+
 
     /**
      * Delete a file from the configured disk and known legacy disks without
@@ -101,7 +109,7 @@ class HeritageShopImageService
         return $this->diskForPath($path) !== null;
     }
 
-    private function diskForPath(?string $path)
+    private function diskForPath(?string $path): ?FilesystemAdapter
     {
         if (blank($path)) {
             return null;

@@ -8,16 +8,26 @@
         <div>
             <p class="eyebrow">Registry</p>
             <h1>Heritage Shop records</h1>
-            <p>Review and manage heritage food businesses, images, locations, and public cultural profiles.</p>
+                        <p>Review and manage verified heritage food businesses, their living stories, galleries, and visitor-facing food catalogs.</p>
+
         </div>
         <div class="actions">
             <a class="button primary small" href="{{ route('admin.heritage-shops.create') }}">Add shop</a>
         </div>
     </header>
 
-    @if (session('success'))
+        @if (session('success'))
         <div class="status-banner success">{{ session('success') }}</div>
     @endif
+
+    <section class="heritage-admin-spotlight" aria-label="HeritageShop management highlights">
+        <div><span class="spotlight-label">Registry health</span><strong>{{ $shops->total() }}</strong><span>records in this view</span></div>
+        <div><span class="spotlight-label">Food coverage</span><strong>{{ $shops->sum(fn ($shop) => $shop->foodItems->count()) }}</strong><span>food items on this page</span></div>
+        <div><span class="spotlight-label">Public storytelling</span><strong>{{ $shops->filter(fn ($shop) => filled($shop->heritage_story))->count() }}</strong><span>profiles with stories</span></div>
+        <div class="spotlight-message"><strong>Make every dish memorable.</strong><span>Open a shop’s food catalog to add names, prices, photos, availability, and heritage significance.</span></div>
+    </section>
+
+
 
     <section class="panel" style="margin-bottom:18px;">
         <form method="GET" action="{{ route('admin.heritage-shops.index') }}">
@@ -92,15 +102,19 @@
                                 <div class="record-meta">
                                     <span>{{ $shop->primary_food_category ?: 'Uncategorized' }}</span>
                                     <span>{{ $shop->state ?: 'State not provided' }}</span>
-                                    <span>{{ $shop->images->count() }} image{{ $shop->images->count() === 1 ? '' : 's' }}</span>
+                                                                        <span>{{ $shop->images->count() }} image{{ $shop->images->count() === 1 ? '' : 's' }}</span>
+                                    <span>{{ $shop->foodItems->count() }} food item{{ $shop->foodItems->count() === 1 ? '' : 's' }}</span>
                                     <span>{{ $shop->publish_status ?: 'draft' }}</span>
+
                                     <span>{{ optional($shop->created_at)->format('d M Y') ?: 'Unknown date' }}</span>
                                 </div>
                             </div>
                         </div>
                         <div class="record-actions">
-                            <a class="button secondary small" href="{{ route('heritage-shops.show', $shop) }}" target="_blank" rel="noopener noreferrer">View</a>
+                                                        <a class="button secondary small" href="{{ route('heritage-shops.show', $shop) }}" target="_blank" rel="noopener noreferrer">View</a>
+                            <a class="button secondary small" href="{{ route('admin.heritage-shops.food-items.index', $shop) }}">Manage food</a>
                             <a class="button primary small" href="{{ route('admin.heritage-shops.edit', $shop) }}">Edit</a>
+
                         </div>
                     </article>
                 @endforeach
@@ -110,4 +124,18 @@
             @endif
         @endif
     </section>
+@push('styles')
+<style>
+    .heritage-admin-spotlight { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)) minmax(260px,2fr); gap:10px; margin-bottom:18px; }
+    .heritage-admin-spotlight > div { display:grid; gap:4px; padding:15px; border:1px solid var(--line); border-radius:14px; background:var(--panel); }
+    .heritage-admin-spotlight strong { color:var(--accent); font-family:Georgia,serif; font-size:1.35rem; }
+    .heritage-admin-spotlight span { color:var(--muted); font-size:.76rem; line-height:1.4; }
+    .heritage-admin-spotlight .spotlight-label { color:var(--gold); font-size:.68rem; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
+    .heritage-admin-spotlight .spotlight-message { background:linear-gradient(135deg,#fff8eb,#fffdf9); }
+    .heritage-admin-spotlight .spotlight-message strong { color:var(--accent); font-family:inherit; font-size:.92rem; }
+    @media (max-width:900px) { .heritage-admin-spotlight { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+    @media (max-width:560px) { .heritage-admin-spotlight { grid-template-columns:1fr; } }
+</style>
+@endpush
+
 @endsection

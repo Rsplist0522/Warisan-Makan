@@ -103,6 +103,9 @@
         .description { margin: 0; color: var(--wm-muted); font-size: .88rem; line-height: 1.55; }
         .card-facts { display: grid; gap: 7px; margin: 16px 0; padding-top: 14px; border-top: 1px solid var(--wm-line); color: var(--wm-muted); font-size: .82rem; }
         .card-facts strong { color: var(--wm-ink); }
+        .food-coverage { display: inline-flex; width: fit-content; align-items: center; gap: 6px; margin-top: 12px; padding: 5px 9px; border-radius: 999px; color: var(--wm-green); background: rgba(61,111,85,.09); font-size: .7rem; font-weight: 900; }
+        .food-coverage::before { content: '✦'; color: var(--wm-gold); }
+        .food-coverage.empty { color: var(--wm-muted); background: rgba(109,91,79,.1); }
         .card-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; }
         .status { display: inline-flex; width: fit-content; align-items: center; border-radius: 999px; padding: 5px 9px; color: var(--wm-green); background: rgba(61, 111, 85, .11); font-size: .7rem; font-weight: 850; letter-spacing: .04em; text-transform: uppercase; }
         .pagination { display:flex; justify-content:center; gap:8px; margin-top:22px; }
@@ -129,10 +132,29 @@
         dt { color: var(--wm-muted); font-size: .7rem; font-weight: 850; letter-spacing: .06em; text-transform: uppercase; }
         dd { margin: 4px 0 0; white-space: pre-line; }
         .menu-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
-        .menu-card { padding: 14px 16px; border: 1px solid var(--wm-line); border-radius: 12px; background: #fff; }
-        .menu-card h3 { margin: 0 0 5px; color: var(--wm-accent); font-size: 1rem; }
+        .menu-card { overflow: hidden; display: flex; min-height: 170px; flex-direction: column; border: 1px solid var(--wm-line); border-radius: 14px; background: #fff; transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
+        .menu-card:hover { transform: translateY(-3px); border-color: rgba(163, 58, 45, .24); box-shadow: 0 16px 30px rgba(77, 48, 34, .1); }
+        .menu-card-image { width: 100%; height: 130px; object-fit: cover; background: #f1e5d7; }
+        .menu-card-content { display: flex; flex: 1; flex-direction: column; padding: 15px 16px; }
+        .menu-card h3 { margin: 0 0 6px; color: var(--wm-accent); font-size: 1.08rem; }
+        .menu-card h3 a { color: inherit; text-decoration: none; }
+        .menu-card h3 a:hover, .menu-card h3 a:focus-visible { text-decoration: underline; outline: 2px solid rgba(163,58,45,.25); outline-offset: 3px; }
         .menu-card p { margin: 0; color: var(--wm-muted); font-size: .88rem; line-height: 1.5; }
-        .menu-price { display: inline-flex; margin-bottom: 9px; padding: 5px 9px; border-radius: 999px; color: #3f2a0d; background: rgba(200, 148, 50, .2); font-size: .74rem; font-weight: 850; }
+        .menu-card-top { display: flex; justify-content: space-between; align-items: start; gap: 9px; margin-bottom: 8px; }
+        .menu-category { color: var(--wm-gold); font-size: .68rem; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+        .menu-price { display: inline-flex; width: fit-content; margin: 0 0 9px; padding: 5px 9px; border-radius: 999px; color: #3f2a0d; background: rgba(200, 148, 50, .2); font-size: .74rem; font-weight: 850; white-space: nowrap; }
+        .menu-meta { display: flex; flex-wrap: wrap; gap: 7px; margin-top: auto; padding-top: 13px; }
+        .menu-meta span { padding: 4px 8px; border-radius: 999px; color: var(--wm-green); background: rgba(61,111,85,.09); font-size: .7rem; font-weight: 850; }
+        .menu-significance { margin-top: 12px; padding-top: 11px; border-top: 1px solid var(--wm-line); color: var(--wm-muted); font-size: .8rem; line-height: 1.5; }
+        .menu-significance summary { color: var(--wm-accent); font-weight: 850; cursor: pointer; }
+        .menu-significance p { margin-top: 8px; font-size: .82rem; }
+        .section-heading { display: flex; justify-content: space-between; align-items: start; gap: 16px; margin-bottom: 16px; }
+        .section-kicker { margin: 0 0 5px; color: var(--wm-gold); font-size: .68rem; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
+        .section-heading h2 { margin: 0 0 5px; color: var(--wm-accent); }
+        .section-heading p { margin: 0; color: var(--wm-muted); font-size: .83rem; line-height: 1.5; }
+        .section-count { display: inline-flex; align-items: center; min-height: 31px; padding: 0 10px; border-radius: 999px; color: var(--wm-green); background: rgba(61,111,85,.09); font-size: .7rem; font-weight: 900; white-space: nowrap; }
+        .menu-empty { display: grid; place-items: center; min-height: 130px; padding: 20px; border: 1px dashed rgba(163,58,45,.22); border-radius: 12px; color: var(--wm-muted); background: linear-gradient(135deg, rgba(239,224,207,.45), rgba(255,253,249,.75)); text-align: center; }
+        .menu-empty strong { display: block; margin-bottom: 5px; color: var(--wm-accent); font-family: Georgia, serif; font-size: 1.1rem; }
                 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
         .ai-guide-panel { position: relative; overflow: hidden; margin-top: 22px;
  padding: 22px; border: 1px solid rgba(163, 58, 45, .2); border-radius: 16px; color: var(--wm-ink); background: linear-gradient(135deg, rgba(255, 247, 236, .98), rgba(255, 253, 249, .98)); box-shadow: 0 16px 38px rgba(91, 29, 29, .08); }
@@ -306,20 +328,57 @@
                             </div>
                         </section>
 
-                        @if (!empty($menuItems) && is_array($menuItems))
-                            <section class="info-section" style="margin-top:22px;">
-                                <h2>Menu highlights</h2>
+                        @php
+                            $menuItems = is_array($menuItems ?? null) ? $menuItems : [];
+                        @endphp
+                        <section id="food-menu" class="info-section menu-section" style="margin-top:22px;">
+                            <div class="section-heading">
+                                <div>
+                                    <p class="section-kicker">Living food heritage</p>
+                                    <h2>Heritage foods &amp; menu</h2>
+                                    <p>Discover the dishes recorded for this shop and the stories that make them worth remembering.</p>
+                                </div>
+                                <span class="section-count">{{ count($menuItems) }} recorded item{{ count($menuItems) === 1 ? '' : 's' }}</span>
+                            </div>
+                            @if ($menuItems !== [])
                                 <div class="menu-grid">
                                     @foreach ($menuItems as $item)
-                                        <div class="menu-card">
-                                            @if (!empty($item['price'])) <span class="menu-price">{{ $item['price'] }}</span> @endif
-                                            <h3>{{ $item['name'] ?? 'House special' }}</h3>
-                                            @if (!empty($item['desc'])) <p>{{ $item['desc'] }}</p> @endif
-                                        </div>
+                                        <article class="menu-card">
+                                            @if (!empty($item['image_url']))
+                                                <img class="menu-card-image" src="{{ $item['image_url'] }}" alt="{{ $item['name'] ?? 'Heritage food item' }} at {{ $shop->shop_name }}" loading="lazy" onerror="this.remove()">
+                                            @endif
+                                            <div class="menu-card-content">
+                                                <div class="menu-card-top">
+                                                    @if (!empty($item['category'])) <span class="menu-category">{{ $item['category'] }}</span> @endif
+                                                    @if (!empty($item['price'])) <span class="menu-price">{{ $item['price'] }}</span> @endif
+                                                </div>
+                                                <h3>
+                                                    @if (!empty($item['id']))
+                                                        <a href="{{ route('heritage-shops.food-items.show', [$shop, $item['id']]) }}">{{ $item['name'] ?? 'Heritage food item' }}</a>
+                                                    @else
+                                                        {{ $item['name'] ?? 'Heritage food item' }}
+                                                    @endif
+                                                </h3>
+                                                @if (!empty($item['desc']) || !empty($item['description'])) <p>{{ $item['desc'] ?? $item['description'] }}</p> @endif
+                                                @if (!empty($item['heritage_significance']))
+                                                    <details class="menu-significance">
+                                                        <summary>Why this dish matters</summary>
+                                                        <p>{{ $item['heritage_significance'] }}</p>
+                                                    </details>
+                                                @endif
+                                                @if (!empty($item['availability']))
+                                                    <div class="menu-meta"><span>{{ $item['availability'] }}</span></div>
+                                                @endif
+                                            </div>
+                                        </article>
                                     @endforeach
                                 </div>
-                            </section>
-                        @endif
+                            @else
+                                <div class="menu-empty">
+                                    <div><strong>The menu is still being documented</strong><span>Food items will appear here once the shop’s verified menu has been added.</span></div>
+                                </div>
+                            @endif
+                        </section>
 
                         @if ($shop->source_url)
                             <section class="info-section" style="margin-top:12px;">
@@ -419,7 +478,12 @@
                                             <div><strong>Location:</strong> {{ $shop->location ?: 'Not provided' }}</div>
                                                             @if ($shop->operating_hours)<div><strong>Hours:</strong> {{ is_array($shop->operating_hours) ? implode('; ', $shop->operating_hours) : $shop->operating_hours }}</div>@endif
                                         </div>
-                                        <div class="card-actions"><a class="button primary" href="{{ route('heritage-shops.show', ['id' => $shop->id]) }}">View details</a></div>
+                                        @if ($shop->activeFoodItems->isNotEmpty())
+                                            <span class="food-coverage">{{ $shop->activeFoodItems->count() }} verified food item{{ $shop->activeFoodItems->count() === 1 ? '' : 's' }}</span>
+                                        @else
+                                            <span class="food-coverage empty">Menu being documented</span>
+                                        @endif
+                                        <div class="card-actions"><a class="button primary" href="{{ route('heritage-shops.show', ['id' => $shop->id]) }}#food-menu">Explore food &amp; story</a></div>
                                     </div>
                                 </article>
                             @endforeach

@@ -68,16 +68,32 @@ class HeritageShopAiGuideService
 
     private function verifiedFacts(HeritageShop $shop): array
     {
-        $menu = collect(is_array($shop->food_items) ? $shop->food_items : [])
-            ->filter(fn ($item) => is_array($item) && filled($item['name'] ?? null))
-            ->map(fn (array $item): array => array_filter([
-                'name' => (string) ($item['name'] ?? ''),
-                'price' => $item['price'] ?? null,
-                'description' => $item['desc'] ?? $item['description'] ?? null,
-            ], fn ($value) => filled($value)))
-            ->take(12)
-            ->values()
-            ->all();
+        $normalizedItems = $shop->relationLoaded('activeFoodItems')
+            ? $shop->activeFoodItems
+            : $shop->activeFoodItems()->get();
+
+        $menu = $normalizedItems->isNotEmpty()
+            ? $normalizedItems->map(fn ($item): array => array_filter([
+                'name' => $item->name,
+                'price' => $item->price,
+                'description' => $item->description,
+                'category' => $item->category,
+                'heritage_significance' => $item->heritage_significance,
+                'availability' => $item->availability,
+            ], fn ($value) => filled($value)))->take(12)->values()->all()
+            : collect(is_array($shop->food_items) ? $shop->food_items : [])
+                ->filter(fn ($item) => is_array($item) && filled($item['name'] ?? null) && ($item['is_active'] ?? true) !== false)
+                ->map(fn (array $item): array => array_filter([
+                    'name' => (string) ($item['name'] ?? ''),
+                    'price' => $item['price'] ?? null,
+                    'description' => $item['desc'] ?? $item['description'] ?? null,
+                    'category' => $item['category'] ?? null,
+                    'heritage_significance' => $item['heritage_significance'] ?? null,
+                    'availability' => $item['availability'] ?? null,
+                ], fn ($value) => filled($value)))
+                ->take(12)
+                ->values()
+                ->all();
 
         return array_filter([
             'shop_name' => $shop->shop_name,

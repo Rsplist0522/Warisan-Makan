@@ -39,7 +39,7 @@ class HeritageShopAdminController extends Controller
         $sort = $request->string('sort')->toString();
 
         $shopsQuery = HeritageShop::query()
-            ->with('images')
+            ->with(['images', 'foodItems'])
             ->when($search !== '', function ($query) use ($search): void {
                 $query->where(function ($query) use ($search): void {
                     $query->where('shop_name', 'like', "%{$search}%")
@@ -102,6 +102,7 @@ class HeritageShopAdminController extends Controller
             $shop = HeritageShop::query()->create($data);
             $this->attachUploadedImages($shop, $request->file('images', []));
             $this->attachStoredCrawlerImages($shop, $request->input('crawler_images', []));
+            $this->syncNormalizedFoodItems($shop, $data['food_items'] ?? []);
             $this->removeRequestedImageIds($shop, $request->input('remove_images', []));
             $this->replaceRequestedImages($shop, $request->file('replace_images', []));
 
@@ -114,7 +115,7 @@ class HeritageShopAdminController extends Controller
 
     public function edit(HeritageShop $heritageShop): View
     {
-        $heritageShop->load('images');
+        $heritageShop->load(['images', 'foodItems']);
 
         return view('admin.heritage-shops.form', [
             'shop' => $heritageShop,
@@ -131,6 +132,7 @@ class HeritageShopAdminController extends Controller
             $heritageShop->fill($data)->save();
             $this->attachUploadedImages($heritageShop, $request->file('images', []));
             $this->attachStoredCrawlerImages($heritageShop, $request->input('crawler_images', []));
+            $this->syncNormalizedFoodItems($heritageShop, $data['food_items'] ?? []);
             $this->removeRequestedImageIds($heritageShop, $request->input('remove_images', []));
             $this->replaceRequestedImages($heritageShop, $request->file('replace_images', []));
 
@@ -209,13 +211,54 @@ class HeritageShopAdminController extends Controller
 
         return collect($items)
             ->filter(fn ($item) => is_array($item) && (filled($item['name'] ?? null) || filled($item['price'] ?? null) || filled($item['desc'] ?? null)))
-            ->map(fn (array $item): array => [
+            ->map(fn (array $item): array => array_filter([
+                'id' => is_numeric($item['id'] ?? null) ? (int) $item['id'] : null,
                 'name' => trim((string) ($item['name'] ?? '')),
                 'price' => trim((string) ($item['price'] ?? '')) ?: null,
-                'desc' => trim((string) ($item['desc'] ?? '')) ?: null,
-            ])
+                'desc' => trim((string) ($item['desc'] ?? $item['description'] ?? '')) ?: null,
+                'description' => trim((string) ($item['description'] ?? $item['desc'] ?? '')) ?: null,
+                'category' => trim((string) ($item['category'] ?? '')) ?: null,
+                'heritage_significance' => trim((string) ($item['heritage_significance'] ?? '')) ?: null,
+                'availability' => trim((string) ($item['availability'] ?? '')) ?: null,
+                'image_path' => trim((string) ($item['image_path'] ?? '')) ?: null,
+                'is_active' => ($item['is_active'] ?? true) !== false,
+            ], fn ($value) => filled($value) || $value === false))
             ->values()
             ->all();
+    }
+
+    private function syncNormalizedFoodItems(HeritageShop $shop, array $items): void
+    {
+        if ($items === []) {
+            return;
+        }
+
+        foreach (array_values($items) as $order => $item) {
+            if (! is_array($item) || blank($item['name'] ?? null)) {
+                continue;
+            }
+
+            $payload = [
+                'name' => trim((string) $item['name']),
+                'description' => filled($item['description'] ?? null) ? trim((string) $item['description']) : (filled($item['desc'] ?? null) ? trim((string) $item['desc']) : null),
+                'category' => filled($item['category'] ?? null) ? trim((string) $item['category']) : null,
+                'heritage_significance' => filled($item['heritage_significance'] ?? null) ? trim((string) $item['heritage_significance']) : null,
+                'availability' => filled($item['availability'] ?? null) ? trim((string) $item['availability']) : null,
+                'price' => filled($item['price'] ?? null) ? trim((string) $item['price']) : null,
+                'display_order' => $order,
+                'is_active' => ($item['is_active'] ?? true) !== false,
+            ];
+
+            $existing = is_numeric($item['id'] ?? null)
+                ? $shop->foodItems()->find((int) $item['id'])
+                : $shop->foodItems()->where('name', $payload['name'])->orderBy('id')->first();
+
+            if ($existing) {
+                $existing->update($payload);
+            } else {
+                $shop->foodItems()->create($payload);
+            }
+        }
     }
 
     private function attachUploadedImages(HeritageShop $shop, array $uploadedFiles): void

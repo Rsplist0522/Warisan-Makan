@@ -166,6 +166,19 @@ class HeritageShopController extends Controller
         return response()->json($aiGuide->answer($heritageShop, $validated['question']));
     }
 
+    public function menu(HeritageShop $heritageShop)
+    {
+        abort_unless($heritageShop->isPubliclyVisible(), 404);
+
+        $heritageShop->load(['images', 'activeFoodItems']);
+
+        return view('heritage.menu', [
+            'shop' => $heritageShop,
+            'menuItems' => $this->resolveFoodItems($heritageShop),
+            'imageService' => $this->imageService,
+        ]);
+    }
+
     public function foodItem(HeritageShop $heritageShop, HeritageFoodItem $foodItem)
     {
         abort_unless($foodItem->heritage_shop_id === $heritageShop->id, 404);
@@ -200,12 +213,8 @@ class HeritageShopController extends Controller
     }
 
     // Show a single shop detail by DB id
-    public function show(string $id, Request $request)
+    public function show(string $id)
     {
-        if (! $request->user()) {
-            abort(403, 'Please sign in with Google to view the heritage shop details.');
-        }
-
         $shop = HeritageShop::query()->published()->with(['images', 'activeFoodItems'])->findOrFail($id);
         $shops = HeritageShop::query()->published()->with(['images', 'activeFoodItems'])->orderBy('shop_name')->get();
         $menuItems = $this->resolveFoodItems($shop);

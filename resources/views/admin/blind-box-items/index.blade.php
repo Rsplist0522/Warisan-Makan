@@ -5,6 +5,31 @@
 
 @push('styles')
     <style>
+        .back-nav { margin-bottom: 22px; }
+        .back-btn { 
+            display: inline-flex; 
+            align-items: center; 
+            padding: 8px 16px 8px 12px;
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            color: var(--ink); 
+            text-decoration: none; 
+            font-size: 0.82rem; 
+            font-weight: 800; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            transition: all 0.2s ease;
+        }
+        .back-btn:hover { 
+            background: var(--canvas);
+            border-color: var(--accent);
+            color: var(--accent);
+            transform: translateX(-4px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+        }
+        .back-btn svg { margin-right: 8px; transition: transform 0.2s ease; }
+        .back-btn:hover svg { transform: translateX(-2px); }
+
         .catalog-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 180px)); gap: 10px; margin-bottom: 22px; }
         .catalog-stat { padding: 15px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
         .catalog-stat strong { display: block; font-family: Georgia, serif; font-size: 1.65rem; }
@@ -34,16 +59,12 @@
 @endpush
 
 @section('content')
-    @if (session('status'))
-        <div class="status-banner success">{{ session('status') }}</div>
-    @endif
-
-    @if ($errors->any())
-        <div class="status-banner error">
-            <strong>Please check the form:</strong>
-            <ul>@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>
-        </div>
-    @endif
+    <div class="back-nav">
+        <a href="{{ route('admin.dashboard') }}" class="back-btn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            Back to Dashboard
+        </a>
+    </div>
 
     <div class="page-header">
         <div>
@@ -51,12 +72,14 @@
             <h1>Recommendation pool</h1>
             <p>Shops not yet selected appear on the left; shops in the Blind Box appear on the right. Removing a shop returns it to the left list, where it can be re-added anytime.</p>
         </div>
-        <a class="button secondary" href="{{ route('blind-box.index') }}">Preview user view</a>
+        <div class="actions">
+            <a class="button secondary" href="{{ route('blind-box.index') }}">Preview user view</a>
+        </div>
     </div>
 
     <div class="catalog-summary">
-        <div class="catalog-stat"><strong>{{ $activeShops }}</strong><span>Shops in the Blind Box</span></div>
         <div class="catalog-stat"><strong>{{ count($availableShops) }}</strong><span>Shops not yet selected</span></div>
+        <div class="catalog-stat"><strong>{{ $activeShops }}</strong><span>Shops in the Blind Box</span></div>
     </div>
 
     <form class="catalog-toolbar" method="GET" action="{{ route('admin.blind-box-items.index') }}">
@@ -122,7 +145,7 @@
                             <p>{{ $shop['state'] }} · {{ $shop['year'] }}</p>
                             <div class="shop-actions">
                                 <a class="button secondary small" href="{{ route('admin.blind-box-items.edit', $shop['id']) }}">Edit shop</a>
-                                <form method="POST" action="{{ route('admin.blind-box-items.toggle', $shop['id']) }}">
+                                <form method="POST" action="{{ route('admin.blind-box-items.toggle', $shop['id']) }}" onsubmit="return confirm('Remove this shop from the Blind Box? It will return to the list on the left.');">
                                     @csrf
                                     @method('PATCH')
                                     <button class="button danger small" type="submit">Remove from reveals</button>
@@ -136,4 +159,19 @@
             </div>
         </section>
     </div>
+
+    <script>
+        // Auto-hide status banners after 3 seconds
+        document.addEventListener('DOMContentLoaded', function() {
+            const banners = document.querySelectorAll('.status-banner');
+            banners.forEach(banner => {
+                setTimeout(() => {
+                    banner.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                    banner.style.opacity = '0';
+                    banner.style.transform = 'translateY(-10px)';
+                    setTimeout(() => banner.remove(), 500);
+                }, 3000);
+            });
+        });
+    </script>
 @endsection

@@ -5,7 +5,7 @@
 @section('content')
     <header class="page-header">
         <div>
-            <p class="eyebrow">User function 2</p>
+            <p class="eyebrow">Saved drafts</p>
             <h1>Manage Drafts</h1>
             <p>Edit, submit, or permanently delete your unfinished heritage shop contributions.</p>
         </div>
@@ -27,7 +27,7 @@
                         <h2>{{ $draft->contribution_title ?: ($draft->shop_name ?: 'Untitled contribution') }}</h2>
                         <div class="record-meta">
                             <span>Shop: {{ $draft->shop_name ?: 'Not provided' }}</span>
-                            <span>Last updated: {{ $draft->updated_at->format('d M Y, g:i A') }}</span>
+                            <span>Last updated: {{ $draft->formatDateTime($draft->updated_at) }}</span>
                         </div>
                     </div>
                     <div class="record-actions">

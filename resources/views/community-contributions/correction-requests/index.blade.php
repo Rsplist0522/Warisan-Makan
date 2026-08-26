@@ -17,10 +17,13 @@
             <h2>Recent correction notifications</h2>
             <div style="margin-top:12px">
                 @foreach ($notifications as $notification)
-                    <a class="notification {{ $notification->read_at ? '' : 'unread' }}" style="display:block;text-decoration:none" href="{{ route('community-contribution.correction-requests.show', $notification->data['correction_request_id']) }}">
-                        <strong>{{ $notification->data['title'] }}</strong>
-                        <p>{{ $notification->data['message'] }}</p>
-                    </a>
+                    @php($notificationCorrectionRequest = $notificationCorrectionRequests->get($notification->data['correction_request_id'] ?? null))
+                    @if ($notificationCorrectionRequest)
+                        <a class="notification {{ $notification->read_at ? '' : 'unread' }}" style="display:block;text-decoration:none" href="{{ route('community-contribution.correction-requests.show', $notificationCorrectionRequest) }}">
+                            <strong>{{ $notification->data['title'] }}</strong>
+                            <p>{{ $notification->data['message'] }}</p>
+                        </a>
+                    @endif
                 @endforeach
             </div>
         </section>

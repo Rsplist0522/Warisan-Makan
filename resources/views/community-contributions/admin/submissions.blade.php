@@ -74,7 +74,7 @@
                             <span>Location: {{ collect([$submission->city, $submission->state])->filter()->join(', ') ?: $submission->address }}</span>
                             <span>Established: {{ $submission->establishment_year ?: 'Unknown' }}</span>
                             <span>Food type: {{ $submission->primary_food_category ?: 'Not provided' }}</span>
-                            <span>Submitted: {{ optional($submission->submitted_at)->format('d M Y, g:i A') }}</span>
+                            <span>Submitted: {{ $submission->formatDateTime($submission->submitted_at) }}</span>
                         </div>
                     </div>
                     <div class="record-actions">

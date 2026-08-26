@@ -3,11 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\HeritageShopContribution;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -17,25 +20,38 @@ class CommunityContributionController extends Controller
 {
     public function index(): View
     {
-        return view('community-contribution', ['contribution' => null]);
+        return view('community-contribution', [
+            'contribution' => null,
+            'formToken' => (string) Str::uuid(),
+        ]);
     }
 
     public function create(): View
     {
-        return view('community-contribution', ['contribution' => null]);
+        return view('community-contribution', [
+            'contribution' => null,
+            'formToken' => (string) Str::uuid(),
+        ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
         $validated = $this->validateContribution($request);
+        $submissionToken = $validated['submission_token'] ?? (string) Str::uuid();
         $storedMedia = [];
 
+        $existingContribution = $this->existingContributionForToken($request, $submissionToken);
+        if ($existingContribution !== null) {
+            return $this->duplicateSubmissionResponse($existingContribution);
+        }
+
         try {
-            $contribution = DB::transaction(function () use ($request, $validated, &$storedMedia) {
+            $contribution = DB::transaction(function () use ($request, $validated, $submissionToken, &$storedMedia) {
                 $action = $validated['submission_action'];
                 $contribution = HeritageShopContribution::create([
                     ...$this->contributionData($request, $validated),
                     'user_id' => $request->user()->id,
+                    'submission_token' => $submissionToken,
                     'status' => $action === 'draft'
                         ? HeritageShopContribution::STATUS_DRAFT
                         : HeritageShopContribution::STATUS_PENDING_REVIEW,
@@ -58,6 +74,16 @@ class CommunityContributionController extends Controller
             });
         } catch (Throwable $exception) {
             $this->deleteStoredMedia($storedMedia);
+
+            if ($exception instanceof QueryException
+                && $this->isDuplicateSubmissionTokenException($exception)) {
+                $existingContribution = $this->existingContributionForToken($request, $submissionToken);
+
+                if ($existingContribution !== null) {
+                    return $this->duplicateSubmissionResponse($existingContribution);
+                }
+            }
+
             throw $exception;
         }
 
@@ -82,7 +108,7 @@ class CommunityContributionController extends Controller
 
     public function edit(Request $request, HeritageShopContribution $contribution): View
     {
-        abort_unless($contribution->canBeEditedBy($request->user()), 403);
+        Gate::authorize('update', $contribution);
         $contribution->load('media');
 
         return view('community-contribution', compact('contribution'));
@@ -90,7 +116,7 @@ class CommunityContributionController extends Controller
 
     public function update(Request $request, HeritageShopContribution $contribution): RedirectResponse
     {
-        abort_unless($contribution->canBeEditedBy($request->user()), 403);
+        Gate::authorize('update', $contribution);
 
         $validated = $this->validateContribution($request);
         $contribution->load('media');
@@ -156,6 +182,10 @@ class CommunityContributionController extends Controller
                         ? ($oldStatus === HeritageShopContribution::STATUS_REVISION_REQUIRED ? 'resubmitted' : 'submitted')
                         : ($oldStatus === HeritageShopContribution::STATUS_REVISION_REQUIRED ? 'revision_updated' : 'draft_updated')
                 );
+
+                if ($isSubmitting && $oldStatus === HeritageShopContribution::STATUS_REVISION_REQUIRED) {
+                    $this->markRevisionNotificationsRead($request, $contribution);
+                }
             });
         } catch (Throwable $exception) {
             $this->deleteStoredMedia($storedMedia);
@@ -182,11 +212,7 @@ class CommunityContributionController extends Controller
 
     public function destroyDraft(Request $request, HeritageShopContribution $contribution): RedirectResponse
     {
-        abort_unless(
-            $contribution->user_id === $request->user()->id
-            && $contribution->status === HeritageShopContribution::STATUS_DRAFT,
-            403
-        );
+        Gate::authorize('deleteDraft', $contribution);
 
         $media = $contribution->media()->get();
         $contribution->delete();
@@ -199,11 +225,13 @@ class CommunityContributionController extends Controller
 
     public function submitDraft(Request $request, HeritageShopContribution $contribution): RedirectResponse
     {
-        abort_unless(
-            $contribution->user_id === $request->user()->id
-            && $contribution->status === HeritageShopContribution::STATUS_DRAFT,
-            403
-        );
+        if ((int) $contribution->user_id === (int) $request->user()->id
+            && $contribution->status === HeritageShopContribution::STATUS_PENDING_REVIEW) {
+            return redirect()->route('community-contribution.contributions.show', $contribution)
+                ->with('status', 'This draft was already submitted for review.');
+        }
+
+        Gate::authorize('submitDraft', $contribution);
 
         $missing = collect([
             'contribution_title',
@@ -246,9 +274,11 @@ class CommunityContributionController extends Controller
             HeritageShopContribution::STATUS_APPROVED,
             HeritageShopContribution::STATUS_REJECTED,
             HeritageShopContribution::STATUS_WITHDRAWN,
+            HeritageShopContribution::STATUS_DELETED,
         ];
 
         $query = $request->user()->heritageShopContributions()
+            ->withTrashed()
             ->whereIn('status', $allowedStatuses)
             ->latest('updated_at');
 
@@ -266,20 +296,26 @@ class CommunityContributionController extends Controller
         $contributions = $query->paginate(10)->withQueryString();
         $notifications = $request->user()->notifications()
             ->whereNotNull('data->contribution_id')
+            ->whereNull('read_at')
             ->latest()
             ->limit(5)
             ->get();
+        $notificationContributions = HeritageShopContribution::withTrashed()
+            ->whereIn('id', $notifications->pluck('data.contribution_id')->filter()->unique()->all())
+            ->get()
+            ->keyBy('id');
 
         return view('community-contributions.index', compact(
             'contributions',
             'notifications',
+            'notificationContributions',
             'allowedStatuses'
         ));
     }
 
     public function show(Request $request, HeritageShopContribution $contribution): View
     {
-        abort_unless($contribution->user_id === $request->user()->id, 403);
+        Gate::authorize('view', $contribution);
 
         $contribution->load(['media', 'versions.user', 'moderationActivities.actor']);
         $request->user()->unreadNotifications()
@@ -291,7 +327,7 @@ class CommunityContributionController extends Controller
 
     public function withdraw(Request $request, HeritageShopContribution $contribution): RedirectResponse
     {
-        abort_unless($contribution->user_id === $request->user()->id, 403);
+        Gate::authorize('view', $contribution);
 
         if (! $contribution->canBeWithdrawnBy($request->user())) {
             return back()->withErrors([
@@ -321,6 +357,7 @@ class CommunityContributionController extends Controller
     {
         $validated = $request->validate([
             'submission_action' => ['required', Rule::in(['draft', 'submit'])],
+            'submission_token' => ['nullable', 'uuid'],
             'contribution_title' => ['required_if:submission_action,submit', 'nullable', 'string', 'max:255'],
             'shop_name' => ['required_if:submission_action,submit', 'nullable', 'string', 'max:255'],
             'primary_food_category' => ['required_if:submission_action,submit', 'nullable', 'string', 'max:255'],
@@ -350,6 +387,13 @@ class CommunityContributionController extends Controller
             'remove_media' => ['nullable', 'array'],
             'remove_media.*' => ['integer'],
         ]);
+
+        if (($validated['submission_action'] ?? null) === 'draft'
+            && ! $this->hasMinimumDraftContent($validated)) {
+            throw ValidationException::withMessages([
+                'draft' => 'Please enter at least one piece of information before saving this draft.',
+            ]);
+        }
 
         return $validated;
     }
@@ -385,12 +429,22 @@ class CommunityContributionController extends Controller
         $data['operating_hours'] = collect($request->input('operating_hours', []))
             ->filter(fn (array $schedule) => filled($schedule['day'] ?? null))
             ->map(function (array $schedule): array {
-                $closed = filter_var($schedule['closed'] ?? false, FILTER_VALIDATE_BOOL);
+                $open = $this->normalizeText($schedule['open'] ?? null);
+                $close = $this->normalizeText($schedule['close'] ?? null);
+                $closed = filter_var(
+                    $schedule['closed'] ?? false,
+                    FILTER_VALIDATE_BOOLEAN,
+                    FILTER_NULL_ON_FAILURE
+                ) ?? false;
+
+                if (filled($open) || filled($close)) {
+                    $closed = false;
+                }
 
                 return [
                     'day' => $this->normalizeText($schedule['day'] ?? null),
-                    'open' => $closed ? null : $this->normalizeText($schedule['open'] ?? null),
-                    'close' => $closed ? null : $this->normalizeText($schedule['close'] ?? null),
+                    'open' => $closed ? null : $open,
+                    'close' => $closed ? null : $close,
                     'closed' => $closed,
                 ];
             })->values()->all();
@@ -449,6 +503,45 @@ class CommunityContributionController extends Controller
     private function mediaType(UploadedFile $file): string
     {
         return str_starts_with((string) $file->getMimeType(), 'video/') ? 'video' : 'image';
+    }
+
+    private function existingContributionForToken(Request $request, string $submissionToken): ?HeritageShopContribution
+    {
+        return HeritageShopContribution::withTrashed()
+            ->where('user_id', $request->user()->id)
+            ->where('submission_token', $submissionToken)
+            ->first();
+    }
+
+    private function duplicateSubmissionResponse(HeritageShopContribution $contribution): RedirectResponse
+    {
+        if ($contribution->status === HeritageShopContribution::STATUS_DRAFT) {
+            return redirect()->route('community-contribution.drafts')
+                ->with('status', 'This draft was already saved.');
+        }
+
+        return redirect()->route('community-contribution.contributions.show', $contribution)
+            ->with('status', 'This contribution was already submitted.');
+    }
+
+    private function isDuplicateSubmissionTokenException(QueryException $exception): bool
+    {
+        return str_contains($exception->getMessage(), 'submission_token')
+            || str_contains($exception->getMessage(), 'hsc_user_submission_token_unique');
+    }
+
+    private function hasMinimumDraftContent(array $validated): bool
+    {
+        return filled($this->normalizeText($validated['contribution_title'] ?? null))
+            || filled($this->normalizeText($validated['shop_name'] ?? null));
+    }
+
+    private function markRevisionNotificationsRead(Request $request, HeritageShopContribution $contribution): void
+    {
+        $request->user()->unreadNotifications()
+            ->where('data->contribution_id', $contribution->id)
+            ->where('data->status', HeritageShopContribution::STATUS_REVISION_REQUIRED)
+            ->update(['read_at' => now()]);
     }
 
     private function normalizeText(?string $value): ?string

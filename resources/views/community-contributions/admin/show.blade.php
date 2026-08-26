@@ -8,7 +8,7 @@
         <div>
             <p class="eyebrow">Review submission</p>
             <h1>{{ $contribution->contribution_title ?: $contribution->shop_name }}</h1>
-            <p>Submitted by {{ $contribution->user?->name ?? 'Deleted user' }} on {{ optional($contribution->submitted_at)->format('d M Y, g:i A') ?: 'Unknown date' }}</p>
+            <p>Submitted by {{ $contribution->user?->name ?? 'Deleted user' }} on {{ $contribution->formatDateTime($contribution->submitted_at, 'Unknown date') }}</p>
         </div>
         <div class="actions">
             <span class="badge badge-{{ $contribution->status }}">{{ $contribution->statusLabel() }}</span>
@@ -125,7 +125,7 @@
                         @forelse ($contribution->moderationActivities as $activity)
                             <div class="timeline-item">
                                 <strong>{{ str($activity->action)->replace('_', ' ')->title() }}</strong>
-                                <p>{{ $activity->created_at->format('d M Y, g:i A') }} by {{ $activity->actor?->name ?? 'Deleted user' }}</p>
+                                <p>{{ $contribution->formatDateTime($activity->created_at) }} by {{ $activity->actor?->name ?? 'Deleted user' }}</p>
                                 @if ($activity->comment)<p>{{ $activity->comment }}</p>@endif
                             </div>
                         @empty
@@ -140,7 +140,7 @@
                         @forelse ($contribution->versions as $version)
                             <div class="timeline-item">
                                 <strong>Version {{ $version->version_number }} - {{ str($version->reason)->replace('_', ' ')->title() }}</strong>
-                                <p>{{ $version->created_at->format('d M Y, g:i A') }} by {{ $version->user?->name ?? 'Deleted user' }}</p>
+                                <p>{{ $contribution->formatDateTime($version->created_at) }} by {{ $version->user?->name ?? 'Deleted user' }}</p>
                             </div>
                         @empty
                             <p class="muted">No version record found.</p>

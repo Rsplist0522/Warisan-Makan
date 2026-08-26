@@ -54,7 +54,7 @@ A User may:
 - collect passport stamps and achievement badges;
 - view passport progress and leaderboard rankings;
 - generate, save, follow, and share food trails;
-- submit heritage shop information or heritage food stories;
+- submit heritage shop information, including heritage story/details fields;
 - report incorrect or outdated shop information;
 - generate and reveal Blind Box recommendations.
 
@@ -766,19 +766,9 @@ The form may contain:
 
 The system must validate mandatory fields and associate the record with the authenticated contributor.
 
-#### B. Submit Heritage Food Story
+#### B. Heritage Story Details Within Shop Submissions
 
-The form may contain:
-
-- contribution title;
-- related shop or food item;
-- food name;
-- story title;
-- story content;
-- cultural significance;
-- supporting media.
-
-Shop-information details and food-story details should be stored separately to keep the data structure clear.
+Heritage story/details are collected only as part of the Heritage Shop submission workflow. The module should keep the shop form's heritage or family story fields, validate and sanitize long-form story text, and store it with the heritage shop contribution record. It should not provide a separate food-story contribution type, form, route, table, or moderation queue.
 
 #### C. Upload Supporting Media
 
@@ -802,7 +792,7 @@ Shop-information details and food-story details should be stored separately to k
 
 Display:
 
-- contribution title and type;
+- contribution title and summary;
 - submission date;
 - last updated date;
 - current status;
@@ -860,9 +850,9 @@ Notify the user when:
 #### A. Submission Management Dashboard
 
 - Display pending, under-review, revision-required, approved, and rejected counts.
-- Separate heritage-shop and heritage-food-story submissions.
+- Display heritage-shop submissions.
 - Search by title or contributor.
-- Filter by status, contributor, type, or date.
+- Filter by status, contributor, or date.
 - Sort the results.
 
 #### B. Start Review
@@ -881,7 +871,7 @@ When review begins:
 - Change status to `APPROVED`.
 - Record review action and time.
 - Create or hand off the approved record to Heritage Shop Tracking.
-- Link the resulting shop or story record where supported.
+- Link the resulting shop record where supported.
 - notify the contributor.
 
 #### D. Reject Contribution
@@ -973,7 +963,7 @@ PENDING
 ### 7.5.8 Main Data Owned
 
 - Contribution
-- Contribution type details
+- Contribution details
 - Contribution media
 - Contribution version
 - Contribution review
@@ -988,9 +978,7 @@ PENDING
 **User pages:**
 
 - My Contributions dashboard
-- Select contribution type
 - Heritage Shop Submission form
-- Heritage Food Story Submission form
 - Draft list
 - Draft detail/edit
 - Contribution history
@@ -1023,7 +1011,7 @@ PENDING
 
 The module is complete when:
 
-- both contribution types can be created;
+- heritage shop contributions can be created;
 - drafts can be saved, edited, deleted, and submitted;
 - media validation works;
 - users can view status, history, details, and feedback;
@@ -1373,7 +1361,7 @@ The Blind Box pool should not become a second heritage-shop database.
 
 When a contribution is approved:
 
-- create a verified shop/story record or hand the approved data to the shop-management workflow;
+- create a verified shop record or hand the approved data to the shop-management workflow;
 - record the source contribution ID;
 - avoid duplicate shop creation;
 - perform the operation through a service and database transaction.
@@ -1711,4 +1699,3 @@ This document was prepared from the following project materials:
 - `Requirement Analysis.pdf`
 - the latest Community Contribution scope and workflow decisions
 - the agreed Laravel modular-monolith and MVC development direction
-

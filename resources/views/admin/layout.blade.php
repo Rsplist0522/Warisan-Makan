@@ -23,7 +23,7 @@
         a { color: inherit; }
         button { font: inherit; }
         .shell { min-height: 100vh; display: grid; grid-template-columns: 270px 1fr; }
-        .sidebar { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; padding: 28px 20px; color: #fff5ec; background: linear-gradient(180deg, var(--sidebar), #281010); }
+        .sidebar { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; overflow-y: auto; padding: 28px 20px; color: #fff5ec; background: linear-gradient(180deg, var(--sidebar), #281010); }
         .brand { display: flex; align-items: center; gap: 12px; padding: 2px 10px 28px; border-bottom: 1px solid rgba(255,255,255,.1); font-family: Georgia, serif; font-size: 1.2rem; font-weight: 800; }
         .brand-mark { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.2); border-radius: 12px; color: #3b1b16; background: var(--gold); font-family: Georgia, serif; }
         .nav-label { margin: 27px 12px 10px; color: rgba(255,245,236,.48); font-size: .68rem; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
@@ -153,12 +153,12 @@
 <body>
     @php
         $communityContributionActive = request()->routeIs('admin.community-contributions.*');
+        $blindBoxActive = request()->routeIs('admin.blind-box-items.*');
         $placeholderModules = [
             'heritage-registry' => 'Heritage Registry',
             'food-map' => 'Food Map',
             'stories-editorial' => 'Stories & Editorial',
             'events-trails' => 'Events & Trails',
-            'users-roles' => 'Users & Roles',
             'reports-analytics' => 'Reports & Analytics',
         ];
     @endphp
@@ -172,6 +172,12 @@
 
             <p class="nav-label">Modules</p>
             <nav class="nav" aria-label="Administrator modules">
+                <a class="nav-item {{ request()->routeIs('admin.users.*') ? 'active' : '' }}" href="{{ route('admin.users.index') }}">
+                    <span>Users &amp; Roles</span>
+                </a>
+                <a class="nav-item {{ request()->routeIs('admin.heritage-shops.*') ? 'active' : '' }}" href="{{ route('admin.heritage-shops.index') }}">
+                    <span>Heritage Shops</span>
+                </a>
                 <a class="nav-item {{ $communityContributionActive ? 'active' : '' }}" href="{{ route('admin.community-contributions.submissions') }}">
                     <span>Community Contribution</span>
                 </a>
@@ -183,6 +189,10 @@
                         <a class="nav-item {{ request()->routeIs('admin.community-contributions.history') ? 'active' : '' }}" href="{{ route('admin.community-contributions.history') }}">Admin History</a>
                     </div>
                 @endif
+
+                <a class="nav-item {{ $blindBoxActive ? 'active' : '' }}" href="{{ route('admin.blind-box-items.index') }}">
+                    <span>Blind Box</span>
+                </a>
 
                 @foreach ($placeholderModules as $slug => $name)
                     <a class="nav-item placeholder {{ request()->routeIs('admin.modules.show') && request()->route('moduleSlug') === $slug ? 'active' : '' }}" href="{{ route('admin.modules.show', $slug) }}">
@@ -208,7 +218,24 @@
                     <p>Warisan Makan management portal</p>
                 </div>
             </header>
-            <main class="content">@yield('content')</main>
+            <main class="content">
+                @if (session('status'))
+                    <div class="status-banner success" role="status">{{ session('status') }}</div>
+                @endif
+
+                @if ($errors->any())
+                    <div class="status-banner error" role="alert">
+                        <strong>Please fix the following:</strong>
+                        <ul>
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+
+                @yield('content')
+            </main>
         </section>
     </div>
 </body>

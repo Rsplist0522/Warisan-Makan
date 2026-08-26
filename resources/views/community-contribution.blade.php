@@ -13,9 +13,16 @@
                     : 'Document a Malaysian heritage food business for administrator review.' }}
             </p>
         </div>
-        @if ($contribution)
-            <span class="badge badge-{{ $contribution->status }}">{{ $contribution->statusLabel() }}</span>
-        @endif
+        <div class="actions">
+            @if ($contribution)
+                <span class="badge badge-{{ $contribution->status }}">{{ $contribution->statusLabel() }}</span>
+                <a class="button secondary small" href="{{ $contribution->status === \App\Models\HeritageShopContribution::STATUS_DRAFT ? route('community-contribution.drafts') : route('community-contribution.contributions.show', $contribution) }}">
+                    {{ $contribution->status === \App\Models\HeritageShopContribution::STATUS_DRAFT ? 'Back to Drafts' : 'Back to Details' }}
+                </a>
+            @else
+                <a class="button secondary small" href="{{ route('community-contribution.contributions') }}">Back to My Contributions</a>
+            @endif
+        </div>
     </header>
 
     @if ($contribution?->status === \App\Models\HeritageShopContribution::STATUS_REVISION_REQUIRED && $contribution->admin_feedback)

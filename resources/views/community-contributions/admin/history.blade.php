@@ -62,7 +62,10 @@
                             <span>Established: {{ $record->establishment_year ?: 'Unknown' }}</span>
                             <span>Food type: {{ $record->primary_food_category ?: 'Not provided' }}</span>
                             <span>Last action: {{ $latestActivity ? str($latestActivity->action)->replace('_', ' ')->title() : 'No audit action' }}</span>
-                            <span>Updated: {{ $record->updated_at->format('d M Y, g:i A') }}</span>
+                            <span>Updated: {{ $record->formatDateTime($record->updated_at) }}</span>
+                            @if ($record->status === \App\Models\HeritageShopContribution::STATUS_DELETED && $record->admin_feedback)
+                                <span>Delete reason: {{ $record->admin_feedback }}</span>
+                            @endif
                         </div>
                     </div>
                     <div class="record-actions">

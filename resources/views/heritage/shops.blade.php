@@ -147,6 +147,9 @@
         .definition-list div:last-child { padding-bottom: 0; border-bottom: 0; }
         dt { color: var(--wm-muted); font-size: .7rem; font-weight: 850; letter-spacing: .06em; text-transform: uppercase; }
         dd { margin: 4px 0 0; white-space: pre-line; }
+        .hours-list { display: grid; gap: 6px; white-space: normal; }
+        .hours-row { display: block; }
+        .hours-row strong { color: var(--wm-ink); }
         .menu-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
         .menu-card { overflow: hidden; display: flex; min-height: 170px; flex-direction: column; border: 1px solid var(--wm-line); border-radius: 14px; background: #fff; transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
         .menu-card:hover { transform: translateY(-3px); border-color: rgba(163, 58, 45, .24); box-shadow: 0 16px 30px rgba(77, 48, 34, .1); }
@@ -310,7 +313,16 @@
                                             <div><dt>Address</dt><dd>{{ collect([$shop->address, $shop->city, $shop->state, $shop->postal_code])->filter()->implode(', ') }}</dd></div>
                                         @endif
                                         @if ($shop->operating_hours)
-                                            <div><dt>Operating information</dt><dd>{{ is_array($shop->operating_hours) ? implode('; ', $shop->operating_hours) : $shop->operating_hours }}</dd></div>
+                                            <div>
+                                                <dt>Operating information</dt>
+                                                <dd class="hours-list">
+                                                    @forelse ($shop->operatingHoursRows() as $hoursRow)
+                                                        <span class="hours-row">@if ($hoursRow['label'])<strong>{{ $hoursRow['label'] }}:</strong> @endif{{ $hoursRow['value'] }}</span>
+                                                    @empty
+                                                        <span class="hours-row">Hours not provided.</span>
+                                                    @endforelse
+                                                </dd>
+                                            </div>
                                         @endif
                                         @if ($shop->contact_number)
                                             <div><dt>Contact</dt><dd>{{ $shop->contact_number }}</dd></div>

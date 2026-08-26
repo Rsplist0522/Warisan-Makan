@@ -76,11 +76,11 @@
         <div class="achievement-card-main">
           <div id="badgeModalIcon" class="achievement-card-icon">★</div>
           <div>
-            <h3 id="badgeModalBadgeName" class="achievement-card-title">Heritage Explorer</h3>
-            <p id="badgeModalBadgeDescription" class="achievement-card-description">Keep exploring and sharing the stories behind local food.</p>
+            <h3 id="badgeModalBadgeName" class="achievement-card-title">Your new badge</h3>
+            <p id="badgeModalBadgeDescription" class="achievement-card-description">The badge you unlock will appear here.</p>
           </div>
         </div>
-        <div id="badgeModalProgress" class="achievement-card-progress">A new story added to my food journey</div>
+        <div id="badgeModalProgress" class="achievement-card-progress">Your milestone will appear here</div>
         <div class="achievement-card-footer">Every dish has a story. Discover yours.</div>
       </div>
       <p class="share-label">Share your achievement</p>
@@ -133,10 +133,18 @@
   }
 
   function openBadgeModal(unlockedBadges, refreshOnClose = false){
-    const primaryBadge = unlockedBadges[0];
-    const badgeNames = unlockedBadges.map(badge => badge.name).join(', ');
-    const additionalBadges = unlockedBadges.length > 1
-      ? ' Also unlocked: ' + unlockedBadges.slice(1).map(badge => badge.name).join(', ') + '.'
+    const validBadges = (Array.isArray(unlockedBadges) ? unlockedBadges : [])
+      .filter(badge => badge && badge.name);
+
+    if(!validBadges.length) return;
+
+    const orderedBadges = [...validBadges].sort((first, second) =>
+      Number(second.threshold || 0) - Number(first.threshold || 0)
+    );
+    const primaryBadge = orderedBadges[0];
+    const badgeNames = orderedBadges.map(badge => badge.name).join(', ');
+    const additionalBadges = orderedBadges.length > 1
+      ? ' Also unlocked: ' + orderedBadges.slice(1).map(badge => badge.name).join(', ') + '.'
       : '';
     const milestone = primaryBadge.threshold || primaryBadge.progress || 'new';
 
@@ -343,6 +351,37 @@
   document.querySelectorAll('[data-close-badge-modal]').forEach(element => element.addEventListener('click', closeBadgeModal));
   document.querySelectorAll('[data-share]').forEach(button => button.addEventListener('click', () => shareBadge(button.dataset.share)));
 
+  async function parseApiResponse(response){
+    const contentType = response.headers.get('content-type') || '';
+    const responseText = await response.text();
+
+    if(contentType.includes('application/json')){
+      try{
+        return JSON.parse(responseText);
+      }catch(error){
+        // Fall through to a friendly message for malformed JSON.
+      }
+    }
+
+    if(response.redirected || response.url.includes('/login')){
+      return { success:false, message:'Please sign in before checking in to your heritage passport.' };
+    }
+    if(response.status === 401 || response.status === 403){
+      return { success:false, message:'Please sign in before checking in to your heritage passport.' };
+    }
+    if(response.status === 419){
+      return { success:false, message:'Your session expired. Refresh the page and sign in again before checking in.' };
+    }
+    if(response.status === 404 || response.status === 405){
+      return { success:false, message:'The check-in service is not available. Please verify the Passport routes in web.php.' };
+    }
+    if(response.status >= 500){
+      return { success:false, message:'The server could not complete your check-in. Please check the Laravel error log.' };
+    }
+
+    return { success:false, message:'The server returned an unexpected response. Please try again.' };
+  }
+
   async function sendCheckIn(payload){
     setResult('Sending check-in...');
 
@@ -357,10 +396,15 @@
         },
         body: JSON.stringify(payload)
       });
-      const json = await res.json();
+      const json = await parseApiResponse(res);
       setResult(json);
 
-      if (res.ok && json.success) {
+      if (res.status === 409) {
+        window.setTimeout(() => window.location.reload(), 900);
+        return;
+      }
+
+      if (res.ok && json && json.success) {
         const newlyUnlockedBadges = Array.isArray(json.newly_unlocked_badges) ? json.newly_unlocked_badges : [];
         if(newlyUnlockedBadges.length > 0){
           openBadgeModal(newlyUnlockedBadges, true);

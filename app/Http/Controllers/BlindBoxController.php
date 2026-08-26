@@ -68,7 +68,7 @@ class BlindBoxController extends Controller
 
         if ($this->hasDrawnThisPeriod($request, $period)) {
             return response()->json([
-                'error' => 'You can only draw once per period. Come back next period for another surprise.',
+                'error' => __('You can only draw once per period. Come back next period for another surprise.'),
             ], 429);
         }
 

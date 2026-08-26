@@ -3,17 +3,17 @@
         <span class="wm-foodtrail-brand-mark">W</span>
         <span>WarisanMakan</span>
     </a>
-    <nav class="wm-foodtrail-links" aria-label="Food trail navigation">
-        <a class="{{ request()->is('foodtrails') ? 'active' : '' }}" href="{{ url('/foodtrails') }}">Food Trails</a>
-        <a href="{{ route('passport.index') }}">Food Passport</a>
+    <nav class="wm-foodtrail-links" aria-label="{{ __('Food trail navigation') }}">
+        <a class="{{ request()->is('foodtrails') ? 'active' : '' }}" href="{{ url('/foodtrails') }}">{{ __('Food Trails') }}</a>
+        <a href="{{ route('passport.index') }}">{{ __('Food Passport') }}</a>
         @auth
-            <a href="{{ route('profile.show') }}">Profile</a>
+            <a href="{{ route('profile.show') }}">{{ __('Profile') }}</a>
             <form method="POST" action="{{ route('logout') }}">
                 @csrf
-                <button type="submit">Log out</button>
+                <button type="submit">{{ __('Log out') }}</button>
             </form>
         @else
-            <a href="{{ route('login') }}">Login</a>
+            <a href="{{ route('login') }}">{{ __('Login') }}</a>
         @endauth
     </nav>
 </div>

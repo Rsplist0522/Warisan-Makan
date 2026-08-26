@@ -136,9 +136,16 @@
                 <p class="mt-4 text-sm text-[#7B6B5F]">${item.summary}</p>
             `;
             card.querySelector('button')?.addEventListener('click', () => {
-                getElement(selectors.locationInput).value = item.location;
-                getElement(selectors.categorySelect).value = item.category === 'All' ? 'all' : item.category;
-                handleGenerateTrail();
+                state.routeRestaurants = (item.restaurants || []).map((restaurant) => ({ ...restaurant, visited: false }));
+                state.activeRestaurants = state.routeRestaurants.slice();
+                state.filteredRestaurants = state.routeRestaurants.slice();
+                state.selectedRestaurant = state.routeRestaurants[0] || null;
+                localStorage.setItem(currentRouteKey, JSON.stringify(state.routeRestaurants));
+                setPanelVisibility(true);
+                renderRestaurantList();
+                renderRouteSummary();
+                updateRouteCompletion();
+                renderSelectedRestaurantDetails();
             });
             container.appendChild(card);
         });

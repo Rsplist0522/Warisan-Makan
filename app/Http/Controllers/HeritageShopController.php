@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\HeritageFoodItem;
 use App\Models\HeritageShop;
 use App\Models\ShopImage;
+use App\Services\HeritageShopAiGuideService;
 use App\Services\HeritageShopImageService;
 use App\Services\ShopCrawlerService;
 use App\Models\User;
@@ -32,7 +34,7 @@ class HeritageShopController extends Controller
 
         $shopsQuery = HeritageShop::query()
             ->published()
-            ->with('images')
+            ->with(['images', 'activeFoodItems'])
             ->when($search, function ($query) use ($search): void {
                 $query->where(function ($query) use ($search): void {
                     $query->where('shop_name', 'like', "%{$search}%")
@@ -153,6 +155,50 @@ class HeritageShopController extends Controller
         }));
     }
 
+    public function aiGuide(Request $request, HeritageShop $heritageShop, HeritageShopAiGuideService $aiGuide): \Illuminate\Http\JsonResponse
+    {
+        abort_unless($heritageShop->isPubliclyVisible(), 404);
+
+        $validated = $request->validate([
+            'question' => ['required', 'string', 'max:500'],
+        ]);
+
+        return response()->json($aiGuide->answer($heritageShop, $validated['question']));
+    }
+
+    public function menu(HeritageShop $heritageShop)
+    {
+        abort_unless($heritageShop->isPubliclyVisible(), 404);
+
+        $heritageShop->load(['images', 'activeFoodItems']);
+
+        return view('heritage.menu', [
+            'shop' => $heritageShop,
+            'menuItems' => $this->resolveFoodItems($heritageShop),
+            'imageService' => $this->imageService,
+        ]);
+    }
+
+    public function foodItem(HeritageShop $heritageShop, HeritageFoodItem $foodItem)
+    {
+        abort_unless($foodItem->heritage_shop_id === $heritageShop->id, 404);
+        abort_unless($heritageShop->isPubliclyVisible() && $foodItem->is_active, 404);
+
+        return view('heritage.food-item', [
+            'shop' => $heritageShop->load('images'),
+            'foodItem' => $foodItem,
+            'imageService' => $this->imageService,
+        ]);
+    }
+
+    public function foodImage(HeritageShop $heritageShop, HeritageFoodItem $foodItem)
+    {
+        abort_unless($foodItem->heritage_shop_id === $heritageShop->id, 404);
+        abort_unless($heritageShop->isPubliclyVisible() && $foodItem->is_active && filled($foodItem->image_path), 404);
+
+        return $this->imageService->responseForPath($foodItem->image_path, $foodItem->name.'.jpg');
+    }
+
     public function image(HeritageShop $heritageShop, ShopImage $image)
     {
         abort_unless($image->shop_id === $heritageShop->id, 404);
@@ -167,15 +213,11 @@ class HeritageShopController extends Controller
     }
 
     // Show a single shop detail by DB id
-    public function show(string $id, Request $request)
+    public function show(string $id)
     {
-        if (! $request->user()) {
-            abort(403, 'Please sign in with Google to view the heritage shop details.');
-        }
-
-        $shop = HeritageShop::query()->published()->with('images')->findOrFail($id);
-        $shops = HeritageShop::query()->published()->with('images')->orderBy('shop_name')->get();
-        $menuItems = $this->resolveMenuItems($shop);
+        $shop = HeritageShop::query()->published()->with(['images', 'activeFoodItems'])->findOrFail($id);
+        $shops = HeritageShop::query()->published()->with(['images', 'activeFoodItems'])->orderBy('shop_name')->get();
+        $menuItems = $this->resolveFoodItems($shop);
 
         $search = '';
         $category = '';
@@ -188,10 +230,36 @@ class HeritageShopController extends Controller
             ->with('imageService', $this->imageService);
     }
 
-    private function resolveMenuItems(HeritageShop $shop): array
+    private function resolveFoodItems(HeritageShop $shop): array
     {
+        if ($shop->relationLoaded('activeFoodItems') && $shop->activeFoodItems->isNotEmpty()) {
+            return $shop->activeFoodItems->map(fn (HeritageFoodItem $item): array => array_filter([
+                'id' => $item->id,
+                'name' => $item->name,
+                'price' => $item->price,
+                'desc' => $item->description,
+                'description' => $item->description,
+                'category' => $item->category,
+                'heritage_significance' => $item->heritage_significance,
+                'availability' => $item->availability,
+                'image_url' => $item->image_path ? route('heritage-shops.food-images.show', [$shop, $item]) : null,
+            ], fn ($value) => filled($value)))->values()->all();
+        }
+
         if (! empty($shop->food_items) && is_array($shop->food_items)) {
-            return $shop->food_items;
+            return collect($shop->food_items)
+                ->filter(fn ($item) => is_array($item) && filled($item['name'] ?? null) && ($item['is_active'] ?? true) !== false)
+                ->map(fn (array $item): array => array_filter([
+                    'id' => $item['id'] ?? null,
+                    'name' => $item['name'] ?? null,
+                    'price' => $item['price'] ?? null,
+                    'desc' => $item['desc'] ?? $item['description'] ?? null,
+                    'description' => $item['description'] ?? $item['desc'] ?? null,
+                    'category' => $item['category'] ?? null,
+                    'heritage_significance' => $item['heritage_significance'] ?? null,
+                    'availability' => $item['availability'] ?? null,
+                    'image_url' => ! empty($item['image_path']) && ! empty($item['id']) ? route('heritage-shops.food-images.show', [$shop, $item['id']]) : null,
+                ], fn ($value) => filled($value)))->values()->all();
         }
 
         if ($shop->source_url) {

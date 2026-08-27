@@ -78,7 +78,7 @@ class BlindBoxController extends Controller
 
         $this->catalog->updateShop($shop, $validated['category']);
 
-        return redirect()->route('admin.blind-box-items.edit', $shop)
+        return redirect()->route('admin.blind-box-items.index')
             ->with('status', 'Blind Box shop settings saved.');
     }
 

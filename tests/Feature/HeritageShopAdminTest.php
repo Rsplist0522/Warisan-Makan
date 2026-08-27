@@ -3,9 +3,14 @@
 namespace Tests\Feature;
 
 use App\Models\HeritageShop;
+use App\Models\PassportStamp;
+
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
+
 use Tests\TestCase;
 
 class HeritageShopAdminTest extends TestCase
@@ -56,9 +61,12 @@ class HeritageShopAdminTest extends TestCase
 
         $this->actingAs($admin);
 
-        $response = $this->postJson(route('admin.heritage-shops.crawl'), [
-            'url' => 'https://example.com/heritage-shop',
-        ]);
+        $csrfToken = 'heritage-shop-test-csrf-token';
+        $response = $this->withSession(['_token' => $csrfToken])
+            ->withHeader('X-CSRF-TOKEN', $csrfToken)
+            ->postJson(route('admin.heritage-shops.crawl'), [
+                'url' => 'https://example.com/heritage-shop',
+            ]);
 
         $response->assertOk()
             ->assertJsonStructure([
@@ -234,5 +242,268 @@ class HeritageShopAdminTest extends TestCase
             ->assertSee('Nasi Lemak')
             ->assertSee('Ayam Goreng')
             ->assertDontSee('Signature Heritage Dish');
+    }
+
+    public function test_crawl_rejects_canonical_duplicate_source_before_fetching(): void
+    {
+        $existing = HeritageShop::create([
+            'shop_name' => 'Existing Heritage Cafe',
+            'source_url' => 'https://example.com/restaurants/warisan',
+            'publish_status' => HeritageShop::STATUS_DRAFT,
+        ]);
+        $admin = User::factory()->create(['role' => 'admin']);
+        Http::fake();
+
+        $csrfToken = 'heritage-admin-test-token';
+        $response = $this->actingAs($admin)->withSession(['_token' => $csrfToken])
+            ->withHeader('X-CSRF-TOKEN', $csrfToken)
+            ->postJson(route('admin.heritage-shops.crawl'), [
+                'url' => 'https://EXAMPLE.com/restaurants/warisan/',
+            ]);
+
+        $response->assertStatus(409)
+            ->assertJsonPath('existing_shop_id', $existing->id)
+            ->assertJsonPath('existing_shop_url', route('admin.heritage-shops.edit', $existing));
+        Http::assertNothingSent();
+    }
+
+    public function test_normal_shop_save_rejects_a_canonical_duplicate_source(): void
+    {
+        HeritageShop::create([
+            'shop_name' => 'Existing Heritage Cafe',
+            'source_url' => 'https://example.com/restaurants/warisan',
+            'publish_status' => HeritageShop::STATUS_DRAFT,
+        ]);
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $csrfToken = 'heritage-admin-test-token';
+        $response = $this->actingAs($admin)->withSession(['_token' => $csrfToken])
+            ->withHeader('X-CSRF-TOKEN', $csrfToken)
+            ->from(route('admin.heritage-shops.create'))
+            ->post(route('admin.heritage-shops.store'), [
+                'shop_name' => 'Duplicate Cafe',
+                'source_url' => 'https://EXAMPLE.com/restaurants/warisan/',
+                'publish_status' => HeritageShop::STATUS_DRAFT,
+            ]);
+
+        $response->assertRedirect(route('admin.heritage-shops.create'))
+            ->assertSessionHasErrors('source_url');
+        $this->assertDatabaseCount('heritage_shops', 1);
+    }
+
+    public function test_admin_can_delete_an_unreferenced_shop_and_its_module_images(): void
+    {
+        Storage::fake('public');
+        $shop = HeritageShop::create([
+            'shop_name' => 'Temporary Heritage Cafe',
+            'publish_status' => HeritageShop::STATUS_DRAFT,
+        ]);
+        Storage::disk('public')->put('heritage-shops/gallery.jpg', 'gallery-bytes');
+        Storage::disk('public')->put('heritage-shops/food.jpg', 'food-bytes');
+        $shop->images()->create(['path' => 'heritage-shops/gallery.jpg', 'is_primary' => true]);
+        $shop->foodItems()->create(['name' => 'Temporary Dish', 'image_path' => 'heritage-shops/food.jpg', 'is_active' => false]);
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $csrfToken = 'heritage-admin-test-token';
+        $response = $this->actingAs($admin)->withSession(['_token' => $csrfToken])
+            ->withHeader('X-CSRF-TOKEN', $csrfToken)
+            ->delete(route('admin.heritage-shops.destroy', $shop));
+
+        $response->assertRedirect(route('admin.heritage-shops.index'));
+        $this->assertDatabaseMissing('heritage_shops', ['id' => $shop->id]);
+        $this->assertDatabaseMissing('shop_images', ['shop_id' => $shop->id]);
+        $this->assertDatabaseMissing('heritage_food_items', ['heritage_shop_id' => $shop->id]);
+        $this->assertFalse(Storage::disk('public')->exists('heritage-shops/gallery.jpg'));
+        $this->assertFalse(Storage::disk('public')->exists('heritage-shops/food.jpg'));
+}
+
+    public function test_admin_delete_is_blocked_when_passport_history_exists(): void
+    {
+        $shop = HeritageShop::create([
+            'shop_name' => 'Visited Heritage Cafe',
+            'publish_status' => HeritageShop::STATUS_PUBLISHED,
+        ]);
+        $user = User::factory()->create();
+        PassportStamp::create([
+            'user_id' => $user->id,
+            'shop_id' => $shop->id,
+            'stamp_datetime' => now(),
+            'gps_latitude' => 3.139,
+            'gps_longitude' => 101.6869,
+        ]);
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $csrfToken = 'heritage-admin-test-token';
+        $response = $this->actingAs($admin)->withSession(['_token' => $csrfToken])
+            ->withHeader('X-CSRF-TOKEN', $csrfToken)
+            ->from(route('admin.heritage-shops.index'))
+            ->delete(route('admin.heritage-shops.destroy', $shop));
+
+        $response->assertRedirect(route('admin.heritage-shops.index'))
+            ->assertSessionHas('error');
+        $this->assertDatabaseHas('heritage_shops', ['id' => $shop->id]);
+    }
+
+    public function test_manual_gallery_upload_uses_the_configured_one_mb_limit(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $csrfToken = 'heritage-admin-test-token';
+        $response = $this->actingAs($admin)->withSession(['_token' => $csrfToken])
+            ->withHeader('X-CSRF-TOKEN', $csrfToken)
+            ->from(route('admin.heritage-shops.create'))
+            ->post(route('admin.heritage-shops.store'), [
+                'shop_name' => 'Oversized Photo Cafe',
+                'publish_status' => HeritageShop::STATUS_DRAFT,
+                'images' => [UploadedFile::fake()->image('oversized.jpg')->size(1025)],
+            ]);
+
+        $response->assertRedirect(route('admin.heritage-shops.create'))
+            ->assertSessionHasErrors('images.0');
+    }
+
+    public function test_public_profile_renders_legacy_raw_hours_as_readable_rows(): void
+    {
+        $shop = HeritageShop::create([
+            'shop_name' => 'Readable Hours Cafe',
+            'operating_hours' => ['raw' => 'Sunday 11:30–14:30; Tuesday 17:30–22:30'],
+            'publish_status' => HeritageShop::STATUS_PUBLISHED,
+        ]);
+
+        $this->get(route('heritage-shops.show', ['id' => $shop->id]))
+            ->assertOk()
+            ->assertSee('Operating information')
+            ->assertSee('Sunday', false)
+            ->assertSee('11:30–14:30', false)
+            ->assertSee('Tuesday', false)
+            ->assertSee('17:30–22:30', false)
+            ->assertDontSee('&quot;raw&quot;', false);
+    }
+
+    public function test_admin_save_stores_operating_hours_as_clean_lines(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $csrfToken = 'heritage-hours-save-test-token';
+
+        $response = $this->actingAs($admin)->withSession(['_token' => $csrfToken])
+            ->withHeader('X-CSRF-TOKEN', $csrfToken)
+            ->post(route('admin.heritage-shops.store'), [
+                'shop_name' => 'Clean Hours Cafe',
+                'publish_status' => HeritageShop::STATUS_DRAFT,
+                'operating_hours' => "Monday: 09:00–17:00\nFriday: 10:00–20:00",
+            ]);
+
+        $shop = HeritageShop::query()->where('shop_name', 'Clean Hours Cafe')->firstOrFail();
+        $response->assertRedirect(route('admin.heritage-shops.edit', $shop));
+        $this->assertSame(['Monday: 09:00–17:00', 'Friday: 10:00–20:00'], $shop->operating_hours);
+        $this->assertStringNotContainsString('raw', json_encode($shop->operating_hours));
+    }
+
+    public function test_admin_form_reopens_hours_without_a_raw_json_wrapper(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $shop = HeritageShop::create([
+            'shop_name' => 'Hours Form Cafe',
+            'operating_hours' => ['raw' => 'Monday 09:00–17:00; Friday 10:00–20:00'],
+            'publish_status' => HeritageShop::STATUS_DRAFT,
+        ]);
+
+        $this->actingAs($admin)->get(route('admin.heritage-shops.edit', $shop))
+            ->assertOk()
+            ->assertSee('Monday: 09:00–17:00', false)
+            ->assertSee('Friday: 10:00–20:00', false)
+            ->assertDontSee('&quot;raw&quot;', false);
+    }
+
+    public function test_published_shop_requires_story_address_and_city(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $csrfToken = 'heritage-required-fields-test-token';
+
+        $response = $this->actingAs($admin)->withSession(['_token' => $csrfToken])
+            ->withHeader('X-CSRF-TOKEN', $csrfToken)
+            ->from(route('admin.heritage-shops.create'))
+            ->post(route('admin.heritage-shops.store'), [
+                'shop_name' => 'Incomplete Published Cafe',
+                'publish_status' => HeritageShop::STATUS_PUBLISHED,
+            ]);
+
+        $response->assertRedirect(route('admin.heritage-shops.create'))
+            ->assertSessionHasErrors(['heritage_story', 'address', 'city']);
+        $this->assertDatabaseMissing('heritage_shops', ['shop_name' => 'Incomplete Published Cafe']);
+    }
+
+    public function test_permitted_list_discovery_previews_same_host_shops_without_saving(): void
+    {
+        Http::fake([
+            'https://authorized.example/directory' => Http::response(<<<'HTML'
+                <a href="/shops/one">Warisan Cafe</a>
+                <a href="/shops/two">Heritage Kitchen</a>
+                <a href="https://outside.example/shop">Outside link</a>
+                <a href="/about">About us</a>
+                HTML, 200),
+            'https://authorized.example/shops/one' => Http::response('<html><head><title>Warisan Cafe</title></head><body><h1>Warisan Cafe</h1></body></html>'),
+            'https://authorized.example/shops/two' => Http::response('<html><head><title>Heritage Kitchen</title></head><body><h1>Heritage Kitchen</h1></body></html>'),
+        ]);
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $csrfToken = 'heritage-admin-test-token';
+        $response = $this->actingAs($admin)->withSession(['_token' => $csrfToken])
+            ->withHeader('X-CSRF-TOKEN', $csrfToken)
+            ->postJson(route('admin.heritage-shops.discover'), [
+                'url' => 'https://authorized.example/directory/',
+                'limit' => 6,
+            ]);
+
+        $response->assertOk()
+            ->assertJsonPath('candidate_count', 2)
+            ->assertJsonCount(2, 'items')
+            ->assertJsonPath('items.0.can_import', true)
+            ->assertJsonPath('items.1.can_import', true);
+        $this->assertDatabaseCount('heritage_shops', 0);
+    }
+
+    public function test_list_import_skips_existing_sources_and_creates_new_records_as_drafts(): void
+    {
+        HeritageShop::create([
+            'shop_name' => 'Already Imported',
+            'source_url' => 'https://authorized.example/shops/one',
+            'publish_status' => HeritageShop::STATUS_DRAFT,
+        ]);
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $csrfToken = 'heritage-admin-test-token';
+        $response = $this->actingAs($admin)->withSession(['_token' => $csrfToken])
+            ->withHeader('X-CSRF-TOKEN', $csrfToken)
+            ->post(route('admin.heritage-shops.discover.import'), [
+            'list_url' => 'https://authorized.example/directory',
+            'items' => [
+                ['name' => 'Duplicate Result', 'source_url' => 'https://AUTHORIZED.example/shops/one/'],
+                ['name' => 'New Heritage Kitchen', 'source_url' => 'https://authorized.example/shops/two/', 'food_items' => json_encode([['name' => 'Old Recipe']])],
+            ],
+        ]);
+
+        $response->assertRedirect(route('admin.heritage-shops.index'))
+            ->assertSessionHas('success');
+        $this->assertDatabaseCount('heritage_shops', 2);
+        $this->assertDatabaseHas('heritage_shops', [
+            'shop_name' => 'New Heritage Kitchen',
+            'source_url' => 'https://authorized.example/shops/two',
+            'publish_status' => HeritageShop::STATUS_DRAFT,
+        ]);
+        $this->assertDatabaseHas('heritage_food_items', ['name' => 'Old Recipe']);
+    }
+
+    public function test_restricted_directory_discovery_returns_a_clear_user_facing_error(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $csrfToken = 'heritage-admin-test-token';
+        $this->actingAs($admin)->withSession(['_token' => $csrfToken])
+            ->withHeader('X-CSRF-TOKEN', $csrfToken)
+            ->postJson(route('admin.heritage-shops.discover'), [
+                'url' => 'https://www.tripadvisor.com/Restaurants-g298570-Kuala_Lumpur.html',
+            ])->assertStatus(422)
+            ->assertJsonPath('message', fn (string $message): bool => str_contains($message, 'not supported'));
     }
 }

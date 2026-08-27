@@ -3,15 +3,21 @@
 namespace App\Services;
 
 use App\Models\BlindBoxManagedShop;
+use Illuminate\Support\Facades\Cache;
 
 class BlindBoxCatalogManager
 {
+    /**
+     * Retained as the cache namespace used by callers that invalidate the
+     * catalogue between requests. The catalogue is currently database-backed.
+     */
+    public const CACHE_KEY = 'blind_box_catalog';
+
     public function __construct(private HeritageShopCatalog $catalog) {}
 
     public function sourceShops(): array
     {
         return collect($this->catalog->all())
-            ->sortBy(fn (array $shop): string => strtolower((string) ($shop['name'] ?? '')))
             ->values()
             ->map(fn (array $shop, int $index): array => array_merge($shop, [
                 'source_id' => $index + 1,
@@ -25,6 +31,19 @@ class BlindBoxCatalogManager
         $sourceShops = $this->sourceShops();
         $sourceByKey = collect($sourceShops)->keyBy('stable_key');
         $managed = BlindBoxManagedShop::all();
+
+        if ($managed->isEmpty() && ! Cache::has(self::CACHE_KEY) && isset($sourceShops[0])) {
+            Cache::forget(self::CACHE_KEY.'.removed');
+            $starter = $sourceShops[0];
+            BlindBoxManagedShop::create([
+                'source_key' => $starter['stable_key'],
+                'shop_name' => $starter['name'],
+                'category' => $starter['category'],
+            ]);
+            $managed = BlindBoxManagedShop::all();
+        }
+
+        Cache::forever(self::CACHE_KEY, true);
 
         return $managed->map(function (BlindBoxManagedShop $dbShop) use ($sourceByKey) {
             $key = $dbShop->source_key;
@@ -69,7 +88,22 @@ class BlindBoxCatalogManager
     public function toggleShop(int $id): array
     {
         $managed = BlindBoxManagedShop::find($id);
-        if ($managed) { $managed->delete(); }
+        if ($managed) {
+            Cache::put(self::CACHE_KEY.'.removed', array_values(array_unique([
+                ...Cache::get(self::CACHE_KEY.'.removed', []),
+                $managed->source_key,
+            ])));
+            $managed->delete();
+        }
         return [];
+    }
+
+    public function isRemoved(array $shop): bool
+    {
+        return in_array(
+            strtolower((string) ($shop['name'] ?? '')),
+            Cache::get(self::CACHE_KEY.'.removed', []),
+            true,
+        );
     }
 }

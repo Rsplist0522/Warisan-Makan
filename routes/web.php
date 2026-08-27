@@ -36,6 +36,10 @@ Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->n
 Route::view('/landing', 'landing')->name('landing');
 
 $userDashboard = function (\Illuminate\Http\Request $request) {
+    if (! $request->user() && ! (bool) $request->session()->get('guest_mode')) {
+        return redirect()->route('login');
+    }
+
     if ($request->user()?->isAdmin()) {
         return redirect()->route('admin.dashboard');
     }

@@ -330,7 +330,10 @@ class HeritageShopAdminController extends Controller
             $menuItems = is_array($decoded) ? $decoded : [];
         }
 
-        $operatingHours = $request->input('operating_hours');
+        $operatingHours = trim((string) $request->input('operating_hours', ''));
+        $operatingHours = $operatingHours !== ''
+            ? array_values(preg_split('/\\r\\n|\\r|\\n/', $operatingHours, -1, PREG_SPLIT_NO_EMPTY) ?: [])
+            : null;
 
         $sourceUrl = $validated['source_url'] ?? null;
         if (is_string($sourceUrl) && $sourceUrl !== '') {
@@ -352,7 +355,7 @@ class HeritageShopAdminController extends Controller
             'current_owner_name' => $validated['current_owner_name'] ?? null,
             'current_owner_details' => $validated['current_owner_details'] ?? null,
             'heritage_story' => $validated['heritage_story'] ?? null,
-            'operating_hours' => is_array($operatingHours) ? $operatingHours : ($operatingHours ? ['raw' => trim((string) $operatingHours)] : null),
+            'operating_hours' => $operatingHours,
             'food_items' => $this->normalizeFoodItems($menuItems),
             'contact_number' => $validated['contact_number'] ?? null,
             'address' => $validated['address'] ?? null,

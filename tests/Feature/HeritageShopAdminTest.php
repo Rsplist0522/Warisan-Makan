@@ -315,7 +315,7 @@ class HeritageShopAdminTest extends TestCase
         $this->assertDatabaseMissing('heritage_food_items', ['heritage_shop_id' => $shop->id]);
         $this->assertFalse(Storage::disk('public')->exists('heritage-shops/gallery.jpg'));
         $this->assertFalse(Storage::disk('public')->exists('heritage-shops/food.jpg'));
-    }
+}
 
     public function test_admin_delete_is_blocked_when_passport_history_exists(): void
     {
@@ -360,6 +360,77 @@ class HeritageShopAdminTest extends TestCase
 
         $response->assertRedirect(route('admin.heritage-shops.create'))
             ->assertSessionHasErrors('images.0');
+    }
+
+    public function test_public_profile_renders_legacy_raw_hours_as_readable_rows(): void
+    {
+        $shop = HeritageShop::create([
+            'shop_name' => 'Readable Hours Cafe',
+            'operating_hours' => ['raw' => 'Sunday 11:30–14:30; Tuesday 17:30–22:30'],
+            'publish_status' => HeritageShop::STATUS_PUBLISHED,
+        ]);
+
+        $this->get(route('heritage-shops.show', ['id' => $shop->id]))
+            ->assertOk()
+            ->assertSee('Operating information')
+            ->assertSee('Sunday', false)
+            ->assertSee('11:30–14:30', false)
+            ->assertSee('Tuesday', false)
+            ->assertSee('17:30–22:30', false)
+            ->assertDontSee('&quot;raw&quot;', false);
+    }
+
+    public function test_admin_save_stores_operating_hours_as_clean_lines(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $csrfToken = 'heritage-hours-save-test-token';
+
+        $response = $this->actingAs($admin)->withSession(['_token' => $csrfToken])
+            ->withHeader('X-CSRF-TOKEN', $csrfToken)
+            ->post(route('admin.heritage-shops.store'), [
+                'shop_name' => 'Clean Hours Cafe',
+                'publish_status' => HeritageShop::STATUS_DRAFT,
+                'operating_hours' => "Monday: 09:00–17:00\nFriday: 10:00–20:00",
+            ]);
+
+        $shop = HeritageShop::query()->where('shop_name', 'Clean Hours Cafe')->firstOrFail();
+        $response->assertRedirect(route('admin.heritage-shops.edit', $shop));
+        $this->assertSame(['Monday: 09:00–17:00', 'Friday: 10:00–20:00'], $shop->operating_hours);
+        $this->assertStringNotContainsString('raw', json_encode($shop->operating_hours));
+    }
+
+    public function test_admin_form_reopens_hours_without_a_raw_json_wrapper(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $shop = HeritageShop::create([
+            'shop_name' => 'Hours Form Cafe',
+            'operating_hours' => ['raw' => 'Monday 09:00–17:00; Friday 10:00–20:00'],
+            'publish_status' => HeritageShop::STATUS_DRAFT,
+        ]);
+
+        $this->actingAs($admin)->get(route('admin.heritage-shops.edit', $shop))
+            ->assertOk()
+            ->assertSee('Monday: 09:00–17:00', false)
+            ->assertSee('Friday: 10:00–20:00', false)
+            ->assertDontSee('&quot;raw&quot;', false);
+    }
+
+    public function test_published_shop_requires_story_address_and_city(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $csrfToken = 'heritage-required-fields-test-token';
+
+        $response = $this->actingAs($admin)->withSession(['_token' => $csrfToken])
+            ->withHeader('X-CSRF-TOKEN', $csrfToken)
+            ->from(route('admin.heritage-shops.create'))
+            ->post(route('admin.heritage-shops.store'), [
+                'shop_name' => 'Incomplete Published Cafe',
+                'publish_status' => HeritageShop::STATUS_PUBLISHED,
+            ]);
+
+        $response->assertRedirect(route('admin.heritage-shops.create'))
+            ->assertSessionHasErrors(['heritage_story', 'address', 'city']);
+        $this->assertDatabaseMissing('heritage_shops', ['shop_name' => 'Incomplete Published Cafe']);
     }
 
     public function test_permitted_list_discovery_previews_same_host_shops_without_saving(): void

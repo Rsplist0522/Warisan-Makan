@@ -13,7 +13,8 @@
         $shopCategory = old('primary_food_category', $shop->primary_food_category ?? '');
         $shopDescription = old('heritage_story', $shop->heritage_story ?? '');
         $shopContact = old('contact_number', $shop->contact_number ?? '');
-        $shopHours = old('operating_hours', $shop->operating_hours ?? '');
+        $shopHours = old('operating_hours', $shop->exists ? $shop->operatingHoursText() : '');
+        $shopStatus = old('publish_status', $shop->publish_status ?? 'draft');
         $shopSourceUrl = old('source_url', $shop->source_url ?? '');
         $shopFoodItems = old('food_items', $shop->food_items ?? [['name' => '', 'price' => '', 'desc' => '']]);
     @endphp
@@ -73,12 +74,14 @@
             <div class="detail-stack">
                 <section class="panel">
                     <h2>Shop profile</h2>
+                    <p class="section-guidance" id="shop-profile-requirements">Shop name is always required and displayed publicly. Heritage story is required when Status is Published.</p>
                     <div class="filters four" style="margin-top:16px;">
                         <div class="field">
-                                                        <label for="shop_name">Shop name <span aria-hidden="true">*</span></label>
-                            <input id="shop_name" name="shop_name" type="text" value="{{ $shopName }}" required maxlength="255" aria-describedby="shop-name-help">
-                            <p class="help-text" id="shop-name-help">Required. Use the official public name of the heritage business.</p>
-
+                            <label for="shop_name">Shop name <span aria-hidden="true">*</span></label>
+                            <input id="shop_name" name="shop_name" type="text" value="{{ $shopName }}" required maxlength="255" aria-describedby="shop-profile-requirements" @if ($errors->has('shop_name')) aria-invalid="true" @endif>
+                            @error('shop_name')
+                                <p class="field-error" role="alert">{{ $message }}</p>
+                            @enderror
                         </div>
                         <div class="field">
                             <label for="primary_food_category">Primary category</label>
@@ -97,40 +100,54 @@
                             <input id="source_url" name="source_url" type="url" value="{{ $shopSourceUrl }}">
                         </div>
                         <div class="field" style="grid-column:1 / -1;">
-                            <label for="heritage_story">Heritage story</label>
-                            <textarea id="heritage_story" name="heritage_story">{{ $shopDescription }}</textarea>
+                            <label for="heritage_story">Heritage story <span class="required-marker" data-required-marker="published" @if ($shopStatus !== 'published') hidden @endif aria-hidden="true">*</span></label>
+                            <textarea id="heritage_story" name="heritage_story" aria-describedby="shop-profile-requirements" @if ($errors->has('heritage_story')) aria-invalid="true" @endif>{{ $shopDescription }}</textarea>
+                            @error('heritage_story')
+                                <p class="field-error" role="alert">{{ $message }}</p>
+                            @enderror
                         </div>
                         <div class="field" style="grid-column:1 / -1;">
                             <label for="operating_hours">Operating hours</label>
-                            <textarea id="operating_hours" name="operating_hours">{{ is_array($shopHours) ? implode("\n", $shopHours) : $shopHours }}</textarea>
+                            <textarea id="operating_hours" name="operating_hours" aria-describedby="operating-hours-help" @if ($errors->has('operating_hours')) aria-invalid="true" @endif>{{ $shopHours }}</textarea>
+                            <p class="help-text field-guidance" id="operating-hours-help">Enter one day or schedule per line, for example: Monday: 11:30–14:30; 17:30–22:30.</p>
+                            @error('operating_hours')
+                                <p class="field-error" role="alert">{{ $message }}</p>
+                            @enderror
                         </div>
                     </div>
                 </section>
 
                 <section class="panel">
                     <h2>Location and ownership</h2>
-                    <div class="filters four" style="margin-top:16px;">
-                        <div class="field" style="grid-column:1 / -1;">
-                            <label for="address">Address</label>
-                            <input id="address" name="address" type="text" value="{{ $shopAddress }}">
+                    <p class="section-guidance" id="location-requirements">Address and City are required when Status is Published.</p>
+                    <div class="filters four location-grid" style="margin-top:16px;">
+                        <div class="field location-address" style="grid-column:1 / -1;">
+                            <label for="address">Address <span class="required-marker" data-required-marker="published" @if ($shopStatus !== 'published') hidden @endif aria-hidden="true">*</span></label>
+                            <input id="address" name="address" type="text" value="{{ $shopAddress }}" aria-describedby="location-requirements" @if ($errors->has('address')) aria-invalid="true" @endif>
+                            @error('address')
+                                <p class="field-error" role="alert">{{ $message }}</p>
+                            @enderror
                         </div>
-                        <div class="field">
-                            <label for="city">City</label>
-                            <input id="city" name="city" type="text" value="{{ $shopCity }}">
+                        <div class="field location-city">
+                            <label for="city">City <span class="required-marker" data-required-marker="published" @if ($shopStatus !== 'published') hidden @endif aria-hidden="true">*</span></label>
+                            <input id="city" name="city" type="text" value="{{ $shopCity }}" aria-describedby="location-requirements" @if ($errors->has('city')) aria-invalid="true" @endif>
+                            @error('city')
+                                <p class="field-error" role="alert">{{ $message }}</p>
+                            @enderror
                         </div>
-                        <div class="field">
+                        <div class="field location-state">
                             <label for="state">State</label>
                             <input id="state" name="state" type="text" value="{{ $shopState }}">
                         </div>
-                        <div class="field">
+                        <div class="field location-postal">
                             <label for="postal_code">Postal code</label>
                             <input id="postal_code" name="postal_code" type="text" value="{{ $shopPostal }}">
                         </div>
-                        <div class="field">
+                        <div class="field location-latitude">
                             <label for="latitude">Latitude</label>
                             <input id="latitude" name="latitude" type="number" step="any" min="-90" max="90" value="{{ old('latitude', $shop->latitude ?? '') }}">
                         </div>
-                        <div class="field">
+                        <div class="field location-longitude">
                             <label for="longitude">Longitude</label>
                             <input id="longitude" name="longitude" type="number" step="any" min="-180" max="180" value="{{ old('longitude', $shop->longitude ?? '') }}">
                         </div>
@@ -211,8 +228,8 @@
                     <h2>Publishing</h2>
                     <div class="field" style="margin-top:16px;">
                         <label for="publish_status">Status</label>
-                        <select id="publish_status" name="publish_status">
-                                                        @php($selectedStatus = old('publish_status', $shop->publish_status ?? 'draft'))
+                            <select id="publish_status" name="publish_status" aria-describedby="publish-status-help">
+                                                        @php($selectedStatus = $shopStatus)
                             <option value="draft" @selected($selectedStatus === 'draft')>Draft</option>
                             <option value="published" @selected($selectedStatus === 'published')>Published</option>
                             <option value="archived" @selected($selectedStatus === 'archived')>Archived</option>
@@ -222,7 +239,7 @@
 
                         </select>
                                         </div>
-                    <p class="help-text" style="margin-top:10px;">Only <strong>Published</strong> records appear in public discovery. Draft and Archived records remain admin-only. Existing Approved records are kept visible for compatibility.</p>
+                    <p class="help-text field-guidance" id="publish-status-help" style="margin-top:10px;">Only <strong>Published</strong> records appear in public discovery. Draft and Archived records remain admin-only. When Published is selected, the Heritage story, Address, and City fields become required.</p>
                     <div class="actions" style="margin-top:16px;">
 
                         <button class="button primary" type="submit">{{ $mode === 'create' ? 'Save shop' : 'Update shop' }}</button>
@@ -233,6 +250,13 @@
     </form>
 
     <style>
+        .field-guidance { margin: 0; color: var(--muted); font-size: .72rem; line-height: 1.4; }
+        .section-guidance { margin: 6px 0 0; color: var(--muted); font-size: .76rem; line-height: 1.45; }
+        .filters.four.location-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+        .filters.four.location-grid .location-address { grid-column: 1 / -1; }
+        .required-marker { color: #a33a2d; font-weight: 900; }
+        .field-error { margin: 0; color: #a33a2d; font-size: .76rem; font-weight: 800; line-height: 1.4; }
+        .field input[aria-invalid="true"], .field textarea[aria-invalid="true"], .field select[aria-invalid="true"] { border-color: rgba(163,54,54,.55); box-shadow: 0 0 0 3px rgba(163,54,54,.1); }
         .autofill-field {
             border: 1px solid rgba(163, 54, 54, .35) !important;
             box-shadow: 0 0 0 4px rgba(163, 54, 54, .08);
@@ -301,9 +325,13 @@
             display: flex;
             justify-content: flex-end;
         }
+        @media (max-width: 1100px) {
+            .filters.four.location-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
         @media (max-width: 640px) {
             .menu-item-fields { grid-template-columns: 1fr; }
             .crawl-controls { grid-template-columns: 1fr; }
+            .filters.four.location-grid { grid-template-columns: 1fr; }
         }
     </style>
 
@@ -315,6 +343,21 @@
         const imageUploadError = document.getElementById('image-upload-error');
         const maxImageBytes = Number('{{ config('heritage_shop.max_image_bytes', 1048576) }}');
         const maxImageLabel = '{{ number_format(config('heritage_shop.max_image_kb', 1024) / 1024, 2) }} MB';
+        const publishStatusInput = document.getElementById('publish_status');
+        const publishRequiredFields = ['heritage_story', 'address', 'city'];
+
+        function syncPublishedRequirements() {
+            const isPublished = publishStatusInput?.value === 'published';
+            publishRequiredFields.forEach((fieldId) => {
+                const field = document.getElementById(fieldId);
+                if (field) field.required = isPublished;
+                const marker = field?.closest('.field')?.querySelector('[data-required-marker="published"]');
+                if (marker) marker.hidden = !isPublished;
+            });
+        }
+
+        publishStatusInput?.addEventListener('change', syncPublishedRequirements);
+        syncPublishedRequirements();
 
         const menuItemsContainer = document.getElementById('menu-items-container');
         const addMenuItemButton = document.getElementById('add-menu-item');

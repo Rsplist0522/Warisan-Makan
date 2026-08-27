@@ -123,12 +123,100 @@ class HeritageShop extends Model
         ])));
     }
 
-    public function getOperatingHoursAttribute($value)
+    /**
+     * Normalize legacy raw strings and structured schedule arrays into rows
+     * suitable for a public profile or an admin form. This keeps the JSON
+     * storage shape intact while preventing raw JSON from leaking into UI.
+     *
+     * @return array<int, array{label: ?string, value: string}>
+     */
+    public function operatingHoursRows(): array
     {
-        if (is_array($value)) {
-            return implode('; ', array_filter($value));
+        $hours = $this->operating_hours;
+
+        if (is_string($hours)) {
+            $decoded = json_decode($hours, true);
+            $hours = is_array($decoded) ? $decoded : $hours;
         }
 
-        return $value;
+        if (is_string($hours)) {
+            return $this->parseOperatingHoursText($hours);
+        }
+
+        if (! is_array($hours)) {
+            return [];
+        }
+
+        if (isset($hours['raw']) && is_scalar($hours['raw'])) {
+            return $this->parseOperatingHoursText((string) $hours['raw']);
+        }
+
+        $rows = [];
+        foreach ($hours as $key => $value) {
+            if (is_array($value)) {
+                $label = filled($value['day'] ?? null)
+                    ? ucwords((string) $value['day'])
+                    : (! is_numeric($key) ? ucwords(str_replace(['_', '-'], ' ', (string) $key)) : null);
+                $closed = filter_var($value['closed'] ?? false, FILTER_VALIDATE_BOOLEAN);
+                $timeRange = $closed
+                    ? 'Closed'
+                    : implode('–', array_filter([
+                        filled($value['open'] ?? null) ? trim((string) $value['open']) : null,
+                        filled($value['close'] ?? null) ? trim((string) $value['close']) : null,
+                    ]));
+                $timeRange = $timeRange !== '' ? $timeRange : trim((string) ($value['hours'] ?? $value['value'] ?? ''));
+
+                if ($timeRange !== '') {
+                    $rows[] = ['label' => $label, 'value' => $timeRange];
+                }
+
+                continue;
+            }
+
+            if (! is_scalar($value) || trim((string) $value) === '' || $key === 'raw') {
+                continue;
+            }
+
+            $text = trim((string) $value);
+            if (is_numeric($key)) {
+                foreach ($this->parseOperatingHoursText($text) as $parsedRow) {
+                    $rows[] = $parsedRow;
+                }
+                continue;
+            }
+
+            $label = ucwords(str_replace(['_', '-'], ' ', (string) $key));
+            $rows[] = ['label' => $label, 'value' => $text];
+        }
+
+        return $rows;
+    }
+
+    public function operatingHoursText(): string
+    {
+        return implode("\n", array_map(
+            static fn (array $row): string => $row['label'] ? $row['label'].': '.$row['value'] : $row['value'],
+            $this->operatingHoursRows(),
+        ));
+    }
+
+    /**
+     * @return array<int, array{label: ?string, value: string}>
+     */
+    private function parseOperatingHoursText(string $hours): array
+    {
+        $parts = preg_split('/\\s*(?:;|\\r\\n|\\n|\\r)\\s*/u', trim($hours), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+        return array_values(array_filter(array_map(function (string $part): array {
+            $part = trim(preg_replace('/\\s+/u', ' ', $part) ?? $part);
+            if (preg_match('/^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|Mon|Tue|Wed|Thu|Fri|Sat|Sun)\\s*[:,-]?\\s*(.+)$/iu', $part, $matches)) {
+                return [
+                    'label' => ucfirst(strtolower($matches[1])),
+                    'value' => trim($matches[2]),
+                ];
+            }
+
+            return ['label' => null, 'value' => $part];
+        }, $parts), static fn (array $row): bool => $row['value'] !== ''));
     }
 }

@@ -322,7 +322,7 @@
         <div class="period-banner animate__animated animate__fadeIn">
             <span class="period-icon">{{ $periodInfo['icon'] }}</span>
             <span class="period-text">It is currently <strong>{{ $periodInfo['label'] }}</strong> &nbsp;·&nbsp; <em>({{ $periodInfo['tag'] }})</em></span>
-            <span class="period-rule">One draw per period</span>
+            <span class="period-rule">One surprise draw per period</span>
         </div>
 
         <form action="{{ url('/blind-box') }}#blind-box" method="GET">

@@ -27,18 +27,21 @@ class BlindBoxController extends Controller
         $period = $this->currentPeriod();
         $periodInfo = $this->periodInfo($period);
 
-        // Discovery Grid: ALWAYS shows ALL approved shops from the database (unfiltered)
-        $allCatalogShops = $this->heritageCatalog->all();
+        // Discovery Grid shows the catalogue and honours its discovery filters.
+        $allCatalogShops = array_values(array_filter(
+            $this->heritageCatalog->all(),
+            fn (array $shop): bool => ! $this->blindBoxCatalog->isRemoved($shop),
+        ));
 
-        // Filters are ONLY for the Blind Box surprise draw (State removed per request)
         $activeFilters = [
+            'state' => trim((string) $request->query('state', '')),
             'category' => trim((string) $request->query('category', '')),
         ];
 
         // Manual pagination for the discovery grid (unfiltered) - Final requirement: 4 items per page
         $perPage = 4; 
         $currentPage = Paginator::resolveCurrentPage() ?: 1;
-        $shopsCollection = collect($allCatalogShops);
+        $shopsCollection = collect($this->filterShops($allCatalogShops, $activeFilters));
         $paginatedShops = new LengthAwarePaginator(
             $shopsCollection->forPage($currentPage, $perPage)->values(),
             $shopsCollection->count(),
@@ -73,6 +76,7 @@ class BlindBoxController extends Controller
         }
 
         $activeFilters = [
+            'state' => trim((string) $request->query('state', '')),
             'category' => trim((string) $request->query('category', '')),
         ];
 
@@ -143,7 +147,8 @@ class BlindBoxController extends Controller
     private function filterShops(array $shops, array $filters): array
     {
         return array_values(array_filter($shops, function (array $shop) use ($filters): bool {
-            return ($filters['category'] === '' || ($shop['category'] ?? '') === $filters['category']);
+            return ($filters['state'] === '' || ($shop['state'] ?? '') === $filters['state'])
+                && ($filters['category'] === '' || ($shop['category'] ?? '') === $filters['category']);
         }));
     }
 }

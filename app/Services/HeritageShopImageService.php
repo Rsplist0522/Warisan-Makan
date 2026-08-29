@@ -56,6 +56,41 @@ class HeritageShopImageService
     }
 
     /**
+     * Copy an already validated image object into module-owned HeritageShop
+     * storage so public gallery images do not share lifecycle ownership with
+     * contribution evidence.
+     */
+    public function copyFromDisk(string $sourceDiskName, string $sourcePath, string $targetPath): string
+    {
+        $sourceDisk = Storage::disk($sourceDiskName);
+        $targetDisk = Storage::disk($this->diskName());
+
+        if (blank($sourcePath) || ! $sourceDisk->exists($sourcePath)) {
+            throw new RuntimeException('The selected supporting image could not be found.');
+        }
+
+        $stream = $sourceDisk->readStream($sourcePath);
+
+        if ($stream === false) {
+            throw new RuntimeException('The selected supporting image could not be opened.');
+        }
+
+        try {
+            $stored = $targetDisk->put($targetPath, $stream);
+        } finally {
+            if (is_resource($stream)) {
+                fclose($stream);
+            }
+        }
+
+        if ($stored === false || ! $targetDisk->exists($targetPath)) {
+            throw new RuntimeException('The selected supporting image could not be copied.');
+        }
+
+        return $targetPath;
+    }
+
+    /**
      * Generate the stable, module-owned URL used by public and admin views.
      */
     public function url(ShopImage $image): string
@@ -63,7 +98,7 @@ class HeritageShopImageService
         return route('heritage-shops.images.show', [
             'heritageShop' => $image->shop_id,
             'image' => $image->id,
-        ], false);
+        ]);
     }
 
     /**

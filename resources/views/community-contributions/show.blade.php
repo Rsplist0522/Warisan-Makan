@@ -3,11 +3,24 @@
 @section('title', 'Contribution Details')
 
 @section('content')
+    @php
+        $currentRevisionFeedback = $contribution->currentRevisionFeedback();
+        $previousRevisionFeedback = $contribution->previousRevisionFeedback();
+        $rejectionFeedback = $contribution->rejection_reason ?: $contribution->admin_feedback;
+    @endphp
+
     <header class="page-header">
         <div>
             <p class="eyebrow">Contribution details</p>
             <h1>{{ $contribution->contribution_title ?: $contribution->shop_name }}</h1>
-            <p>Submitted {{ $contribution->formatDateTime($contribution->submitted_at, 'as a draft') }}</p>
+            <p>
+                @if ($contribution->wasResubmitted())
+                    Resubmitted {{ $contribution->formatDateTime($contribution->latestSubmissionOccurredAt()) }}
+                    <span class="submission-secondary">Originally submitted {{ $contribution->formatDateTime($contribution->submitted_at, 'date not available') }}</span>
+                @else
+                    Submitted {{ $contribution->formatDateTime($contribution->submitted_at, 'as a draft') }}
+                @endif
+            </p>
         </div>
         <div class="actions">
             <span class="badge badge-{{ $contribution->status }}">{{ $contribution->statusLabel() }}</span>
@@ -20,13 +33,32 @@
             <strong>Deleted by administrator</strong><br>
             {{ $contribution->admin_feedback ?: 'No deletion reason was provided.' }}
         </section>
-    @elseif ($contribution->admin_feedback)
-        <section class="status-banner {{ $contribution->status === \App\Models\HeritageShopContribution::STATUS_APPROVED ? 'success' : 'error' }}">
-            <strong>Administrator feedback</strong><br>
-            {{ $contribution->admin_feedback }}
-        </section>
-    @endif
+    @else
+        @if ($contribution->status === \App\Models\HeritageShopContribution::STATUS_REJECTED && $rejectionFeedback)
+            <section class="status-banner error">
+                <strong>Rejection reason</strong><br>
+                {{ $rejectionFeedback }}
+            </section>
+        @elseif ($contribution->status === \App\Models\HeritageShopContribution::STATUS_APPROVED && $contribution->admin_feedback)
+            <section class="status-banner success">
+                <strong>Administrator feedback</strong><br>
+                {{ $contribution->admin_feedback }}
+            </section>
+        @endif
 
+        @if ($currentRevisionFeedback)
+            <section class="status-banner error">
+                <strong>Administrator feedback</strong><br>
+                {{ $currentRevisionFeedback }}
+            </section>
+        @elseif ($previousRevisionFeedback)
+            <section class="status-banner neutral">
+                <strong>Previous administrator feedback</strong><br>
+                {{ $previousRevisionFeedback }}
+                <p class="status-note">Addressed in the latest resubmission.</p>
+            </section>
+        @endif
+    @endif
     <div class="detail-grid">
         <div class="detail-stack">
             <section class="panel">

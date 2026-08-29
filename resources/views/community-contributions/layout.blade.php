@@ -150,6 +150,8 @@
 
         .status-banner.success { border-color: rgba(41, 100, 71, .22); background: rgba(41, 100, 71, .09); color: var(--wm-success); }
         .status-banner.error { border-color: rgba(180, 35, 24, .2); background: rgba(180, 35, 24, .08); color: var(--wm-danger); }
+        .status-banner.neutral { border-color: rgba(200, 148, 50, .28); background: rgba(200, 148, 50, .1); color: var(--wm-text); }
+        .status-note { margin: 8px 0 0; color: var(--wm-muted); font-size: .88rem; }
         .status-banner ul { margin: 8px 0 0; padding-left: 20px; }
 
         .panel, .form-section, .record-card, .stat-card {
@@ -299,53 +301,468 @@
             .repeat-row { grid-template-columns: 1fr; }
             .repeat-actions { padding-top: 0; }
         }
+
+        :root {
+            --wm-bg: #f7f1ea;
+            --wm-panel: #fffdf9;
+            --wm-text: #2e2420;
+            --wm-muted: #7b6a60;
+            --wm-accent: #a33a2d;
+            --wm-accent-strong: #3b1b18;
+            --wm-accent-soft: rgba(163, 58, 45, .1);
+            --wm-border: rgba(66, 43, 32, .12);
+            --wm-shadow: 0 12px 32px rgba(77, 48, 34, .07);
+            --wm-highlight: #c89432;
+            --wm-sidebar: #3b1b18;
+            --wm-sidebar-soft: #51251f;
+        }
+
+        body {
+            min-width: 0;
+            overflow-x: hidden;
+            color: var(--wm-text);
+            background:
+                linear-gradient(135deg, rgba(163, 58, 45, .06), transparent 34%),
+                linear-gradient(315deg, rgba(61, 111, 85, .07), transparent 38%),
+                var(--wm-bg);
+        }
+
+        body::before { display: none; }
+        h1, h2, h3 { font-family: Georgia, 'Times New Roman', serif; }
+
+        .shell { min-height: 100vh; display: grid; grid-template-columns: 268px minmax(0, 1fr); }
+        .shell.nav-collapsed { grid-template-columns: 82px minmax(0, 1fr); }
+        .main { min-width: 0; overflow-x: hidden; }
+        .sidebar {
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 28px 20px;
+            color: #fff5ec;
+            background: linear-gradient(180deg, var(--wm-sidebar), #28100e);
+        }
+
+        .sidebar .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 0;
+            padding: 2px 10px 28px;
+            border-bottom: 1px solid rgba(255, 255, 255, .1);
+            color: #fff5ec;
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: 1.18rem;
+            font-weight: 800;
+            text-decoration: none;
+        }
+
+        .brand-mark {
+            width: 38px;
+            height: 38px;
+            display: grid;
+            place-items: center;
+            flex: 0 0 auto;
+            border-radius: 12px;
+            color: #3b1b16;
+            background: var(--wm-highlight);
+            font-family: Georgia, 'Times New Roman', serif;
+        }
+
+        .nav-label {
+            margin: 27px 12px 10px;
+            color: rgba(255, 245, 236, .48);
+            font-size: .68rem;
+            font-weight: 800;
+            letter-spacing: .13em;
+            text-transform: uppercase;
+        }
+
+        .nav { display: grid; gap: 5px; }
+        .nav-item {
+            position: relative;
+            display: flex;
+            min-width: 0;
+            align-items: center;
+            gap: 11px;
+            padding: 11px 12px;
+            border-radius: 10px;
+            color: rgba(255, 245, 236, .72);
+            font-size: .88rem;
+            font-weight: 700;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .nav-item::before {
+            content: attr(data-icon);
+            width: 25px;
+            height: 25px;
+            display: grid;
+            place-items: center;
+            flex: 0 0 auto;
+            border: 1px solid rgba(255, 255, 255, .15);
+            border-radius: 8px;
+            font-size: .75rem;
+            line-height: 1;
+        }
+
+        .nav-item.active, .nav-item:hover { color: #fff; background: var(--wm-sidebar-soft); }
+        .nav-item.active::before { border-color: rgba(200, 148, 50, .42); background: var(--wm-highlight); color: #3b1b16; }
+        .sidebar-footer { margin-top: auto; padding-top: 22px; border-top: 1px solid rgba(255, 255, 255, .1); }
+        .user-name { margin: 0 0 3px; font-size: .88rem; font-weight: 800; }
+        .user-role { margin: 0 0 14px; color: rgba(255, 245, 236, .52); font-size: .76rem; }
+        .logout {
+            width: 100%;
+            padding: 9px 12px;
+            border: 1px solid rgba(255, 255, 255, .16);
+            border-radius: 9px;
+            color: #fff5ec;
+            background: transparent;
+            cursor: pointer;
+            text-align: left;
+        }
+        .logout:hover { background: rgba(255, 255, 255, .08); }
+
+        .shell.nav-collapsed .sidebar .brand { justify-content: center; padding-inline: 0; }
+        .shell.nav-collapsed .brand-word, .shell.nav-collapsed .nav-label, .shell.nav-collapsed .nav-item span, .shell.nav-collapsed .user-name, .shell.nav-collapsed .user-role { display: none; }
+        .shell.nav-collapsed .nav-item { width: 44px; min-height: 44px; justify-content: center; margin-inline: auto; padding-inline: 8px; overflow: hidden; }
+        .shell.nav-collapsed .nav-item::before { width: 28px; height: 28px; border-color: transparent; background: rgba(255,255,255,.04); }
+        .shell.nav-collapsed .nav-item:hover::after, .shell.nav-collapsed .nav-item:focus-visible::after {
+            content: attr(data-label);
+            position: absolute;
+            z-index: 60;
+            left: calc(100% + 10px);
+            top: 50%;
+            display: block;
+            min-width: max-content;
+            transform: translateY(-50%);
+            padding: 8px 10px;
+            border: 1px solid rgba(255,255,255,.12);
+            border-radius: 8px;
+            color: #fffaf4;
+            background: #3b1b18;
+            box-shadow: 0 10px 22px rgba(0,0,0,.18);
+            font-size: .75rem;
+            font-weight: 800;
+        }
+        .shell.nav-collapsed .nav-item:hover { overflow: visible; }
+        .nav-backdrop { display: none; }
+
+        .topbar {
+            position: static;
+            min-height: 76px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            padding: 16px 34px;
+            border-bottom: 1px solid var(--wm-border);
+            background: rgba(255, 253, 249, .9);
+        }
+
+        .topbar-inner {
+            width: auto;
+            min-height: 0;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .topbar h2 { margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 1.35rem; }
+        .topbar p { margin: 3px 0 0; color: var(--wm-muted); font-size: .82rem; }
+        .topbar-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+        .nav-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            min-height: 38px;
+            padding: 0 12px;
+            border: 1px solid var(--wm-border);
+            border-radius: 10px;
+            color: var(--wm-text);
+            background: #fff;
+            cursor: pointer;
+            font-size: .8rem;
+            font-weight: 800;
+        }
+        .nav-toggle:hover { border-color: rgba(163, 58, 45, .35); background: #fffaf4; }
+        .topbar-link {
+            display: inline-flex;
+            align-items: center;
+            min-height: 38px;
+            padding: 0 14px;
+            border: 1px solid var(--wm-border);
+            border-radius: 999px;
+            color: var(--wm-accent);
+            background: #fff;
+            font-size: .82rem;
+            font-weight: 800;
+            text-decoration: none;
+        }
+
+        .page-shell {
+            width: min(1180px, 100%);
+            margin: 0 auto;
+            padding: 34px;
+            border: 0;
+            border-radius: 0;
+            background: transparent;
+            box-shadow: none;
+        }
+        .home-back { display: none; }
+
+        .page-header {
+            position: relative;
+            overflow: hidden;
+            align-items: end;
+            gap: 20px;
+            margin-bottom: 24px;
+            padding: 30px;
+            border-radius: 18px;
+            color: #fffaf4;
+            background: linear-gradient(125deg, #96352c, #54201b);
+            box-shadow: 0 20px 50px rgba(91, 29, 29, .18);
+        }
+        .page-header::after {
+            content: '';
+            position: absolute;
+            width: 240px;
+            height: 240px;
+            right: -68px;
+            top: -100px;
+            border: 1px solid rgba(255,255,255,.16);
+            border-radius: 50%;
+            box-shadow: 0 0 0 22px rgba(255,255,255,.04), 0 0 0 46px rgba(255,255,255,.025);
+            pointer-events: none;
+        }
+        .page-header > * { position: relative; z-index: 1; min-width: 0; }
+        .eyebrow { color: #e7bf74; font-size: .72rem; }
+        h1 { font-size: 3.2rem; }
+        .page-header p:last-child { max-width: 720px; color: rgba(255, 250, 244, .74); line-height: 1.6; }
+        .submission-secondary { display: block; color: rgba(255, 250, 244, .68); font-size: .9em; }
+        .page-header .button.secondary { border-color: rgba(255, 255, 255, .18); color: #fff5ec; background: rgba(255, 255, 255, .08); }
+        .page-header .button.primary { box-shadow: none; }
+
+        .panel, .form-section, .record-card, .stat-card {
+            border: 1px solid var(--wm-border);
+            border-radius: 14px;
+            background: var(--wm-panel);
+            box-shadow: var(--wm-shadow);
+        }
+        .form-grid, .form-section, .field-grid, .field, .detail-stack, .media-grid, .repeat-shell, .repeat-row { min-width: 0; }
+        .form-section { padding: 20px; }
+        .section-title { color: var(--wm-accent); font-size: 1.12rem; }
+        label { color: var(--wm-muted); font-size: .76rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+        input:not([type='hidden']):not([type='checkbox']):not([type='radio']), textarea, select {
+            max-width: 100%;
+            min-width: 0;
+            min-height: 42px;
+            border-color: var(--wm-border);
+            border-radius: 10px;
+            background: #fff;
+            color: var(--wm-text);
+            padding: 11px 12px;
+        }
+        input:focus, textarea:focus, select:focus { border-color: rgba(163, 58, 45, .45); box-shadow: 0 0 0 4px rgba(163, 58, 45, .1); }
+        .soft-card { border-color: var(--wm-border); background: var(--wm-panel); }
+        .soft-card-head, .soft-card-row { grid-template-columns: 110px minmax(0, 1fr) minmax(0, 1fr); }
+        .close-cell { min-width: 0; }
+        .close-cell label { display: inline-flex; align-items: center; gap: 6px; text-transform: none; letter-spacing: 0; }
+        .repeat-row { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto; }
+        .button { min-height: 42px; border-radius: 10px; padding: 0 15px; }
+        .button.primary { color: #3f2a0d; background: var(--wm-highlight); box-shadow: 0 10px 22px rgba(200, 148, 50, .16); }
+        .button.secondary { border-color: var(--wm-border); background: #fff; color: var(--wm-text); }
+        .record-card h2 { margin-top: 8px; color: var(--wm-accent); font-size: 1.2rem; }
+        .record-card p { line-height: 1.5; }
+        .empty-state h2 { color: var(--wm-accent); }
+        dd { overflow-wrap: anywhere; }
+        .notification { border-left-color: var(--wm-highlight); border-radius: 0 10px 10px 0; background: rgba(255,255,255,.72); }
+
+        @media (max-width: 850px) {
+            .shell, .shell.nav-collapsed { display: block; width: 100%; max-width: 100%; }
+            .main { width: 100%; min-width: 0; overflow-x: hidden; }
+            .sidebar {
+                position: fixed;
+                z-index: 40;
+                left: 0;
+                top: 0;
+                width: min(88vw, 340px);
+                height: 100dvh;
+                transform: translateX(-105%);
+                transition: transform .2s ease;
+                box-shadow: 18px 0 45px rgba(44,18,12,.22);
+            }
+            .shell.nav-open .sidebar { transform: translateX(0); }
+            .shell.nav-open .nav-backdrop { display: block; position: fixed; z-index: 30; inset: 0; border: 0; background: rgba(34,16,12,.42); cursor: pointer; }
+            .shell.nav-collapsed .sidebar .brand { justify-content: flex-start; padding-inline: 10px; }
+            .shell.nav-collapsed .brand-word, .shell.nav-collapsed .nav-label, .shell.nav-collapsed .nav-item span, .shell.nav-collapsed .user-name, .shell.nav-collapsed .user-role { display: block; }
+            .shell.nav-collapsed .nav-item { width: auto; min-height: 0; justify-content: flex-start; margin-inline: 0; padding-inline: 12px; overflow: visible; }
+            .topbar, .page-shell { padding-inline: 20px; }
+            .topbar-inner { min-width: 0; }
+            .detail-grid, .record-card { grid-template-columns: 1fr; }
+            .record-actions { justify-content: start; }
+        }
+
+        @media (max-width: 620px) {
+            .topbar, .page-header { display: grid; grid-template-columns: minmax(0, 1fr); }
+            .topbar { width: 100%; max-width: 100%; min-height: 0; align-items: start; justify-content: stretch; gap: 14px; overflow: hidden; }
+            .topbar-inner { display: grid; width: 100%; max-width: 100%; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 12px; }
+            .topbar-inner > div, .topbar-actions { min-width: 0; }
+            .topbar h2 { font-size: 1.1rem; line-height: 1.15; overflow-wrap: anywhere; }
+            .topbar p { max-width: 100%; font-size: .76rem; line-height: 1.35; overflow-wrap: anywhere; }
+            .topbar-actions { width: 100%; justify-content: start; }
+            .topbar-link { max-width: 100%; min-height: 36px; white-space: normal; text-align: center; }
+            .page-shell { width: 100%; padding: 22px 16px 34px; }
+            .page-header { max-width: 100%; padding: 22px; border-radius: 16px; }
+            .page-header > div { width: 100%; min-width: 0; max-width: 100%; }
+            .page-header h1 { font-size: 2.1rem; line-height: 1.05; overflow-wrap: anywhere; }
+            .page-header p:last-child { display: block; max-width: 100%; overflow-wrap: anywhere; }
+            .page-header .actions { display: grid; width: 100%; min-width: 0; max-width: 100%; }
+            .field-grid, .field-grid.three, .definition-grid, .filters, .filters.four { grid-template-columns: 1fr; }
+            .soft-card-head { display: none; }
+            .soft-card-row { grid-template-columns: 1fr; gap: 7px; padding: 12px; }
+            .close-cell { align-items: stretch; flex-direction: column; }
+            .repeat-row { grid-template-columns: 1fr; }
+            .repeat-actions { padding-top: 0; }
+            .actions .button, .record-actions .button { width: 100%; white-space: normal; text-align: center; }
+            .media-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+        }
+
+        @media (max-width: 420px) {
+            input:not([type='hidden']):not([type='checkbox']):not([type='radio']), textarea, select { font-size: .92rem; }
+            .page-header h1 { font-size: 1.72rem; }
+        }
     </style>
 </head>
 <body>
-    <header class="topbar">
-        <div class="topbar-inner">
-            <a class="brand" href="{{ route('home') }}">Warisan Makan</a>
-            <nav class="nav-links" aria-label="{{ __('Community contribution navigation') }}">
-                <a class="nav-link {{ request()->routeIs('community-contribution.create', 'community-contribution.edit') ? 'active' : '' }}" href="{{ route('community-contribution.create') }}">{{ __('Submit shop') }}</a>
-                <a class="nav-link {{ request()->routeIs('community-contribution.drafts*') ? 'active' : '' }}" href="{{ route('community-contribution.drafts') }}">{{ __('Drafts') }}</a>
-                <a class="nav-link {{ request()->routeIs('community-contribution.contributions*') ? 'active' : '' }}" href="{{ route('community-contribution.contributions') }}">{{ __('My contributions') }}</a>
-                <a class="nav-link {{ request()->routeIs('community-contribution.correction-requests*') ? 'active' : '' }}" href="{{ route('community-contribution.correction-requests') }}">{{ __('My correction requests') }}</a>
-                <form class="inline-form" method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <button class="logout-button" type="submit">{{ __('Log out') }}</button>
-                </form>
-            </nav>
-        </div>
-    </header>
-
     @php
-        $backToHomeRoute = trim($__env->yieldContent('back_to_home', 'home'));
+        $userName = auth()->user()->name ?? __('Food Explorer');
     @endphp
 
-    @if ($backToHomeRoute !== '')
-        <div class="home-back">
-            <a class="button secondary small" href="{{ route($backToHomeRoute) }}">&larr; {{ __('Back to Home') }}</a>
-        </div>
-    @endif
+    <div class="shell" data-community-user-nav>
+        <aside class="sidebar" id="community-user-sidebar">
+            <a class="brand" href="{{ route('home') }}"><span class="brand-mark">W</span><span class="brand-word">WarisanMakan</span></a>
 
-    <main class="page-shell">
-        @if (session('status'))
-            <div class="status-banner success" role="status">{{ session('status') }}</div>
-        @endif
+            <p class="nav-label">{{ __('Home') }}</p>
+            <nav class="nav" aria-label="{{ __('User navigation') }}">
+                <a class="nav-item" data-icon="D" data-label="{{ __('Dashboard') }}" title="{{ __('Dashboard') }}" href="{{ route('home') }}"><span>{{ __('Dashboard') }}</span></a>
+                @auth
+                    <a class="nav-item {{ request()->routeIs('profile.*') ? 'active' : '' }}" data-icon="P" data-label="{{ __('Profile') }}" title="{{ __('Profile') }}" href="{{ route('profile.show') }}"><span>{{ __('Profile') }}</span></a>
+                @endauth
+            </nav>
 
-        @if ($errors->any())
-            <div class="status-banner error" role="alert">
-                <strong>{{ __('Please fix the following:') }}</strong>
-                <ul>
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
+            <p class="nav-label">{{ __('Modules') }}</p>
+            <nav class="nav" aria-label="{{ __('WarisanMakan modules') }}">
+                <a class="nav-item" data-icon="H" data-label="{{ __('Heritage Shops') }}" title="{{ __('Heritage Shops') }}" href="{{ route('heritage-shops.index') }}"><span>{{ __('Heritage Shops') }}</span></a>
+                <a class="nav-item" data-icon="T" data-label="{{ __('Food Trail') }}" title="{{ __('Food Trail') }}" href="{{ route('foodtrails.index') }}"><span>{{ __('Food Trail') }}</span></a>
+                <a class="nav-item" data-icon="F" data-label="{{ __('Food Passport') }}" title="{{ __('Food Passport') }}" href="{{ route('passport.index') }}"><span>{{ __('Food Passport') }}</span></a>
+                <a class="nav-item active" data-icon="C" data-label="{{ __('Community Contribution') }}" title="{{ __('Community Contribution') }}" href="{{ route('community-contribution.create') }}"><span>{{ __('Community Contribution') }}</span></a>
+            </nav>
 
-        @yield('content')
-    </main>
+            <p class="nav-label">{{ __('Contribution') }}</p>
+            <nav class="nav" aria-label="{{ __('Community contribution navigation') }}">
+                <a class="nav-item {{ request()->routeIs('community-contribution.create', 'community-contribution.edit') ? 'active' : '' }}" data-icon="+" data-label="{{ __('Submit shop') }}" title="{{ __('Submit shop') }}" href="{{ route('community-contribution.create') }}"><span>{{ __('Submit shop') }}</span></a>
+                <a class="nav-item {{ request()->routeIs('community-contribution.drafts*') ? 'active' : '' }}" data-icon="R" data-label="{{ __('Drafts') }}" title="{{ __('Drafts') }}" href="{{ route('community-contribution.drafts') }}"><span>{{ __('Drafts') }}</span></a>
+                <a class="nav-item {{ request()->routeIs('community-contribution.contributions*') ? 'active' : '' }}" data-icon="M" data-label="{{ __('My contributions') }}" title="{{ __('My contributions') }}" href="{{ route('community-contribution.contributions') }}"><span>{{ __('My contributions') }}</span></a>
+                <a class="nav-item {{ request()->routeIs('community-contribution.correction-requests*') ? 'active' : '' }}" data-icon="!" data-label="{{ __('Correction requests') }}" title="{{ __('Correction requests') }}" href="{{ route('community-contribution.correction-requests') }}"><span>{{ __('Correction requests') }}</span></a>
+            </nav>
+
+            @auth
+                <div class="sidebar-footer">
+                    <p class="user-name">{{ $userName }}</p>
+                    <p class="user-role">{{ __('WarisanMakan member') }}</p>
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button class="logout" type="submit">{{ __('Log out') }}</button>
+                    </form>
+                </div>
+            @endauth
+        </aside>
+        <button class="nav-backdrop" id="community-nav-backdrop" type="button" aria-label="{{ __('Close navigation') }}"></button>
+
+        <section class="main">
+            <header class="topbar">
+                <div class="topbar-inner">
+                    <button class="nav-toggle" id="community-nav-toggle" type="button" aria-controls="community-user-sidebar" aria-expanded="true">
+                        <span aria-hidden="true">☰</span><span id="community-nav-toggle-label">{{ __('Collapse') }}</span>
+                    </button>
+                    <div>
+                        <h2>{{ __('Community Contribution') }}</h2>
+                        <p>{{ __('Preserve heritage shops, stories, corrections and supporting evidence.') }}</p>
+                    </div>
+                </div>
+                <div class="topbar-actions">
+                    <a class="topbar-link" href="{{ route('home') }}">{{ __('Back to Home') }}</a>
+                    <a class="topbar-link" href="{{ route('heritage-shops.index') }}">{{ __('Heritage Shops') }}</a>
+                </div>
+            </header>
+
+            <main class="page-shell">
+                @if (session('status'))
+                    <div class="status-banner success" role="status">{{ session('status') }}</div>
+                @endif
+
+                @if ($errors->any())
+                    <div class="status-banner error" role="alert">
+                        <strong>{{ __('Please fix the following:') }}</strong>
+                        <ul>
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+
+                @yield('content')
+            </main>
+        </section>
+    </div>
+
+    <script>
+    (() => {
+        const shell = document.querySelector('[data-community-user-nav]');
+        const toggle = document.getElementById('community-nav-toggle');
+        const label = document.getElementById('community-nav-toggle-label');
+        const backdrop = document.getElementById('community-nav-backdrop');
+        if (!shell || !toggle || !label) return;
+        const key = 'warisan-community-user-nav-collapsed';
+        const mobile = () => window.matchMedia('(max-width: 850px)').matches;
+        const sync = () => {
+            if (mobile()) {
+                shell.classList.remove('nav-collapsed');
+                const open = shell.classList.contains('nav-open');
+                toggle.setAttribute('aria-expanded', String(open));
+                toggle.setAttribute('aria-label', open ? @json(__('Close navigation')) : @json(__('Open navigation')));
+                label.textContent = open ? @json(__('Close')) : @json(__('Menu'));
+            } else {
+                shell.classList.remove('nav-open');
+                const collapsed = localStorage.getItem(key) === 'true';
+                shell.classList.toggle('nav-collapsed', collapsed);
+                toggle.setAttribute('aria-expanded', String(!collapsed));
+                toggle.setAttribute('aria-label', collapsed ? @json(__('Expand navigation')) : @json(__('Collapse navigation')));
+                label.textContent = collapsed ? @json(__('Expand')) : @json(__('Collapse'));
+            }
+        };
+        toggle.addEventListener('click', () => {
+            if (mobile()) shell.classList.toggle('nav-open');
+            else {
+                const collapsed = !shell.classList.contains('nav-collapsed');
+                shell.classList.toggle('nav-collapsed', collapsed);
+                localStorage.setItem(key, String(collapsed));
+            }
+            sync();
+        });
+        backdrop?.addEventListener('click', () => { shell.classList.remove('nav-open'); sync(); });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') { shell.classList.remove('nav-open'); sync(); }
+        });
+        window.addEventListener('resize', sync, { passive: true });
+        sync();
+    })();
+    </script>
 
     @stack('scripts')
 </body>

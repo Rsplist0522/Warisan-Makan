@@ -492,6 +492,7 @@
                                 @php
                                     $primaryImage = $shop->images->first();
                                     $primaryImageUrl = $primaryImage ? $imageService->url($primaryImage) : null;
+                                    $operatingHoursSummary = $shop->operatingHoursSummary();
                                 @endphp
                                 <article class="shop-card">
                                     <div class="image-frame">
@@ -507,7 +508,7 @@
                                         <p class="description">{{ \Illuminate\Support\Str::limit($shop->heritage_story ?: 'Heritage information is being prepared.', 150) }}</p>
                                         <div class="card-facts">
                                             <div><strong>Location:</strong> {{ $shop->location ?: 'Not provided' }}</div>
-                                                            @if ($shop->operating_hours)<div><strong>Hours:</strong> {{ is_array($shop->operating_hours) ? implode('; ', $shop->operating_hours) : $shop->operating_hours }}</div>@endif
+                                            @if ($operatingHoursSummary !== '')<div><strong>Hours:</strong> {{ \Illuminate\Support\Str::limit($operatingHoursSummary, 140) }}</div>@endif
                                         </div>
                                         <div class="card-support">
                                             @if ($shop->activeFoodItems->isNotEmpty())

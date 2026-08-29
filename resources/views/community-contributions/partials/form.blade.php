@@ -261,7 +261,7 @@
             {{ $isEdit ? __('Save changes') : __('Save as draft') }}
         </button>
         <button class="button primary" type="submit" name="submission_action" value="submit">
-            {{ $contribution?->status === \App\Models\HeritageShopContribution::STATUS_REVISION_REQUIRED? __('Resubmit revision'): __('Submit for review') }}{{ __('Cancel') }}
+            {{ $contribution?->status === \App\Models\HeritageShopContribution::STATUS_REVISION_REQUIRED ? __('Resubmit revision') : __('Submit for review') }}
         </button>
         @if ($isEdit)
             <a class="button secondary" href="{{ $contribution->status === \App\Models\HeritageShopContribution::STATUS_DRAFT ? route('community-contribution.drafts') : route('community-contribution.contributions.show', $contribution) }}">Cancel</a>

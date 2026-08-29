@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\CorrectionRequest;
 use App\Models\HeritageShop;
 use App\Models\HeritageShopContribution;
+use App\Models\Media;
+use App\Models\ShopImage;
 use App\Models\User;
 use App\Notifications\ContributionStatusChanged;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -902,6 +904,315 @@ class CommunityContributionTest extends TestCase
             ->assertSee('Submitted 18 Aug 2026, 5:42 PM');
     }
 
+    public function test_revision_required_detail_shows_current_feedback_as_active(): void
+    {
+        $user = User::factory()->create();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $contribution = HeritageShopContribution::create([
+            ...$this->modelContributionData(),
+            'user_id' => $user->id,
+            'status' => HeritageShopContribution::STATUS_REVISION_REQUIRED,
+            'submitted_at' => Carbon::parse('2026-08-19 02:34:00', 'UTC'),
+            'admin_feedback' => 'Please upload supporting evidence.',
+        ]);
+        $contribution->moderationActivities()->create([
+            'actor_user_id' => $admin->id,
+            'action' => 'request_revision',
+            'from_status' => HeritageShopContribution::STATUS_UNDER_REVIEW,
+            'to_status' => HeritageShopContribution::STATUS_REVISION_REQUIRED,
+            'comment' => 'Please upload supporting evidence.',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('community-contribution.contributions.show', $contribution))
+            ->assertOk()
+            ->assertSee('Revision Required')
+            ->assertSee('<section class="status-banner error">', false)
+            ->assertSee('<strong>Administrator feedback</strong>', false)
+            ->assertSee('Please upload supporting evidence.')
+            ->assertSee('Revise and resubmit')
+            ->assertDontSee('Previous administrator feedback')
+            ->assertDontSee('No action is currently required.');
+    }
+
+    public function test_pending_after_resubmission_shows_previous_feedback_as_historical(): void
+    {
+        $user = User::factory()->create();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $contribution = HeritageShopContribution::create([
+            ...$this->modelContributionData(),
+            'user_id' => $user->id,
+            'status' => HeritageShopContribution::STATUS_PENDING_REVIEW,
+            'submitted_at' => Carbon::parse('2026-08-19 02:34:00', 'UTC'),
+            'resubmitted_at' => Carbon::parse('2026-08-29 11:04:00', 'UTC'),
+            'admin_feedback' => 'upload the support',
+        ]);
+        $contribution->moderationActivities()->create([
+            'actor_user_id' => $admin->id,
+            'action' => 'request_revision',
+            'from_status' => HeritageShopContribution::STATUS_UNDER_REVIEW,
+            'to_status' => HeritageShopContribution::STATUS_REVISION_REQUIRED,
+            'comment' => 'upload the support',
+        ]);
+
+        $response = $this->actingAs($user)
+            ->get(route('community-contribution.contributions.show', $contribution))
+            ->assertOk()
+            ->assertSee('Resubmitted 29 Aug 2026, 7:04 PM')
+            ->assertSee('Originally submitted 19 Aug 2026, 10:34 AM')
+            ->assertSee('<section class="status-banner neutral">', false)
+            ->assertSee('Previous administrator feedback')
+            ->assertSee('upload the support')
+            ->assertSee('Addressed in the latest resubmission.')
+            ->assertDontSee('<strong>Administrator feedback</strong>', false)
+            ->assertDontSee('Revise and resubmit');
+
+        $this->assertStringContainsString('Withdraw submission', $response->getContent());
+    }
+
+    public function test_under_review_after_resubmission_shows_previous_feedback_as_historical(): void
+    {
+        $user = User::factory()->create();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $contribution = HeritageShopContribution::create([
+            ...$this->modelContributionData(),
+            'user_id' => $user->id,
+            'status' => HeritageShopContribution::STATUS_UNDER_REVIEW,
+            'submitted_at' => Carbon::parse('2026-08-19 02:34:00', 'UTC'),
+            'resubmitted_at' => Carbon::parse('2026-08-29 11:04:00', 'UTC'),
+            'review_started_at' => Carbon::parse('2026-08-29 11:08:00', 'UTC'),
+            'reviewed_by_user_id' => $admin->id,
+            'admin_feedback' => 'upload the support',
+        ]);
+        $revisionRequest = $contribution->moderationActivities()->create([
+            'actor_user_id' => $admin->id,
+            'action' => 'request_revision',
+            'from_status' => HeritageShopContribution::STATUS_UNDER_REVIEW,
+            'to_status' => HeritageShopContribution::STATUS_REVISION_REQUIRED,
+            'comment' => 'upload the support',
+        ]);
+        $revisionRequest->forceFill([
+            'created_at' => Carbon::parse('2026-08-29 11:04:00', 'UTC'),
+            'updated_at' => Carbon::parse('2026-08-29 11:04:00', 'UTC'),
+        ])->save();
+        $reviewStarted = $contribution->moderationActivities()->create([
+            'actor_user_id' => $admin->id,
+            'action' => 'review_started',
+            'from_status' => HeritageShopContribution::STATUS_PENDING_REVIEW,
+            'to_status' => HeritageShopContribution::STATUS_UNDER_REVIEW,
+        ]);
+        $reviewStarted->forceFill([
+            'created_at' => Carbon::parse('2026-08-29 11:08:00', 'UTC'),
+            'updated_at' => Carbon::parse('2026-08-29 11:08:00', 'UTC'),
+        ])->save();
+
+        $this->actingAs($user)
+            ->get(route('community-contribution.contributions.show', $contribution))
+            ->assertOk()
+            ->assertSee('Under Review')
+            ->assertSee('Resubmitted 29 Aug 2026, 7:04 PM')
+            ->assertSee('Originally submitted 19 Aug 2026, 10:34 AM')
+            ->assertSee('Previous administrator feedback')
+            ->assertSee('upload the support')
+            ->assertSee('No action is currently required.')
+            ->assertSee('Review Started')
+            ->assertSee('29 Aug 2026, 7:08 PM')
+            ->assertDontSee('<strong>Administrator feedback</strong>', false)
+            ->assertDontSee('Revise and resubmit');
+    }
+
+    public function test_full_revision_resubmission_flow_renders_under_review_feedback_as_historical(): void
+    {
+        $user = User::factory()->create();
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        try {
+            Carbon::setTestNow(Carbon::parse('2026-08-19 02:34:00', 'UTC'));
+            $this->actingAs($user)
+                ->post(route('community-contribution.store'), $this->validContributionData())
+                ->assertSessionHasNoErrors();
+
+            $contribution = HeritageShopContribution::firstOrFail();
+
+            Carbon::setTestNow(Carbon::parse('2026-08-20 03:00:00', 'UTC'));
+            $this->actingAs($admin)
+                ->post(route('admin.community-contributions.start-review', $contribution))
+                ->assertSessionHasNoErrors();
+
+            $this->actingAs($admin)
+                ->post(route('admin.community-contributions.moderate', $contribution), [
+                    'moderation_action' => 'request_revision',
+                    'feedback' => 'upload the support',
+                ])
+                ->assertSessionHasNoErrors();
+
+            Carbon::setTestNow(Carbon::parse('2026-08-29 11:04:00', 'UTC'));
+            $this->actingAs($user)
+                ->put(route('community-contribution.update', $contribution), [
+                    ...$this->validContributionData(),
+                    'heritage_story' => 'The revised story includes newly uploaded support.',
+                ])
+                ->assertRedirect(route('community-contribution.contributions.show', $contribution));
+
+            Carbon::setTestNow(Carbon::parse('2026-08-29 11:08:00', 'UTC'));
+            $this->actingAs($admin)
+                ->post(route('admin.community-contributions.start-review', $contribution->fresh()))
+                ->assertSessionHasNoErrors();
+        } finally {
+            Carbon::setTestNow();
+        }
+
+        $this->actingAs($user)
+            ->get(route('community-contribution.contributions.show', $contribution->fresh()))
+            ->assertOk()
+            ->assertSee('Under Review')
+            ->assertSee('Resubmitted 29 Aug 2026, 7:04 PM')
+            ->assertSee('Originally submitted 19 Aug 2026, 10:34 AM')
+            ->assertSee('Previous administrator feedback')
+            ->assertSee('upload the support')
+            ->assertSee('No action is currently required.')
+            ->assertSee('Review Started')
+            ->assertSee('29 Aug 2026, 7:08 PM')
+            ->assertDontSee('<strong>Administrator feedback</strong>', false)
+            ->assertDontSee('Revise and resubmit');
+    }
+
+    public function test_under_review_before_revision_has_no_feedback_banner(): void
+    {
+        $user = User::factory()->create();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $contribution = HeritageShopContribution::create([
+            ...$this->modelContributionData(),
+            'user_id' => $user->id,
+            'status' => HeritageShopContribution::STATUS_UNDER_REVIEW,
+            'submitted_at' => Carbon::parse('2026-08-19 02:34:00', 'UTC'),
+            'review_started_at' => Carbon::parse('2026-08-20 03:00:00', 'UTC'),
+            'reviewed_by_user_id' => $admin->id,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('community-contribution.contributions.show', $contribution))
+            ->assertOk()
+            ->assertSee('Submitted 19 Aug 2026, 10:34 AM')
+            ->assertDontSee('<strong>Administrator feedback</strong>', false)
+            ->assertDontSee('Previous administrator feedback')
+            ->assertSee('No action is currently required.');
+    }
+
+    public function test_multiple_revision_cycles_use_latest_revision_feedback_as_current(): void
+    {
+        $user = User::factory()->create();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $contribution = HeritageShopContribution::create([
+            ...$this->modelContributionData(),
+            'user_id' => $user->id,
+            'status' => HeritageShopContribution::STATUS_REVISION_REQUIRED,
+            'submitted_at' => Carbon::parse('2026-08-19 02:34:00', 'UTC'),
+            'resubmitted_at' => Carbon::parse('2026-08-29 11:04:00', 'UTC'),
+            'admin_feedback' => 'Second cycle evidence is still missing.',
+        ]);
+        $firstRevision = $contribution->moderationActivities()->create([
+            'actor_user_id' => $admin->id,
+            'action' => 'request_revision',
+            'from_status' => HeritageShopContribution::STATUS_UNDER_REVIEW,
+            'to_status' => HeritageShopContribution::STATUS_REVISION_REQUIRED,
+            'comment' => 'First cycle feedback was addressed.',
+        ]);
+        $firstRevision->forceFill([
+            'created_at' => Carbon::parse('2026-08-20 03:00:00', 'UTC'),
+            'updated_at' => Carbon::parse('2026-08-20 03:00:00', 'UTC'),
+        ])->save();
+        $secondRevision = $contribution->moderationActivities()->create([
+            'actor_user_id' => $admin->id,
+            'action' => 'request_revision',
+            'from_status' => HeritageShopContribution::STATUS_UNDER_REVIEW,
+            'to_status' => HeritageShopContribution::STATUS_REVISION_REQUIRED,
+            'comment' => 'Second cycle evidence is still missing.',
+        ]);
+        $secondRevision->forceFill([
+            'created_at' => Carbon::parse('2026-08-30 04:00:00', 'UTC'),
+            'updated_at' => Carbon::parse('2026-08-30 04:00:00', 'UTC'),
+        ])->save();
+
+        $content = $this->actingAs($user)
+            ->get(route('community-contribution.contributions.show', $contribution))
+            ->assertOk()
+            ->assertSee('Second cycle evidence is still missing.')
+            ->assertSee('Revise and resubmit')
+            ->assertDontSee('Previous administrator feedback')
+            ->getContent();
+
+        $this->assertStringContainsString('<strong>Administrator feedback</strong>', $content);
+        $this->assertLessThan(
+            strpos($content, 'Status activity'),
+            strpos($content, 'Second cycle evidence is still missing.')
+        );
+    }
+
+    public function test_approved_after_revision_keeps_old_revision_feedback_historical(): void
+    {
+        $user = User::factory()->create();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $contribution = HeritageShopContribution::create([
+            ...$this->modelContributionData(),
+            'user_id' => $user->id,
+            'status' => HeritageShopContribution::STATUS_APPROVED,
+            'submitted_at' => Carbon::parse('2026-08-19 02:34:00', 'UTC'),
+            'resubmitted_at' => Carbon::parse('2026-08-29 11:04:00', 'UTC'),
+            'approved_at' => Carbon::parse('2026-08-30 05:00:00', 'UTC'),
+            'approved_by_user_id' => $admin->id,
+        ]);
+        $contribution->moderationActivities()->create([
+            'actor_user_id' => $admin->id,
+            'action' => 'request_revision',
+            'from_status' => HeritageShopContribution::STATUS_UNDER_REVIEW,
+            'to_status' => HeritageShopContribution::STATUS_REVISION_REQUIRED,
+            'comment' => 'Please upload supporting evidence.',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('community-contribution.contributions.show', $contribution))
+            ->assertOk()
+            ->assertSee('Approved')
+            ->assertSee('Previous administrator feedback')
+            ->assertSee('Please upload supporting evidence.')
+            ->assertDontSee('<strong>Administrator feedback</strong>', false)
+            ->assertDontSee('Revise and resubmit');
+    }
+
+    public function test_rejected_after_revision_separates_rejection_reason_from_old_revision_feedback(): void
+    {
+        $user = User::factory()->create();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $contribution = HeritageShopContribution::create([
+            ...$this->modelContributionData(),
+            'user_id' => $user->id,
+            'status' => HeritageShopContribution::STATUS_REJECTED,
+            'submitted_at' => Carbon::parse('2026-08-19 02:34:00', 'UTC'),
+            'resubmitted_at' => Carbon::parse('2026-08-29 11:04:00', 'UTC'),
+            'admin_feedback' => 'The submitted details duplicate another shop record.',
+            'rejection_reason' => 'The submitted details duplicate another shop record.',
+        ]);
+        $contribution->moderationActivities()->create([
+            'actor_user_id' => $admin->id,
+            'action' => 'request_revision',
+            'from_status' => HeritageShopContribution::STATUS_UNDER_REVIEW,
+            'to_status' => HeritageShopContribution::STATUS_REVISION_REQUIRED,
+            'comment' => 'Please upload supporting evidence.',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('community-contribution.contributions.show', $contribution))
+            ->assertOk()
+            ->assertSee('Rejected')
+            ->assertSee('Rejection reason')
+            ->assertSee('The submitted details duplicate another shop record.')
+            ->assertSee('Previous administrator feedback')
+            ->assertSee('Please upload supporting evidence.')
+            ->assertDontSee('<strong>Administrator feedback</strong>', false)
+            ->assertDontSee('Revise and resubmit');
+    }
+
     public function test_administrator_can_approve_and_create_a_heritage_shop_record(): void
     {
         $user = User::factory()->create();
@@ -938,6 +1249,312 @@ class CommunityContributionTest extends TestCase
         $this->get(route('heritage-shops.index'))
             ->assertOk()
             ->assertSee('Capital Caf');
+    }
+
+    public function test_admin_can_publish_one_selected_contribution_image_to_shop_images_on_approval(): void
+    {
+        Notification::fake();
+        $this->fakeContributionAndShopImageDisks();
+
+        $user = User::factory()->create();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $contribution = $this->underReviewContribution($user, $admin);
+        $media = $this->storedContributionMedia($contribution, 'image', 'selected-photo.jpg', 'image/jpeg', 'contribution-image-bytes');
+
+        $this->actingAs($admin)
+            ->post(route('admin.community-contributions.moderate', $contribution), [
+                'moderation_action' => 'approve',
+                'publish_media_ids' => [$media->id],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $shop = HeritageShop::where('source_contribution_id', $contribution->id)->firstOrFail();
+        $image = $shop->images()->firstOrFail();
+
+        $this->assertTrue($image->is_primary);
+        $this->assertSame(
+            "heritage-shops/community-contributions/{$shop->id}/{$contribution->id}/media-{$media->id}.jpg",
+            $image->path
+        );
+        $this->assertNotSame($media->r2_object_key, $image->path);
+        $this->assertTrue(Storage::disk('media-test')->exists($media->r2_object_key));
+        $this->assertTrue(Storage::disk('heritage-test')->exists($image->path));
+    }
+
+    public function test_admin_can_publish_multiple_selected_contribution_images_on_approval(): void
+    {
+        Notification::fake();
+        $this->fakeContributionAndShopImageDisks();
+
+        $user = User::factory()->create();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $contribution = $this->underReviewContribution($user, $admin);
+        $first = $this->storedContributionMedia($contribution, 'image', 'front.jpg', 'image/jpeg', 'front-bytes');
+        $second = $this->storedContributionMedia($contribution, 'image', 'menu.png', 'image/png', 'menu-bytes');
+
+        $this->actingAs($admin)
+            ->post(route('admin.community-contributions.moderate', $contribution), [
+                'moderation_action' => 'approve',
+                'publish_media_ids' => [$first->id, $second->id],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $shop = HeritageShop::where('source_contribution_id', $contribution->id)->firstOrFail();
+        $images = $shop->images()->orderBy('id')->get();
+
+        $this->assertCount(2, $images);
+        $this->assertTrue($images[0]->is_primary);
+        $this->assertFalse($images[1]->is_primary);
+        $this->assertTrue(Storage::disk('heritage-test')->exists($images[0]->path));
+        $this->assertTrue(Storage::disk('heritage-test')->exists($images[1]->path));
+    }
+
+    public function test_admin_can_approve_with_zero_selected_images(): void
+    {
+        Notification::fake();
+        $this->fakeContributionAndShopImageDisks();
+
+        $user = User::factory()->create();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $contribution = $this->underReviewContribution($user, $admin);
+        $this->storedContributionMedia($contribution, 'image', 'evidence.jpg', 'image/jpeg', 'evidence-bytes');
+
+        $this->actingAs($admin)
+            ->post(route('admin.community-contributions.moderate', $contribution), [
+                'moderation_action' => 'approve',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $shop = HeritageShop::where('source_contribution_id', $contribution->id)->firstOrFail();
+
+        $this->assertSame(HeritageShopContribution::STATUS_APPROVED, $contribution->fresh()->status);
+        $this->assertSame(0, $shop->images()->count());
+    }
+
+    public function test_unselected_supporting_image_remains_evidence_and_is_not_published(): void
+    {
+        Notification::fake();
+        $this->fakeContributionAndShopImageDisks();
+
+        $user = User::factory()->create();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $contribution = $this->underReviewContribution($user, $admin);
+        $selected = $this->storedContributionMedia($contribution, 'image', 'selected.jpg', 'image/jpeg', 'selected-bytes');
+        $unselected = $this->storedContributionMedia($contribution, 'image', 'unselected.jpg', 'image/jpeg', 'unselected-bytes');
+
+        $this->actingAs($admin)
+            ->post(route('admin.community-contributions.moderate', $contribution), [
+                'moderation_action' => 'approve',
+                'publish_media_ids' => [$selected->id],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $shop = HeritageShop::where('source_contribution_id', $contribution->id)->firstOrFail();
+
+        $this->assertSame(2, $contribution->media()->count());
+        $this->assertTrue(Storage::disk('media-test')->exists($unselected->r2_object_key));
+        $this->assertSame(1, $shop->images()->count());
+        $this->assertStringContainsString("media-{$selected->id}.jpg", $shop->images()->first()->path);
+        $this->assertStringNotContainsString("media-{$unselected->id}.jpg", $shop->images()->first()->path);
+    }
+
+    public function test_non_image_media_id_cannot_be_published_on_approval(): void
+    {
+        Notification::fake();
+        $this->fakeContributionAndShopImageDisks();
+
+        $user = User::factory()->create();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $contribution = $this->underReviewContribution($user, $admin);
+        $video = $this->storedContributionMedia($contribution, 'video', 'walkthrough.mp4', 'video/mp4', 'video-bytes');
+
+        $this->actingAs($admin)
+            ->post(route('admin.community-contributions.moderate', $contribution), [
+                'moderation_action' => 'approve',
+                'publish_media_ids' => [$video->id],
+            ])
+            ->assertSessionHasErrors('publish_media_ids');
+
+        $this->assertSame(HeritageShopContribution::STATUS_UNDER_REVIEW, $contribution->fresh()->status);
+        $this->assertDatabaseCount('shop_images', 0);
+        $this->assertDatabaseCount('heritage_shops', 0);
+    }
+
+    public function test_media_from_another_contribution_cannot_be_published(): void
+    {
+        Notification::fake();
+        $this->fakeContributionAndShopImageDisks();
+
+        $user = User::factory()->create();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $contribution = $this->underReviewContribution($user, $admin);
+        $otherContribution = $this->underReviewContribution($user, $admin);
+        $otherMedia = $this->storedContributionMedia($otherContribution, 'image', 'other.jpg', 'image/jpeg', 'other-bytes');
+
+        $this->actingAs($admin)
+            ->post(route('admin.community-contributions.moderate', $contribution), [
+                'moderation_action' => 'approve',
+                'publish_media_ids' => [$otherMedia->id],
+            ])
+            ->assertSessionHasErrors('publish_media_ids');
+
+        $this->assertSame(HeritageShopContribution::STATUS_UNDER_REVIEW, $contribution->fresh()->status);
+        $this->assertDatabaseCount('shop_images', 0);
+        $this->assertDatabaseCount('heritage_shops', 0);
+    }
+
+    public function test_reject_and_request_revision_ignore_selected_media_ids(): void
+    {
+        Notification::fake();
+        $this->fakeContributionAndShopImageDisks();
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        $rejectOwner = User::factory()->create();
+        $revisionOwner = User::factory()->create();
+        $rejectContribution = $this->underReviewContribution($rejectOwner, $admin);
+        $revisionContribution = $this->underReviewContribution($revisionOwner, $admin);
+        $rejectMedia = $this->storedContributionMedia($rejectContribution, 'image', 'reject.jpg', 'image/jpeg', 'reject-bytes');
+        $revisionMedia = $this->storedContributionMedia($revisionContribution, 'image', 'revision.jpg', 'image/jpeg', 'revision-bytes');
+
+        $this->actingAs($admin)
+            ->post(route('admin.community-contributions.moderate', $rejectContribution), [
+                'moderation_action' => 'reject',
+                'feedback' => 'Not enough supporting detail.',
+                'publish_media_ids' => [$rejectMedia->id],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->actingAs($admin)
+            ->post(route('admin.community-contributions.moderate', $revisionContribution), [
+                'moderation_action' => 'request_revision',
+                'feedback' => 'Please provide clearer proof.',
+                'publish_media_ids' => [$revisionMedia->id],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseCount('shop_images', 0);
+        $this->assertDatabaseCount('heritage_shops', 0);
+        $this->assertSame(HeritageShopContribution::STATUS_REJECTED, $rejectContribution->fresh()->status);
+        $this->assertSame(HeritageShopContribution::STATUS_REVISION_REQUIRED, $revisionContribution->fresh()->status);
+    }
+
+    public function test_selected_image_does_not_replace_an_existing_primary_shop_image(): void
+    {
+        Notification::fake();
+        $this->fakeContributionAndShopImageDisks();
+
+        $user = User::factory()->create();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $contribution = $this->underReviewContribution($user, $admin);
+        $media = $this->storedContributionMedia($contribution, 'image', 'selected.jpg', 'image/jpeg', 'selected-bytes');
+        $shop = HeritageShop::create([
+            ...$this->modelContributionData(),
+            'source_contribution_id' => $contribution->id,
+            'publish_status' => HeritageShop::STATUS_PUBLISHED,
+        ]);
+        Storage::disk('heritage-test')->put('heritage-shops/existing-primary.jpg', 'existing-bytes');
+        $existingPrimary = $shop->images()->create([
+            'path' => 'heritage-shops/existing-primary.jpg',
+            'is_primary' => true,
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.community-contributions.moderate', $contribution), [
+                'moderation_action' => 'approve',
+                'publish_media_ids' => [$media->id],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertTrue($existingPrimary->fresh()->is_primary);
+        $this->assertSame(2, $shop->fresh()->images()->count());
+        $this->assertFalse($shop->images()->where('path', '!=', $existingPrimary->path)->firstOrFail()->is_primary);
+    }
+
+    public function test_public_profile_uses_published_shop_images_from_selected_contribution_media(): void
+    {
+        Notification::fake();
+        $this->fakeContributionAndShopImageDisks();
+
+        $user = User::factory()->create();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $contribution = $this->underReviewContribution($user, $admin);
+        $selected = $this->storedContributionMedia($contribution, 'image', 'selected.jpg', 'image/jpeg', 'selected-bytes');
+        $unselected = $this->storedContributionMedia($contribution, 'image', 'unselected.jpg', 'image/jpeg', 'unselected-bytes');
+
+        $this->actingAs($admin)
+            ->post(route('admin.community-contributions.moderate', $contribution), [
+                'moderation_action' => 'approve',
+                'publish_media_ids' => [$selected->id],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $shop = HeritageShop::where('source_contribution_id', $contribution->id)->firstOrFail();
+        $image = $shop->images()->firstOrFail();
+
+        $this->get(route('heritage-shops.show', ['id' => $shop->id]))
+            ->assertOk()
+            ->assertSee(route('heritage-shops.images.show', [$shop, $image]), false)
+            ->assertDontSee('No image available');
+
+        $this->assertStringContainsString("media-{$selected->id}.jpg", $image->path);
+        $this->assertStringNotContainsString("media-{$unselected->id}.jpg", $image->path);
+    }
+
+    public function test_retrying_approval_does_not_duplicate_selected_shop_images(): void
+    {
+        Notification::fake();
+        $this->fakeContributionAndShopImageDisks();
+
+        $user = User::factory()->create();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $contribution = $this->underReviewContribution($user, $admin);
+        $media = $this->storedContributionMedia($contribution, 'image', 'selected.jpg', 'image/jpeg', 'selected-bytes');
+
+        $payload = [
+            'moderation_action' => 'approve',
+            'publish_media_ids' => [$media->id],
+        ];
+
+        $this->actingAs($admin)
+            ->post(route('admin.community-contributions.moderate', $contribution), $payload)
+            ->assertSessionHasNoErrors();
+
+        $this->actingAs($admin)
+            ->post(route('admin.community-contributions.moderate', $contribution->fresh()), $payload)
+            ->assertSessionHasErrors('moderation');
+
+        $this->assertDatabaseCount('shop_images', 1);
+    }
+
+    public function test_missing_selected_source_image_fails_without_approving_or_creating_shop_image(): void
+    {
+        Notification::fake();
+        $this->fakeContributionAndShopImageDisks();
+
+        $user = User::factory()->create();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $contribution = $this->underReviewContribution($user, $admin);
+        $media = $contribution->media()->create([
+            'uploaded_by_user_id' => $user->id,
+            'media_type' => 'image',
+            'r2_object_key' => "contributions/{$contribution->id}/missing.jpg",
+            'original_name' => 'missing.jpg',
+            'mime_type' => 'image/jpeg',
+            'file_size_bytes' => 12,
+            'display_order' => 0,
+            'is_primary' => true,
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.community-contributions.moderate', $contribution), [
+                'moderation_action' => 'approve',
+                'publish_media_ids' => [$media->id],
+            ])
+            ->assertSessionHasErrors('publish_media_ids');
+
+        $this->assertSame(HeritageShopContribution::STATUS_UNDER_REVIEW, $contribution->fresh()->status);
+        $this->assertDatabaseCount('shop_images', 0);
+        $this->assertDatabaseCount('heritage_shops', 0);
     }
 
     public function test_user_can_submit_correction_request_and_admin_can_approve_it(): void
@@ -1202,6 +1819,50 @@ class CommunityContributionTest extends TestCase
             ->assertSessionHasNoErrors();
 
         $this->assertDatabaseCount('heritage_shop_contributions', 1);
+    }
+
+    private function fakeContributionAndShopImageDisks(): void
+    {
+        Storage::fake('media-test');
+        Storage::fake('heritage-test');
+
+        config()->set('filesystems.media_disk', 'media-test');
+        config()->set('heritage_shop.image_disk', 'heritage-test');
+    }
+
+    private function underReviewContribution(User $user, User $admin): HeritageShopContribution
+    {
+        return HeritageShopContribution::create([
+            ...$this->modelContributionData(),
+            'user_id' => $user->id,
+            'status' => HeritageShopContribution::STATUS_UNDER_REVIEW,
+            'reviewed_by_user_id' => $admin->id,
+            'review_started_at' => now(),
+            'submitted_at' => now(),
+        ]);
+    }
+
+    private function storedContributionMedia(
+        HeritageShopContribution $contribution,
+        string $mediaType,
+        string $originalName,
+        string $mimeType,
+        string $contents
+    ): Media {
+        $disk = Storage::disk(config('filesystems.media_disk'));
+        $r2ObjectKey = "contributions/{$contribution->id}/{$originalName}";
+        $disk->put($r2ObjectKey, $contents);
+
+        return $contribution->media()->create([
+            'uploaded_by_user_id' => $contribution->user_id,
+            'media_type' => $mediaType,
+            'r2_object_key' => $r2ObjectKey,
+            'original_name' => $originalName,
+            'mime_type' => $mimeType,
+            'file_size_bytes' => strlen($contents),
+            'display_order' => 0,
+            'is_primary' => false,
+        ]);
     }
 
     public function test_valid_supporting_video_is_stored_as_video_media(): void

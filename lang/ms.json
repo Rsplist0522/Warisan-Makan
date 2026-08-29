@@ -502,6 +502,7 @@
     "Last check-in: :date": "Daftar masuk terakhir: :date",
     ":count badges": ":count lencana",
     ":count check-ins": ":count daftar masuk",
-    "Resetting the demo passport...": "Menetapkan semula pasport demo..."
+    "Resetting the demo passport...": "Menetapkan semula pasport demo...",
+    "Profile completion": "Kelengkapan profil"
 
 }

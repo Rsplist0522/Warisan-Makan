@@ -4,15 +4,25 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use App\Models\UserBadge;
 
 class ProfileController extends Controller
 {
     public function show()
     {
+        $user = auth()->user();
+
+        $badges = UserBadge::with('badge')
+            ->where('user_id', $user->id)
+            ->orderByDesc('earned_at')
+            ->get();
+
         return view('profile.show', [
-            'user' => auth()->user(),
+            'user' => $user,
+            'badges' => $badges,
         ]);
     }
+
 
     public function edit()
     {
@@ -28,7 +38,7 @@ class ProfileController extends Controller
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email,' . $user->id,
-            'phone' => 'nullable|string|max:40',
+            'phone' => ['nullable', 'regex:/^[0-9]{1,11}$/'],
             'city' => 'nullable|string|max:80',
             'bio' => 'nullable|string|max:700',
             'profile_photo' => 'nullable|image|max:2048',
@@ -63,6 +73,8 @@ class ProfileController extends Controller
             return redirect()->route('home');
         }
 
-        return redirect()->route('profile.show')->with('success', __('Profile updated successfully.'));
+        return redirect()
+            ->route('profile.edit')
+            ->with('success', __('Profile updated successfully.'));
     }
 }

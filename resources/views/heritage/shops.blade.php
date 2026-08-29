@@ -507,7 +507,15 @@
                                         <p class="description">{{ \Illuminate\Support\Str::limit($shop->heritage_story ?: 'Heritage information is being prepared.', 150) }}</p>
                                         <div class="card-facts">
                                             <div><strong>Location:</strong> {{ $shop->location ?: 'Not provided' }}</div>
-                                                            @if ($shop->operating_hours)<div><strong>Hours:</strong> {{ is_array($shop->operating_hours) ? implode('; ', $shop->operating_hours) : $shop->operating_hours }}</div>@endif
+                                                            @if ($shop->operating_hours)
+                                                                 <div>
+                                                                    <strong>Hours:</strong>
+                                                                    {{ is_array($shop->operating_hours)
+                                                                        ? implode('; ', \Illuminate\Support\Arr::flatten($shop->operating_hours))
+                                                                        : $shop->operating_hours
+                                                                    }}
+                                                                </div>
+                                                            @endif
                                         </div>
                                         <div class="card-support">
                                             @if ($shop->activeFoodItems->isNotEmpty())
@@ -516,8 +524,40 @@
                                                 <span class="food-coverage empty">Menu being documented</span>
                                             @endif
                                             <div class="card-actions">
-                                                <a class="button secondary" href="{{ route('heritage-shops.show', ['id' => $shop->id]) }}">View details</a>
-                                                <a class="button primary" href="{{ route('heritage-shops.menu', $shop) }}">Explore menu &amp; stories</a>
+                                                @guest
+                                                    <a
+                                                        class="button secondary"
+                                                        href="{{ route('heritage-shops.show', ['id' => $shop->id]) }}"
+                                                        data-login-required
+                                                        data-login-message="Please sign in with Google to view shop details."
+                                                    >
+                                                    View details
+                                                    </a>
+
+                                                    <a
+                                                        class="button primary"
+                                                        href="{{ route('heritage-shops.menu', $shop) }}"
+                                                        data-login-required
+                                                        data-login-message="Please sign in with Google to explore the menu and stories."
+                                                        >
+                                                            Explore menu &amp; stories
+                                                    </a>
+                                                @else
+                                                    <a
+                                                        class="button secondary"
+                                                        href="{{ route('heritage-shops.show', ['id' => $shop->id]) }}"
+                                                    >
+                                                        View details
+                                                    </a>
+
+                                                    <a
+                                                        class="button primary"
+                                                        href="{{ route('heritage-shops.menu', $shop) }}"
+                                                    >
+                                                        Explore menu &amp; stories
+                                                    </a>
+                                                @endguest
+
                                             </div>
                                         </div>
                                     </div>
@@ -634,5 +674,6 @@
             })();
         </script>
     @endif
+    @include('partials.login-required-modal')
 </body>
 </html>

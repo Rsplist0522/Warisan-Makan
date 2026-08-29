@@ -2,11 +2,11 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
@@ -28,7 +28,10 @@ use Throwable;
     'deactivated_at',
     'deactivated_by_user_id',
 ])]
-#[Hidden(['password', 'remember_token'])]
+#[Hidden([
+    'password',
+    'remember_token',
+])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
@@ -80,17 +83,28 @@ class User extends Authenticatable
             return null;
         }
 
-        if (str_starts_with($this->profile_photo, 'http://') || str_starts_with($this->profile_photo, 'https://')) {
+        // If the database already contains a complete URL, return it directly.
+        if (
+            str_starts_with($this->profile_photo, 'http://' ) ||
+            str_starts_with($this->profile_photo, 'https://' )
+        ) {
             return $this->profile_photo;
         }
 
         $diskName = config('filesystems.media_disk', 'public');
+
+        /** @var FilesystemAdapter $disk */
         $disk = Storage::disk($diskName);
 
+        // Cloudflare R2/S3 disks can provide temporary signed URLs.
         if ($diskName === 'r2') {
             try {
-                return $disk->temporaryUrl($this->profile_photo, now()->addMinutes(15));
+                return $disk->temporaryUrl(
+                    $this->profile_photo,
+                    now()->addMinutes(15)
+                );
             } catch (Throwable) {
+                // Fall back to the normal URL below.
             }
         }
 
@@ -98,8 +112,9 @@ class User extends Authenticatable
             return $disk->url($this->profile_photo);
         }
 
+        // Fallback for local and public disks.
         if ($diskName === 'local' || $diskName === 'public') {
-            return asset('storage/'.$this->profile_photo);
+            return asset('storage/' . $this->profile_photo);
         }
 
         return $disk->url($this->profile_photo);

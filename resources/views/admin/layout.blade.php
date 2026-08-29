@@ -31,8 +31,8 @@
         .nav { display: grid; gap: 5px; }
         .nav-item { position: relative; display: flex; min-width: 0; align-items: center; gap: 11px; padding: 11px 12px; border-radius: 10px; color: rgba(255,245,236,.7); font-size: .88rem; text-decoration: none; white-space: nowrap; }
         .nav-item::before { content: ''; width: 7px; height: 7px; flex: 0 0 auto; border: 1px solid currentColor; border-radius: 50%; }
-        .shell[data-heritage-nav] .nav-item::before { content: attr(data-icon); width: 25px; height: 25px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.15); border-radius: 8px; font-size: .75rem; line-height: 1; }
-        .shell[data-heritage-nav] .nav-item.active::before { border-color: rgba(196,147,60,.42); }
+        .shell[data-admin-nav] .nav-item::before { content: attr(data-icon); width: 25px; height: 25px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.15); border-radius: 8px; font-size: .75rem; line-height: 1; }
+        .shell[data-admin-nav] .nav-item.active::before { border-color: rgba(196,147,60,.42); }
         .nav-item.active, .nav-item:hover { color: #fff; background: var(--sidebar-soft); }
         .nav-item.active::before { border-color: var(--gold); background: var(--gold); }
         .nav-item.placeholder { color: rgba(255,245,236,.42); }
@@ -47,8 +47,8 @@
         .shell.nav-collapsed .brand-word, .shell.nav-collapsed .nav-label, .shell.nav-collapsed .nav-item span, .shell.nav-collapsed .nav-item small, .shell.nav-collapsed .admin-name, .shell.nav-collapsed .admin-role { display: none; }
         .shell.nav-collapsed .nav-item { width: 44px; min-height: 44px; justify-content: center; margin-inline: auto; padding-inline: 8px; overflow: hidden; }
         .shell.nav-collapsed .nav-item::before { width: 28px; height: 28px; border-color: transparent; background: rgba(255,255,255,.04); }
-        .shell[data-heritage-nav].nav-collapsed .nav-item:hover::after, .shell[data-heritage-nav].nav-collapsed .nav-item:focus-visible::after { content: attr(data-label); position: absolute; z-index: 60; left: calc(100% + 10px); top: 50%; display: block; min-width: max-content; transform: translateY(-50%); padding: 8px 10px; border: 1px solid rgba(255,255,255,.12); border-radius: 8px; color: #fffaf4; background: #3b1b18; box-shadow: 0 10px 22px rgba(0,0,0,.18); font-size: .75rem; font-weight: 800; }
-        .shell[data-heritage-nav].nav-collapsed .nav-item:hover { overflow: visible; }
+        .shell[data-admin-nav].nav-collapsed .nav-item:hover::after, .shell[data-admin-nav].nav-collapsed .nav-item:focus-visible::after { content: attr(data-label); position: absolute; z-index: 60; left: calc(100% + 10px); top: 50%; display: block; min-width: max-content; transform: translateY(-50%); padding: 8px 10px; border: 1px solid rgba(255,255,255,.12); border-radius: 8px; color: #fffaf4; background: #3b1b18; box-shadow: 0 10px 22px rgba(0,0,0,.18); font-size: .75rem; font-weight: 800; }
+        .shell[data-admin-nav].nav-collapsed .nav-item:hover { overflow: visible; }
         .shell.nav-collapsed .subnav { display: none; }
         .nav-toggle { display:inline-flex; align-items:center; gap:8px; min-height:38px; border:1px solid var(--line); border-radius:10px; padding:0 12px; color:var(--ink); background:#fff; cursor:pointer; font-size:.8rem; font-weight:800; }
         .nav-toggle:hover { border-color:rgba(163,54,54,.35); background:#fffaf4; }
@@ -181,7 +181,6 @@
 </head>
 <body>
     @php
-        $heritageShopNavEnabled = request()->routeIs('admin.heritage-shops.*');
         $communityContributionActive = request()->routeIs('admin.community-contributions.*');
         $foodTrailActive = request()->routeIs('admin.food-trails.*');
         $blindBoxActive = request()->routeIs('admin.blind-box-items.*');
@@ -193,8 +192,8 @@
             'reports-analytics' => 'Reports & Analytics',
         ];
     @endphp
-    <div class="shell">
-        <aside class="sidebar" id="admin-sidebar" @if($heritageShopNavEnabled) data-heritage-nav="true" @endif>
+    <div class="shell" data-admin-nav>
+        <aside class="sidebar" id="admin-sidebar">
             <div class="brand"><span class="brand-mark">W</span><span class="brand-word">Warisan Makan</span></div>
             <p class="nav-label">Admin home</p>
             <nav class="nav" aria-label="Administrator modules">
@@ -245,15 +244,11 @@
                 </form>
             </div>
         </aside>
-        @if ($heritageShopNavEnabled)
-            <button class="nav-backdrop" id="nav-backdrop" type="button" aria-label="Close navigation"></button>
-        @endif
+        <button class="nav-backdrop" id="nav-backdrop" type="button" aria-label="Close navigation"></button>
 
         <section class="main">
             <header class="topbar">
-                @if ($heritageShopNavEnabled)
-                    <button class="nav-toggle" id="nav-toggle" type="button" aria-controls="admin-sidebar" aria-expanded="true"><span aria-hidden="true">☰</span><span id="nav-toggle-label">Collapse</span></button>
-                @endif
+                <button class="nav-toggle" id="nav-toggle" type="button" aria-controls="admin-sidebar" aria-expanded="true"><span aria-hidden="true">☰</span><span id="nav-toggle-label">Collapse</span></button>
                 <div>
                     <h1>@yield('page-title', 'Admin Dashboard')</h1>
                     <p>Warisan Makan management portal</p>
@@ -279,15 +274,14 @@
             </main>
         </section>
     </div>
-    @if ($heritageShopNavEnabled)
-        <script>
+    <script>
         (() => {
             const shell = document.querySelector('.shell');
             const toggle = document.getElementById('nav-toggle');
             const label = document.getElementById('nav-toggle-label');
             const backdrop = document.getElementById('nav-backdrop');
             if (!shell || !toggle || !label) return;
-            const key = 'warisan-heritage-nav-collapsed';
+            const key = 'warisan-admin-nav-collapsed';
             const mobile = () => window.matchMedia('(max-width: 850px)').matches;
             const sync = () => {
                 if (mobile()) {
@@ -321,7 +315,6 @@
             window.addEventListener('resize', sync, {passive:true});
             sync();
         })();
-        </script>
-    @endif
+    </script>
 </body>
 </html>

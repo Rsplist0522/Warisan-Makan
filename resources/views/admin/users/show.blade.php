@@ -69,9 +69,6 @@
         .user-profile-main p {
             margin: 0 0 14px;
         }
-
-        /* Activity stats now live inside the profile card as pills,
-           so they no longer create an awkward empty panel in the grid */
         .stat-pills {
             display: flex;
             flex-wrap: nowrap;
@@ -114,9 +111,6 @@
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 20px;
-            /* Key fix: panels no longer stretch to match the tallest
-               sibling in their row, so a short panel won't leave a
-               big empty gap of stretched background behind it */
             align-items: start;
         }
 
@@ -220,9 +214,6 @@
                 text-align: left;
             }
 
-            /* flex-basis: 260px on .user-profile-main is meant for row
-               layout (width). In column layout it becomes a min-height,
-               which was creating a large empty gap below the stat pills. */
             .user-profile-main {
                 flex: 1 1 auto;
             }

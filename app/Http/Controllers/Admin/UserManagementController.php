@@ -4,6 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\Badge;
+use App\Models\PassportStamp;
+use App\Models\UserBadge;
+use App\Models\HeritageShop;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -58,6 +62,46 @@ class UserManagementController extends Controller
             'inactiveMembers'
         ));
     }
+
+    public function show(User $user): View
+{
+    abort_unless(
+        $user->role !== 'admin',
+        404
+    );
+
+    $userBadges = UserBadge::query()
+        ->where('user_id', $user->id)
+        ->with('badge')
+        ->orderByDesc('earned_at')
+        ->get();
+
+    $stamps = PassportStamp::query()
+        ->where('user_id', $user->id)
+        ->orderByDesc('stamp_datetime')
+        ->get();
+
+    $shopIds = $stamps
+        ->pluck('shop_id')
+        ->filter()
+        ->unique()
+        ->values();
+
+    $visitedShops = HeritageShop::query()
+        ->whereIn('id', $shopIds)
+        ->get()
+        ->keyBy('id');
+
+    $shopVisitCount = $visitedShops->count();
+
+    return view('admin.users.show', [
+        'user' => $user,
+        'userBadges' => $userBadges,
+        'stamps' => $stamps,
+        'visitedShops' => $visitedShops,
+        'shopVisitCount' => $shopVisitCount,
+    ]);
+}
 
 
     public function toggleStatus(Request $request, User $user): RedirectResponse

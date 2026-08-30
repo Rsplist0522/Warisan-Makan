@@ -109,12 +109,6 @@
         </article>
     </section>
 
-    @if (session('status'))
-        <div class="status-banner success" role="status">
-            {{ session('status') }}
-        </div>
-    @endif
-
     @if ($users->isEmpty())
         <section class="panel empty-state">
             <h2>No user accounts found</h2>
@@ -156,18 +150,17 @@
                         </div>
                     </div>
 
-                    <div class="record-actions">
+                   <div class="record-actions" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                        <a class="button secondary small" href="{{ route('admin.users.show', $user) }}">View</a>
+
                         <form method="POST" action="{{ route('admin.users.toggle-status', $user) }}">
                             @csrf
 
-                            <button
-                                class="button {{ $user->status === 'inactive' ? 'primary' : 'danger' }} small"
-                                type="submit"
-                            >
-                                {{ $user->status === 'inactive' ? 'Activate account' : 'Deactivate account' }}
+                            <button class="button {{ $user->status === 'inactive' ? 'primary' : 'danger' }} small" type="submit">
+                                {{ $user->status === 'inactive' ? 'Activate' : 'Deactivate' }}
                             </button>
                         </form>
-                    </div>
+                </div>
                 </article>
             @endforeach
         </div>

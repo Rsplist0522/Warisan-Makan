@@ -121,7 +121,13 @@ Route::prefix('admin')
     ->group(function () {
         Route::view('/', 'admin.dashboard')->name('dashboard');
 
-        Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');
+        Route::get('/users', [UserManagementController::class, 'index'])
+            ->name('users.index');
+
+        Route::get('/users/{user}', [UserManagementController::class, 'show'])
+            ->whereNumber('user')
+            ->name('users.show');
+
         Route::resource('food-trails', FoodTrailSuggestionController::class)->except('show');
         Route::post('/users/{user}/toggle-status', [UserManagementController::class, 'toggleStatus'])->name('users.toggle-status');
 

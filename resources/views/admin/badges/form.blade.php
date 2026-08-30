@@ -4,13 +4,6 @@
 @section('page-title', $mode === 'create' ? 'Create badge' : 'Edit badge')
 
 @section('content')
-    @if (session('badge_error'))
-    <div class="status-banner error" role="alert">
-        <strong>Badge action could not be completed:</strong>
-        <p>{{ session('badge_error') }}</p>
-    </div>
-    @endif
-
     <header class="page-header">
         <div>
             <p class="eyebrow">Food Passport</p>

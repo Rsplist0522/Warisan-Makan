@@ -937,7 +937,7 @@
                     <div class="action-row" aria-label="{{ __('Passport sections') }}">
                         <a href="#check-in" class="btn secondary section-nav-link active" data-section-nav="check-in">{{ __('Check In') }}</a>
                         <a href="#nearby" class="btn secondary section-nav-link" data-section-nav="nearby">{{ __('Available Shops') }}</a>
-                        <a href="#passport-progress" class="btn secondary section-nav-link" data-section-nav="passport-progress">{{ __('Passport Progress') }}</a>
+                        <a href="#passport-progress" class="btn secondary section-nav-link" data-section-nav="passport-progress">{{ __('Passport') }}</a>
                         <a href="#leaderboard" class="btn secondary section-nav-link" data-section-nav="leaderboard">{{ __('Leaderboard') }}</a>
                     </div>
 
@@ -973,7 +973,7 @@
                 <div class="panel">
                     <div class="panel-inner">
                         <div class="section-header">
-                            <h2>{{ __('Nearby heritage stop') }}</h2>
+                            <h2>{{ __('Available Shops') }}</h2>
                             <span class="tag">{{ __('Live') }}</span>
                         </div>
 
@@ -1049,8 +1049,6 @@
 
                         <div class="button-row">
                             <button type="button" id="btnCheckIn" class="btn primary">{{ __('Use my location') }}</button>
-                            <button type="button" id="btnDemoCheckIn" class="btn secondary">{{ __('Use demo location') }}</button>
-                            <button type="button" id="btnRefresh" class="btn secondary">{{ __('Reset demo') }}</button>
                         </div>
 
                         <pre id="result" class="result-box">{{ __('Ready to check in. Select a shop and allow location access.') }}</pre>
@@ -1300,7 +1298,6 @@
 
     <script>
         const sendingCheckInRequestMessage = @json(__('Sending check-in request...'));
-        const resettingDemoPassportMessage = @json(__('Resetting the demo passport...'));
 
         const readyToCheckInMessage = @json(__('Ready to check in. Select a shop and allow location access.'));
         const unexpectedErrorMessage = @json(__('We could not complete the request. Please try again.'));
@@ -1310,10 +1307,7 @@
         const serverCheckInErrorMessage = @json(__('The server could not complete your check-in. Please check the Laravel error log.'));
         const unexpectedResponseMessage = @json(__('The server returned an unexpected response. Please try again.'));
         const networkServerErrorMessage = @json(__('Network or server error: :message'));
-        const resetDemoConfirmMessage = @json(__('Reset the demo passport and start again?'));
-        const resetDemoErrorMessage = @json(__('We could not reset the demo right now. Please try again.'));
         const selectHeritageShopMessage = @json(__('Please select a heritage shop first.'));
-        const demoLocationMessage = @json(__('Using a demo location near the selected shop...'));
         const geolocationUnsupportedMessage = @json(__('Geolocation is not supported by this browser.'));
         const requestingLocationMessage = @json(__('Requesting location for your heritage check-in...'));
         const failedLocationMessage = @json(__('Failed to get location: :message'));
@@ -1765,11 +1759,6 @@
                 const json = await parseApiResponse(response);
                 setResult(json);
 
-                if (response.status === 409) {
-                    window.setTimeout(() => window.location.reload(), 900);
-                    return;
-                }
-
                 if (response.ok && json && json.success) {
                     const newlyUnlockedBadges = Array.isArray(json.newly_unlocked_badges)
                         ? json.newly_unlocked_badges
@@ -1785,47 +1774,6 @@
                 setResult( networkServerErrorMessage.replace(':message', error.message));
             });
         }
-
-        document.getElementById('btnRefresh')?.addEventListener('click', async () => {
-            if (!window.confirm(resetDemoConfirmMessage)) {
-                return;
-            }
-
-            setResult(resettingDemoPassportMessage);
-
-            try {
-                const response = await fetch('/passport/reset-demo', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                        'Accept': 'application/json'
-                    }
-                });
-                const json = await parseApiResponse(response);
-                setResult(json);
-
-                if (response.ok && json.success) {
-                    window.setTimeout(() => window.location.reload(), 700);
-                }
-            } catch (error) {
-                setResult(resetDemoErrorMessage);
-            }
-        });
-
-        document.getElementById('btnDemoCheckIn')?.addEventListener('click', function () {
-            if (!activeShop) {
-                setResult(demoLocationMessage);
-                return;
-            }
-
-            setResult(geolocationUnsupportedMessage);
-            submitCheckIn({
-                shop_id: Number(activeShop.id),
-                user_latitude: Number((Number(activeShop.lat) + 0.0002).toFixed(6)),
-                user_longitude: Number((Number(activeShop.lng) + 0.0002).toFixed(6)),
-                demo_mode: true
-            });
-        });
 
         document.getElementById('btnCheckIn')?.addEventListener('click', function () {
             if (!activeShop) {

@@ -638,6 +638,34 @@
         window.addEventListener('resize', sync, { passive: true });
         sync();
     })();
+
+    (() => {
+        const hashLinks = document.querySelectorAll('.user-nav-item.user-nav-child[data-hash-target]');
+        if (!hashLinks.length) return;
+
+        const updateHashActiveState = () => {
+            const currentHash = window.location.hash.replace('#', '');
+            let matched = false;
+
+            hashLinks.forEach(link => {
+                const target = link.dataset.hashTarget;
+                const isActive = !currentHash && target === 'check-in'
+                    ? true
+                    : target === currentHash;
+
+                link.classList.toggle('active', isActive);
+                if (isActive) matched = true;
+            });
+
+            if (!matched && !currentHash) {
+                const defaultLink = document.querySelector('.user-nav-item.user-nav-child[data-hash-target="check-in"]');
+                defaultLink?.classList.add('active');
+            }
+        };
+
+        updateHashActiveState();
+        window.addEventListener('hashchange', updateHashActiveState, { passive: true });
+    })();
     </script>
 
     @include('partials.chatbox')

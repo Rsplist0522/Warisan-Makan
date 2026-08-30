@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    @include('partials.brand-favicon')
     @stack('head')
     <title>@yield('title', __('WarisanMakan')) - Warisan Makan</title>
     @fonts

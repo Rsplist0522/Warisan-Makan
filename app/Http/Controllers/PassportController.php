@@ -327,7 +327,7 @@ class PassportController extends Controller
         return $awarded;
     }
 
-    public function showShop($id)
+    public function showShop(int $id)
     {
         $heritageShop = HeritageShop::query()
             ->whereKey($id)

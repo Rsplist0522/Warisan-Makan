@@ -1,13 +1,22 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="csrf-token" content="{{ csrf_token() }}">
-  <title>{{ $shop->name }} — Check In</title>
-  <style>
+@extends('layouts.user')
+
+@section('title', $shop->name.' - Check In')
+@section('user-topbar-title', __('Food Passport'))
+@section('user-topbar-subtitle', __('Check in to a heritage shop and unlock passport progress.'))
+
+@section('user-topbar-actions')
+<a class="user-topbar-link" href="{{ route('passport.index') }}">{{ __('Food Passport') }}</a>
+<a class="user-topbar-link" href="{{ route('heritage-shops.index') }}">{{ __('Heritage Shops') }}</a>
+@endsection
+
+@push('head')
+<meta name="csrf-token" content="{{ csrf_token() }}">
+@endpush
+
+@push('styles')
+<style>
     :root{--primary:#8C1F1F;--bg:#FBF6EE;--ink:#32241F;--muted:#7A6A63;--accent:#D4A017}
-    body{margin:0;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial;background:var(--bg);color:var(--ink);padding:20px}
+    body{margin:0;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial;background:var(--bg);color:var(--ink)}
     .card{background:white;padding:16px;border-radius:12px;max-width:720px;margin:0 auto}
     .shop-image{width:100%;height:320px;border-radius:10px;background-size:cover;background-position:center;display:block}
     .shop-title{font-family: Georgia, serif;font-size:1.4rem;color:var(--primary);margin-top:12px}
@@ -40,11 +49,12 @@
     .share-status{min-height:24px;margin-top:12px!important;font-size:.82rem}
     .share-note{margin-top:12px!important;color:var(--muted);font-size:.76rem}
     .badge-modal-continue{width:100%;margin-top:16px;background:var(--primary);color:#fff;border:0;padding:11px 14px;border-radius:8px;font-weight:700;cursor:pointer}
-    @media(min-width:800px){body{padding:40px}.card{padding:28px}}
+    @media(min-width:800px){.card{padding:28px}}
   </style>
-</head>
-<body>
-  <div class="card">
+@endpush
+
+@section('content')
+<div class="card">
     <div class="check-overlay">
       <div id="shopImage" class="shop-image" style="background-image:url('{{ $shop->image }}')"></div>
       <button id="imgCheckBtn" class="check-btn">Check In</button>
@@ -476,5 +486,4 @@
   document.getElementById('shopName').addEventListener('click', doCheckIn);
 })();
 </script>
-</body>
-</html>
+@endsection

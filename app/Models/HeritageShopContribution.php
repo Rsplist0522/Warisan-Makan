@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Throwable;
 
 class HeritageShopContribution extends Model
 {
@@ -174,6 +176,48 @@ class HeritageShopContribution extends Model
     public function media()
     {
         return $this->morphMany(Media::class, 'attachable')->orderBy('display_order');
+    }
+
+    public function foodItemImageUrl(?string $path): ?string
+    {
+        if (! $this->isValidFoodItemImagePath($path)) {
+            return null;
+        }
+
+        $diskName = config('filesystems.media_disk');
+        if (! is_string($diskName) || $diskName === '') {
+            return null;
+        }
+
+        $disk = Storage::disk($diskName);
+
+        try {
+            if (! $disk->exists($path)) {
+                return null;
+            }
+        } catch (Throwable) {
+            return null;
+        }
+
+        if ($diskName === 'r2') {
+            try {
+                return $disk->temporaryUrl($path, now()->addMinutes(15));
+            } catch (Throwable) {
+            }
+        }
+
+        return $disk->url($path);
+    }
+
+    private function isValidFoodItemImagePath(?string $path): bool
+    {
+        return is_string($path)
+            && $path !== ''
+            && str_starts_with($path, 'contributions/')
+            && ! str_starts_with($path, '/')
+            && ! str_starts_with($path, '\\')
+            && ! str_contains($path, '..')
+            && ! str_contains($path, '\\');
     }
 
     public function canBeEditedBy(User $user): bool

@@ -1,11 +1,43 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ __('User Dashboard') }} - Warisan Makan</title>
-    @fonts
-    <style>
+@extends('layouts.user')
+
+@section('title', __('User Dashboard'))
+@section('user-topbar-title', __('User Dashboard'))
+@section('user-topbar-subtitle', __('WarisanMakan heritage food portal'))
+
+@section('user-topbar-actions')
+@auth
+    <div class="topbar-account-group">
+        <form class="language-form" method="POST" action="{{ route('profile.update') }}">
+            @csrf
+            <input type="hidden" name="language_only" value="1">
+            <input type="hidden" name="name" value="{{ auth()->user()->name }}">
+            <input type="hidden" name="email" value="{{ auth()->user()->email }}">
+            <input type="hidden" name="phone" value="{{ auth()->user()->phone }}">
+            <input type="hidden" name="city" value="{{ auth()->user()->city }}">
+            <input type="hidden" name="bio" value="{{ auth()->user()->bio }}">
+            <label class="sr-only" for="dashboard-language">{{ __('Language') }}</label>
+            <select id="dashboard-language" name="language" onchange="this.form.submit()">
+                <option value="en" @selected((auth()->user()->language ?? 'en') === 'en')>{{ __('English') }}</option>
+                <option value="ms" @selected((auth()->user()->language ?? 'en') === 'ms')>{{ __('Bahasa Melayu') }}</option>
+                <option value="zh" @selected((auth()->user()->language ?? 'en') === 'zh')>{{ __('Chinese') }}</option>
+            </select>
+        </form>
+        <a href="{{ route('profile.show') }}" style="display:inline-flex;align-items:center;gap:10px;padding:10px 14px;border-radius:999px;border:1px solid rgba(46, 36, 32, .14);background:#fff;text-decoration:none;">
+            @if (auth()->user()->profile_photo)
+                <img src="{{ auth()->user()->profilePhotoUrl() }}" alt="Profile photo" style="width:38px;height:38px;border-radius:999px;object-fit:cover;">
+            @else
+                <span style="display:inline-flex;width:38px;height:38px;align-items:center;justify-content:center;border-radius:999px;background:#f2e7dd;color:var(--wm-accent);font-weight:800;">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</span>
+            @endif
+            <span style="font-size:.92rem;font-weight:700">{{ auth()->user()->name }}</span>
+        </a>
+    </div>
+@else
+    <button class="guest-trigger" type="button" data-login-trigger aria-label="Guest Mode">Guest Mode</button>
+@endauth
+@endsection
+
+@push('styles')
+<style>
         :root {
             color-scheme: light;
             --wm-sidebar: #3b1b18;
@@ -385,9 +417,10 @@
             .header-pill { justify-self: start; }
         }
     </style>
-</head>
-<body>
-    @php
+@endpush
+
+@section('content')
+@php
         $userName = auth()->user()->name ?? 'Food Explorer';
         $isGuest = ! auth()->check();
         $modules = [
@@ -433,74 +466,7 @@
         ];
     @endphp
 
-    <div class="shell">
-        <aside class="sidebar">
-            <div class="brand"><span class="brand-mark">W</span> WarisanMakan</div>
-
-            <p class="nav-label">{{ __('Home') }}</p>
-            <nav class="nav" aria-label="User home navigation">
-                <a class="nav-item active" href="{{ route('home') }}">{{ __('Dashboard') }}</a>
-                @auth<a class="nav-item" href="{{ route('profile.show') }}">{{ __('Profile') }}</a>@endauth
-            </nav>
-
-            <p class="nav-label">{{ __('Modules') }}</p>
-            <nav class="nav" aria-label="WarisanMakan modules">
-                @foreach ($modules as $module)
-                    <a class="nav-item" href="{{ $isGuest && ($module['guestRestricted'] ?? false) ? '#' : (isset($module['route']) ? route($module['route']) : $module['url']) }}" @if($isGuest && ($module['guestRestricted'] ?? false)) data-login-required="true" @endif>
-                        <span>{{ __($module['name']) }}</span>
-                    </a>
-                @endforeach
-            </nav>
-
-            @auth<div class="sidebar-footer">
-                <p class="user-name">{{ $userName }}</p>
-                <p class="user-role">{{ __('WarisanMakan member') }}</p>
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <button class="logout" type="submit">{{ __('Log out') }}</button>
-                </form>
-            </div>@endauth
-        </aside>
-
-        <section class="main">
-            <header class="topbar">
-                <div>
-                    <h2>{{ __('User Dashboard') }}</h2>
-                    <p>{{ __('WarisanMakan heritage food portal') }}</p>
-                </div>
-                @auth
-                    <div class="topbar-account-group">
-                        <form class="language-form" method="POST" action="{{ route('profile.update') }}">
-                            @csrf
-                            <input type="hidden" name="language_only" value="1">
-                            <input type="hidden" name="name" value="{{ auth()->user()->name }}">
-                            <input type="hidden" name="email" value="{{ auth()->user()->email }}">
-                            <input type="hidden" name="phone" value="{{ auth()->user()->phone }}">
-                            <input type="hidden" name="city" value="{{ auth()->user()->city }}">
-                            <input type="hidden" name="bio" value="{{ auth()->user()->bio }}">
-                            <label class="sr-only" for="dashboard-language">{{ __('Language') }}</label>
-                            <select id="dashboard-language" name="language" onchange="this.form.submit()">
-                                <option value="en" @selected((auth()->user()->language ?? 'en') === 'en')>{{ __('English') }}</option>
-                                <option value="ms" @selected((auth()->user()->language ?? 'en') === 'ms')>{{ __('Bahasa Melayu') }}</option>
-                                <option value="zh" @selected((auth()->user()->language ?? 'en') === 'zh')>{{ __('中文 (Chinese)') }}</option>
-                            </select>
-                        </form>
-                        <a href="{{ route('profile.show') }}" style="display:inline-flex;align-items:center;gap:10px;padding:10px 14px;border-radius:999px;border:1px solid rgba(46, 36, 32, .14);background:#fff;">
-                            @if (auth()->user()->profile_photo)
-                                <img src="{{ auth()->user()->profilePhotoUrl() }}" alt="Profile photo" style="width:38px;height:38px;border-radius:999px;object-fit:cover;">
-                            @else
-                                <span style="display:inline-flex;width:38px;height:38px;align-items:center;justify-content:center;border-radius:999px;background:#f2e7dd;color:var(--wm-accent);font-weight:800;">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</span>
-                            @endif
-                            <span style="font-size:.92rem;font-weight:700">{{ $userName }}</span>
-                        </a>
-                    </div>
-                @else
-                    <button class="guest-trigger" type="button" data-login-trigger aria-label="Guest Mode">Guest Mode</button>
-                @endauth
-            </header>
-
-            <main class="content">
-                <header class="page-header">
+<header class="page-header">
                     <div>
                         <p class="eyebrow">{{ __('User home') }}</p>
                                 <h1>{{ __('Welcome back, :name', ['name' => $userName]) }}</h1>
@@ -532,12 +498,8 @@
                         @endif
                     @endforeach
                 </section>
-            </main>
-        </section>
-    </div>
 
-    @guest
-        @include('partials.login-required-modal')
-    @endguest
-</body>
-</html>
+@guest
+    @include('partials.login-required-modal')
+@endguest
+@endsection

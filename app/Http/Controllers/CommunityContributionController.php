@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\HeritageShopContribution;
+use App\Services\HeritageShopCatalog;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,6 +24,7 @@ class CommunityContributionController extends Controller
         return view('community-contribution', [
             'contribution' => null,
             'formToken' => (string) Str::uuid(),
+            'foodCategoryOptions' => $this->foodCategoryOptions(),
         ]);
     }
 
@@ -31,6 +33,7 @@ class CommunityContributionController extends Controller
         return view('community-contribution', [
             'contribution' => null,
             'formToken' => (string) Str::uuid(),
+            'foodCategoryOptions' => $this->foodCategoryOptions(),
         ]);
     }
 
@@ -39,6 +42,7 @@ class CommunityContributionController extends Controller
         $validated = $this->validateContribution($request);
         $submissionToken = $validated['submission_token'] ?? (string) Str::uuid();
         $storedMedia = [];
+        $storedFoodItemImages = [];
 
         $existingContribution = $this->existingContributionForToken($request, $submissionToken);
         if ($existingContribution !== null) {
@@ -46,10 +50,12 @@ class CommunityContributionController extends Controller
         }
 
         try {
-            $contribution = DB::transaction(function () use ($request, $validated, $submissionToken, &$storedMedia) {
+            $contribution = DB::transaction(function () use ($request, $validated, $submissionToken, &$storedMedia, &$storedFoodItemImages) {
                 $action = $validated['submission_action'];
+                $foodItems = $this->foodItemsFromRequest($request, true);
                 $contribution = HeritageShopContribution::create([
                     ...$this->contributionData($request, $validated),
+                    'food_items' => $this->foodItemsForStorage($foodItems),
                     'user_id' => $request->user()->id,
                     'submission_token' => $submissionToken,
                     'status' => $action === 'draft'
@@ -57,6 +63,11 @@ class CommunityContributionController extends Controller
                         : HeritageShopContribution::STATUS_PENDING_REVIEW,
                     'submitted_at' => $action === 'submit' ? now() : null,
                 ]);
+
+                [$foodItems, $storedFoodItemImages] = $this->storeFoodItemImages($request, $contribution, $foodItems);
+                if ($storedFoodItemImages !== []) {
+                    $contribution->forceFill(['food_items' => $foodItems])->save();
+                }
 
                 $storedMedia = $this->storeNewMedia(
                     $request,
@@ -74,6 +85,7 @@ class CommunityContributionController extends Controller
             });
         } catch (Throwable $exception) {
             $this->deleteStoredMedia($storedMedia);
+            $this->deleteStoredMedia($storedFoodItemImages);
 
             if ($exception instanceof QueryException
                 && $this->isDuplicateSubmissionTokenException($exception)) {
@@ -111,7 +123,10 @@ class CommunityContributionController extends Controller
         Gate::authorize('update', $contribution);
         $contribution->load('media');
 
-        return view('community-contribution', compact('contribution'));
+        return view('community-contribution', [
+            'contribution' => $contribution,
+            'foodCategoryOptions' => $this->foodCategoryOptions($contribution->primary_food_category),
+        ]);
     }
 
     public function update(Request $request, HeritageShopContribution $contribution): RedirectResponse
@@ -136,7 +151,9 @@ class CommunityContributionController extends Controller
         }
 
         $storedMedia = [];
+        $storedFoodItemImages = [];
         $oldStatus = $contribution->status;
+        $previousFoodItemImagePaths = $this->foodItemImagePaths($contribution->food_items);
 
         try {
             DB::transaction(function () use (
@@ -146,13 +163,16 @@ class CommunityContributionController extends Controller
                 $requestedRemovals,
                 $retainedMediaCount,
                 &$storedMedia,
+                &$storedFoodItemImages,
                 $oldStatus
             ): void {
                 $action = $validated['submission_action'];
                 $isSubmitting = $action === 'submit';
+                $foodItems = $this->foodItemsFromRequest($request, true);
 
                 $contribution->fill([
                     ...$this->contributionData($request, $validated),
+                    'food_items' => $this->foodItemsForStorage($foodItems),
                     'status' => $isSubmitting
                         ? HeritageShopContribution::STATUS_PENDING_REVIEW
                         : $oldStatus,
@@ -166,6 +186,11 @@ class CommunityContributionController extends Controller
                     'review_started_at' => $isSubmitting ? null : $contribution->review_started_at,
                     'withdrawn_at' => null,
                 ])->save();
+
+                [$foodItems, $storedFoodItemImages] = $this->storeFoodItemImages($request, $contribution, $foodItems);
+                if ($storedFoodItemImages !== []) {
+                    $contribution->forceFill(['food_items' => $foodItems])->save();
+                }
 
                 $requestedRemovals->each->delete();
                 $storedMedia = $this->storeNewMedia(
@@ -189,10 +214,14 @@ class CommunityContributionController extends Controller
             });
         } catch (Throwable $exception) {
             $this->deleteStoredMedia($storedMedia);
+            $this->deleteStoredMedia($storedFoodItemImages);
             throw $exception;
         }
 
         Storage::disk(config('filesystems.media_disk'))->delete($requestedRemovals->pluck('r2_object_key')->all());
+        Storage::disk(config('filesystems.media_disk'))->delete(
+            array_values(array_diff($previousFoodItemImagePaths, $this->foodItemImagePaths($contribution->fresh()->food_items)))
+        );
 
         if ($validated['submission_action'] === 'draft') {
             if ($oldStatus === HeritageShopContribution::STATUS_REVISION_REQUIRED) {
@@ -215,9 +244,11 @@ class CommunityContributionController extends Controller
         Gate::authorize('deleteDraft', $contribution);
 
         $media = $contribution->media()->get();
+        $foodItemImagePaths = $this->foodItemImagePaths($contribution->food_items);
         $contribution->delete();
         $contribution->media()->delete();
         Storage::disk(config('filesystems.media_disk'))->delete($media->pluck('r2_object_key')->all());
+        Storage::disk(config('filesystems.media_disk'))->delete($foodItemImagePaths);
 
         return redirect()->route('community-contribution.drafts')
             ->with('status', __('Draft deleted successfully.'));
@@ -238,9 +269,6 @@ class CommunityContributionController extends Controller
             'shop_name',
             'primary_food_category',
             'establishment_year',
-            'founder_name',
-            'founder_background',
-            'current_owner_name',
             'heritage_story',
             'address',
         ])->filter(fn (string $field) => blank($contribution->{$field}));
@@ -360,11 +388,17 @@ class CommunityContributionController extends Controller
             'submission_token' => ['nullable', 'uuid'],
             'contribution_title' => ['required_if:submission_action,submit', 'nullable', 'string', 'max:255'],
             'shop_name' => ['required_if:submission_action,submit', 'nullable', 'string', 'max:255'],
-            'primary_food_category' => ['required_if:submission_action,submit', 'nullable', 'string', 'max:255'],
+            'primary_food_category' => [
+                'required_if:submission_action,submit',
+                'nullable',
+                'string',
+                'max:255',
+                Rule::in($this->foodCategoryOptions($request->route('contribution')?->primary_food_category)),
+            ],
             'establishment_year' => ['required_if:submission_action,submit', 'nullable', 'integer', 'min:1000', 'max:'.now()->year],
-            'founder_name' => ['required_if:submission_action,submit', 'nullable', 'string', 'max:255'],
-            'founder_background' => ['required_if:submission_action,submit', 'nullable', 'string', 'max:5000'],
-            'current_owner_name' => ['required_if:submission_action,submit', 'nullable', 'string', 'max:255'],
+            'founder_name' => ['nullable', 'string', 'max:255'],
+            'founder_background' => ['nullable', 'string', 'max:5000'],
+            'current_owner_name' => ['nullable', 'string', 'max:255'],
             'current_owner_details' => ['nullable', 'string', 'max:5000'],
             'heritage_story' => ['required_if:submission_action,submit', 'nullable', 'string', 'max:10000'],
             'operating_hours' => ['nullable', 'array'],
@@ -375,6 +409,8 @@ class CommunityContributionController extends Controller
             'food_items' => ['nullable', 'array'],
             'food_items.*.name' => ['nullable', 'string', 'max:255'],
             'food_items.*.desc' => ['nullable', 'string', 'max:1000'],
+            'food_items.*.image' => ['nullable', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:'.(int) config('heritage_shop.max_image_kb', 1024)],
+            'food_items.*.image_path' => ['nullable', 'string', 'max:500', 'starts_with:contributions/'],
             'contact_number' => ['nullable', 'string', 'max:30', 'regex:/^[0-9+()\-\s]*$/'],
             'address' => ['required_if:submission_action,submit', 'nullable', 'string', 'max:500'],
             'city' => ['nullable', 'string', 'max:100'],
@@ -437,25 +473,136 @@ class CommunityContributionController extends Controller
                     FILTER_NULL_ON_FAILURE
                 ) ?? false;
 
-                if (filled($open) || filled($close)) {
-                    $closed = false;
-                }
-
                 return [
                     'day' => $this->normalizeText($schedule['day'] ?? null),
                     'open' => $closed ? null : $open,
                     'close' => $closed ? null : $close,
                     'closed' => $closed,
                 ];
-            })->values()->all();
-        $data['food_items'] = collect($request->input('food_items', []))
-            ->filter(fn (array $item) => filled($item['name'] ?? null) || filled($item['desc'] ?? null))
-            ->map(fn (array $item): array => [
-                'name' => $this->normalizeText($item['name'] ?? null),
-                'desc' => $this->normalizeText($item['desc'] ?? null),
-            ])->values()->all();
+            })
+            ->filter(fn (array $schedule): bool => $schedule['closed'] || filled($schedule['open']) || filled($schedule['close']))
+            ->values()
+            ->all();
+        $data['food_items'] = $this->foodItemsFromRequest($request);
 
         return $data;
+    }
+
+    private function foodCategoryOptions(?string $currentCategory = null): array
+    {
+        return collect([...HeritageShopCatalog::CATEGORIES, 'Other', $currentCategory])
+            ->filter(fn ($category): bool => filled($category))
+            ->map(fn ($category): string => trim((string) $category))
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    private function foodItemsFromRequest(Request $request, bool $includeFormIndex = false): array
+    {
+        $fileRows = $request->file('food_items', []);
+
+        return collect($request->input('food_items', []))
+            ->filter(function (array $item, int|string $index) use ($fileRows): bool {
+                return filled($item['name'] ?? null)
+                    || filled($item['desc'] ?? null)
+                    || filled($item['image_path'] ?? null)
+                    || ($this->foodItemImageFile($fileRows, $index) instanceof UploadedFile);
+            })
+            ->map(function (array $item, int|string $index) use ($includeFormIndex): array {
+                $normalized = [
+                    'name' => $this->normalizeText($item['name'] ?? null),
+                    'desc' => $this->normalizeText($item['desc'] ?? null),
+                    'image_path' => $this->normalizeFoodItemImagePath($item['image_path'] ?? null),
+                ];
+
+                if ($includeFormIndex) {
+                    $normalized['_form_index'] = $index;
+                }
+
+                return array_filter($normalized, fn ($value): bool => filled($value) || $value === 0);
+            })
+            ->values()
+            ->all();
+    }
+
+    private function foodItemsForStorage(array $foodItems): array
+    {
+        return collect($foodItems)
+            ->map(function (array $item): array {
+                unset($item['_form_index']);
+
+                return $item;
+            })
+            ->values()
+            ->all();
+    }
+
+    private function foodItemImageFile(array $fileRows, int|string $index): ?UploadedFile
+    {
+        $row = $fileRows[$index] ?? null;
+        $file = is_array($row) ? ($row['image'] ?? null) : null;
+
+        return $file instanceof UploadedFile && $file->isValid() ? $file : null;
+    }
+
+    private function storeFoodItemImages(Request $request, HeritageShopContribution $contribution, array $foodItems): array
+    {
+        $fileRows = $request->file('food_items', []);
+        $stored = [];
+
+        foreach ($foodItems as &$item) {
+            $file = $this->foodItemImageFile($fileRows, $item['_form_index'] ?? '');
+
+            if ($file instanceof UploadedFile) {
+                $objectKey = $file->store("contributions/{$contribution->id}/food-items", config('filesystems.media_disk'));
+
+                if ($objectKey === false) {
+                    throw ValidationException::withMessages([
+                        'food_items' => 'The food item image could not be uploaded. Please try again.',
+                    ]);
+                }
+
+                $item['image_path'] = $objectKey;
+                $stored[] = ['r2_object_key' => $objectKey];
+            }
+
+            unset($item['_form_index']);
+        }
+
+        unset($item);
+
+        return [$foodItems, $stored];
+    }
+
+    private function normalizeFoodItemImagePath(mixed $path): ?string
+    {
+        $path = is_string($path) ? trim($path) : null;
+
+        if (blank($path)
+            || ! str_starts_with($path, 'contributions/')
+            || str_contains($path, '..')
+            || str_contains($path, '\\')
+            || str_starts_with($path, '/')) {
+            return null;
+        }
+
+        return $path;
+    }
+
+    private function foodItemImagePaths(mixed $foodItems): array
+    {
+        if (! is_array($foodItems)) {
+            return [];
+        }
+
+        return collect($foodItems)
+            ->pluck('image_path')
+            ->filter(fn ($path): bool => filled($this->normalizeFoodItemImagePath($path)))
+            ->map(fn ($path): string => (string) $path)
+            ->unique()
+            ->values()
+            ->all();
     }
 
     private function storeNewMedia(Request $request, string $directory, int $userId, int $startOrder = 0): array

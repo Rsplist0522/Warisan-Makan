@@ -32,16 +32,10 @@
                         <div class="full"><dt>Current owner details</dt><dd>{{ $contribution->current_owner_details ?: 'Not provided' }}</dd></div>
                         <div class="full"><dt>Heritage story</dt><dd>{{ $contribution->heritage_story }}</dd></div>
                         <div class="full"><dt>Address</dt><dd>{{ collect([$contribution->address, $contribution->city, $contribution->state, $contribution->postal_code])->filter()->join(', ') }}</dd></div>
-                        <div class="full">
-                            <dt>Food items</dt>
-                            <dd>
-                                @forelse ($contribution->food_items ?? [] as $item)
-                                    <strong>{{ $item['name'] ?: 'Unnamed item' }}</strong>{{ filled($item['desc'] ?? null) ? ': '.$item['desc'] : '' }}<br>
-                                @empty Not provided @endforelse
-                            </dd>
-                        </div>
                     </dl>
                 </section>
+
+                @include('community-contributions.partials.food-items-hours', ['contribution' => $contribution])
 
                 <section class="panel">
                     <h2>Supporting media</h2>

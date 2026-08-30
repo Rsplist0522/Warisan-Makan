@@ -77,32 +77,7 @@
                 </dl>
             </section>
 
-            <section class="panel">
-                <h2>Food items and operating hours</h2>
-                <div class="definition-grid" style="margin-top:16px">
-                    <div>
-                        <dt>Food items</dt>
-                        <dd>
-                            @forelse ($contribution->food_items ?? [] as $item)
-                                <strong>{{ $item['name'] ?: 'Unnamed item' }}</strong>{{ filled($item['desc'] ?? null) ? ': '.$item['desc'] : '' }}<br>
-                            @empty
-                                Not provided
-                            @endforelse
-                        </dd>
-                    </div>
-                    <div>
-                        <dt>Operating hours</dt>
-                        <dd>
-                            @forelse ($contribution->operating_hours ?? [] as $schedule)
-                                <strong>{{ $schedule['day'] }}</strong>:
-                                {{ $schedule['closed'] ? 'Closed' : (($schedule['open'] ?: '—').' - '.($schedule['close'] ?: '—')) }}<br>
-                            @empty
-                                Not provided
-                            @endforelse
-                        </dd>
-                    </div>
-                </div>
-            </section>
+            @include('community-contributions.partials.food-items-hours', ['contribution' => $contribution])
 
             <section class="panel">
                 <h2>Supporting media</h2>

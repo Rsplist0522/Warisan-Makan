@@ -202,9 +202,6 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/passport/check-in', [PassportController::class, 'checkIn'])
         ->name('passport.checkin');
-
-    Route::post('/passport/reset-demo', [PassportController::class, 'resetDemoData'])
-        ->name('passport.reset-demo');
 });
 
 

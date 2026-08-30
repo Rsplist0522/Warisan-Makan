@@ -243,51 +243,6 @@ class PassportController extends Controller
 
     private function badgeSummary(?User $user, ?int $visitedCount = null): array
     {
-        $fallback = [
-            [
-                'id' => 1,
-                'name' => 'Heritage Starter',
-                'description' => 'Visit your first heritage shop',
-                'icon' => '✦',
-                'threshold' => 1,
-            ],
-            [
-                'id' => 2,
-                'name' => 'Trail Explorer',
-                'description' => 'Check in to three heritage shops',
-                'icon' => '▣',
-                'threshold' => 8,
-            ],
-            [
-                'id' => 3,
-                'name' => 'Kopitiam Collector',
-                'description' => 'Unlock five heritage stops',
-                'icon' => '★',
-                'threshold' => 15,
-            ],
-            [
-                'id' => 4,
-                'name' => 'Night Market Hunter',
-                'description' => 'Visit seven iconic food spots',
-                'icon' => '✧',
-                'threshold' => 25,
-            ],
-            [
-                'id' => 5,
-                'name' => 'Heritage Legend',
-                'description' => 'Complete ten memorable heritage visits',
-                'icon' => '◎',
-                'threshold' => 40,
-            ],
-            [
-                'id' => 6,
-                'name' => 'Heritage Ambassador',
-                'description' => 'Complete fifty heritage visits and help keep local food stories alive',
-                'icon' => '♛',
-                'threshold' => 50,
-            ],
-        ];
-
         $records = Badge::query()
             ->where('is_active', true)
             ->orderBy('criteria_value')
@@ -298,20 +253,7 @@ class PassportController extends Controller
             : 0;
 
         if ($records->isEmpty()) {
-            return array_map(function ($badge) use ($visitedCount) {
-                $earned = $visitedCount >= (int) $badge['threshold'];
-
-                return [
-                    'id' => (int) $badge['id'],
-                    'name' => $badge['name'],
-                    'description' => $badge['description'],
-                    'icon' => $badge['icon'],
-                    'threshold' => (int) $badge['threshold'],
-                    'earned' => $earned,
-                    'eligible' => $earned,
-                    'progress' => min($visitedCount, (int) $badge['threshold']) . '/' . (int) $badge['threshold'],
-                ];
-            }, $fallback);
+            return [];
         }
 
         $awardedBadgeIds = $user ? UserBadge::where('user_id', $user->id)->pluck('badge_id')->all() : [];
@@ -331,25 +273,6 @@ class PassportController extends Controller
                 'progress' => min($visitedCount, (int) $badge->criteria_value) . '/' . (int) $badge->criteria_value,
             ];
         })->values()->all();
-
-        $hasHeritageAmbassador = collect($badgeList)->contains(
-            fn ($badge) => $badge['id'] === 6 || $badge['name'] === 'Heritage Ambassador'
-        );
-
-        if (! $hasHeritageAmbassador) {
-            $ambassador = $fallback[5];
-            $earned = $visitedCount >= (int) $ambassador['threshold'];
-            $badgeList[] = [
-                'id' => (int) $ambassador['id'],
-                'name' => $ambassador['name'],
-                'description' => $ambassador['description'],
-                'icon' => $ambassador['icon'],
-                'threshold' => (int) $ambassador['threshold'],
-                'earned' => $earned,
-                'eligible' => $earned,
-                'progress' => min($visitedCount, (int) $ambassador['threshold']) . '/' . (int) $ambassador['threshold'],
-            ];
-        }
 
         return $badgeList;
     }
@@ -404,7 +327,7 @@ class PassportController extends Controller
         return $awarded;
     }
 
-    public function showShop($id)
+    public function showShop(int $id)
     {
         $heritageShop = HeritageShop::query()
             ->whereKey($id)
@@ -446,7 +369,6 @@ class PassportController extends Controller
             'shop_id' => 'required|integer',
             'user_latitude' => 'required|numeric',
             'user_longitude' => 'required|numeric',
-            'demo_mode' => 'sometimes|boolean',
         ]);
 
         $shop = HeritageShop::query()
@@ -469,8 +391,9 @@ class PassportController extends Controller
         $shopLng = (float) $shop->longitude;
         $userLat = (float) $data['user_latitude'];
         $userLng = (float) $data['user_longitude'];
-        $radius = 100.0;
-        $demoMode = (bool) ($data['demo_mode'] ?? false);
+        $radius = (float) config('heritage_shop.checkin_radius_meters', 150);
+
+        $withinShopRadius = $this->haversineDistance($userLat, $userLng, $shopLat, $shopLng) <= $radius;
 
         // Prevent duplicate check-ins
         $already = PassportStamp::where('user_id', $user->id)
@@ -480,17 +403,17 @@ class PassportController extends Controller
         if ($already) {
             return response()->json([
                 'success' => false,
-                'message' => __('You have already checked in at this shop. Reset the demo to start again.'),
+                'message' => __('You have already checked in at this shop. One passport entry per shop is allowed. Please try another shop or check back later.'),
             ], 409);
         }
 
-        // Calculate distance (meters)
-        $distance = $this->haversineDistance($userLat, $userLng, $shopLat, $shopLng);
-
-        if ($distance > $radius) {
+        // Accept a valid check-in only when the user is within the actual shop radius.
+        if (! $withinShopRadius) {
             return response()->json([
                 'success' => false,
-                'message' => __('You need to be within :radius metres of this shop to check in.', ['radius' => round($radius)]),
+                'message' => __('You need to be within :radius metres of this shop to check in.', [
+                    'radius' => round($radius),
+                ]),
             ], 422);
         }
 
@@ -521,9 +444,7 @@ class PassportController extends Controller
                 })
                 ->values();
 
-            $message = $demoMode
-                ? __('Demo check-in successful! Your passport has been updated.')
-                : __('Check-in successful! Your passport has been updated.');
+            $message = __('Check-in successful! Your passport has been updated.');
 
             if ($newlyUnlockedBadges->isNotEmpty()) {
                 $message .= ' ' . __('Congratulations! You unlocked :badges.', ['badges' => $newlyUnlockedBadges->pluck('name')->join(', ')]);
@@ -532,7 +453,6 @@ class PassportController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => $message,
-                'demo_mode' => $demoMode,
                 'newly_unlocked_badges' => $newlyUnlockedBadges->all(),
                 'badge_count' => $this->earnedBadgeCountForUser($user),
             ], 201);
@@ -550,27 +470,6 @@ class PassportController extends Controller
                 'message' => __('We could not complete your check-in right now. Please try again.'),
             ], 500);
         }
-    }
-
-    public function resetDemoData(Request $request)
-    {
-        $user = $request->user();
-
-        if (! $user) {
-            return response()->json([
-                'success' => false,
-                'message' => __('Please sign in before resetting the demo passport.'),
-            ], 401);
-        }
-
-        PassportStamp::where('user_id', $user->id)->delete();
-        UserBadge::where('user_id', $user->id)->delete();
-        Cache::forget(self::LEADERBOARD_CACHE_KEY);
-
-        return response()->json([
-            'success' => true,
-            'message' => __('Demo passport reset. You can start the demonstration again.'),
-        ]);
     }
 
     /**

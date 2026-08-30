@@ -67,8 +67,6 @@
 
       <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap">
         <button id="nameCheckBtn" class="check-btn" style="position:static">Check In</button>
-        <button id="demoCheckBtn" class="check-btn" style="position:static;background:#F2E5D0">Use Demo Location</button>
-        <button id="resetDemoBtn" class="check-btn" style="position:static;background:#f1ddd0">Reset Demo</button>
       </div>
 
       <div id="result" class="result">No check-in attempted.</div>
@@ -124,8 +122,6 @@
   const resultEl = document.getElementById('result');
   const imgBtn = document.getElementById('imgCheckBtn');
   const nameBtn = document.getElementById('nameCheckBtn');
-  const demoBtn = document.getElementById('demoCheckBtn');
-  const resetBtn = document.getElementById('resetDemoBtn');
   const badgeModal = document.getElementById('badgeModal');
   const badgeModalIcon = document.getElementById('badgeModalIcon');
   const badgeModalBadgeName = document.getElementById('badgeModalBadgeName');
@@ -409,11 +405,6 @@
       const json = await parseApiResponse(res);
       setResult(json);
 
-      if (res.status === 409) {
-        window.setTimeout(() => window.location.reload(), 900);
-        return;
-      }
-
       if (res.ok && json && json.success) {
         const newlyUnlockedBadges = Array.isArray(json.newly_unlocked_badges) ? json.newly_unlocked_badges : [];
         if(newlyUnlockedBadges.length > 0){
@@ -441,48 +432,8 @@
     }, err=>{ setResult('Unable to get your device location. Please allow location access and try again.'); }, { enableHighAccuracy:true, timeout:10000 });
   }
 
-  function doDemoCheckIn(){
-    if(!shop.participating || !shop.published){ setResult('Shop is not active for check-in.'); return; }
-    if(shop.latitude === null || shop.longitude === null){ setResult('This shop does not have a demo location yet.'); return; }
-
-    setResult('Using the demo location near this shop...');
-    sendCheckIn({
-      shop_id: shop.id,
-      user_latitude: Number((Number(shop.latitude) + 0.0002).toFixed(6)),
-      user_longitude: Number((Number(shop.longitude) + 0.0002).toFixed(6)),
-      demo_mode: true
-    });
-  }
-
-  async function resetDemo(){
-    if(!window.confirm('Reset the demo passport and start again?')) return;
-
-    setResult('Resetting the demo passport...');
-
-    try{
-      const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-      const res = await fetch('/passport/reset-demo', {
-        method: 'POST',
-        headers: {
-          'X-CSRF-TOKEN': token,
-          'Accept': 'application/json'
-        }
-      });
-      const json = await res.json();
-      setResult(json);
-
-      if(res.ok && json.success){
-        window.setTimeout(() => window.location.reload(), 700);
-      }
-    }catch(err){
-      setResult('We could not reset the demo right now. Please try again.');
-    }
-  }
-
   imgBtn.addEventListener('click', doCheckIn);
   nameBtn.addEventListener('click', doCheckIn);
-  demoBtn.addEventListener('click', doDemoCheckIn);
-  resetBtn.addEventListener('click', resetDemo);
   document.getElementById('shopName').addEventListener('click', doCheckIn);
 })();
 </script>

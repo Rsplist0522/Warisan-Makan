@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 
 class HeritageShop extends Model
 {
@@ -132,12 +133,7 @@ class HeritageShop extends Model
      */
     public function operatingHoursRows(): array
     {
-        $hours = $this->operating_hours;
-
-        if (is_string($hours)) {
-            $decoded = json_decode($hours, true);
-            $hours = is_array($decoded) ? $decoded : $hours;
-        }
+        $hours = $this->normalizeOperatingHoursValue($this->operating_hours);
 
         if (is_string($hours)) {
             return $this->parseOperatingHoursText($hours);
@@ -198,6 +194,44 @@ class HeritageShop extends Model
             static fn (array $row): string => $row['label'] ? $row['label'].': '.$row['value'] : $row['value'],
             $this->operatingHoursRows(),
         ));
+    }
+
+    public function operatingHoursSummary(): string
+    {
+        return implode('; ', array_map(
+            static fn (array $row): string => $row['label'] ? $row['label'].': '.$row['value'] : $row['value'],
+            $this->operatingHoursRows(),
+        ));
+    }
+
+    private function normalizeOperatingHoursValue(mixed $hours, int $depth = 0): mixed
+    {
+        if ($depth > 5) {
+            return $hours;
+        }
+
+        if ($hours instanceof Collection) {
+            $hours = $hours->all();
+        }
+
+        if (is_string($hours)) {
+            $decoded = json_decode($hours, true);
+
+            if (json_last_error() === JSON_ERROR_NONE && (is_array($decoded) || is_string($decoded))) {
+                return $this->normalizeOperatingHoursValue($decoded, $depth + 1);
+            }
+
+            return $hours;
+        }
+
+        if (is_array($hours)
+            && count($hours) === 1
+            && array_key_exists('raw', $hours)
+            && (is_scalar($hours['raw']) || is_array($hours['raw']))) {
+            return $this->normalizeOperatingHoursValue($hours['raw'], $depth + 1);
+        }
+
+        return $hours;
     }
 
     /**

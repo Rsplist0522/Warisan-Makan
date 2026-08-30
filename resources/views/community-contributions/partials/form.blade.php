@@ -11,13 +11,48 @@
     $foodItems = old('food_items', $contribution?->food_items ?: [['name' => '', 'desc' => '']]);
     $existingMedia = $contribution?->media ?? collect();
     $fieldValue = fn (string $name, mixed $fallback = null) => old($name, $contribution?->{$name} ?? $fallback);
+    $selectedFoodCategory = $fieldValue('primary_food_category');
+    $foodCategoryOptions = collect($foodCategoryOptions ?? \App\Services\HeritageShopCatalog::CATEGORIES)
+        ->push('Other')
+        ->push($contribution?->primary_food_category)
+        ->filter(fn ($category) => filled($category))
+        ->unique()
+        ->values()
+        ->all();
     $submissionToken = old('submission_token', $contribution?->submission_token ?? $formToken ?? (string) \Illuminate\Support\Str::uuid());
     $isClosed = function (array $schedule): bool {
         $closed = filter_var($schedule['closed'] ?? false, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? false;
 
-        return $closed && blank($schedule['open'] ?? null) && blank($schedule['close'] ?? null);
+        return $closed;
     };
 @endphp
+
+<style>
+    .food-item-row {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) minmax(170px, .85fr) auto;
+    }
+
+    .food-item-image-note {
+        margin: 6px 0 0;
+        color: var(--wm-muted);
+        font-size: .78rem;
+    }
+
+    .food-item-image-preview {
+        display: block;
+        width: 100%;
+        height: 112px;
+        margin-bottom: 8px;
+        border: 1px solid var(--wm-border);
+        border-radius: 10px;
+        background: #f1e5d7;
+        object-fit: cover;
+    }
+
+    @media (max-width: 760px) {
+        .food-item-row { grid-template-columns: 1fr; }
+    }
+</style>
 
 <form class="form-grid" method="POST"
       action="{{ $isEdit ? route('community-contribution.update', $contribution) : route('community-contribution.store') }}"
@@ -44,7 +79,12 @@
             </div>
             <div class="field">
                 <label class="required" for="primary_food_category">{{ __('Primary food category') }}</label>
-                <input id="primary_food_category" name="primary_food_category" value="{{ $fieldValue('primary_food_category') }}"placeholder="{{ __('Example: Hainanese cuisine') }}">
+                <select id="primary_food_category" name="primary_food_category">
+                    <option value="">{{ __('Select a category') }}</option>
+                    @foreach ($foodCategoryOptions as $categoryOption)
+                        <option value="{{ $categoryOption }}" @selected($selectedFoodCategory === $categoryOption)>{{ $categoryOption }}</option>
+                    @endforeach
+                </select>
                 @error('primary_food_category') <p class="field-error">{{ $message }}</p> @enderror
             </div>
             <div class="field">
@@ -62,9 +102,10 @@
 
     <section class="form-section">
         <h2 class="section-title">{{ __('Founder and owner information') }}</h2>
+        <p class="help-text">{{ __('Optional — provide this information if known.') }}</p>
         <div class="field-grid">
             <div class="field">
-                <label class="required" for="founder_name">{{ __('Founder name') }}</label>
+                <label for="founder_name">{{ __('Founder name') }}</label>
                 <input
                     id="founder_name"
                     name="founder_name"
@@ -74,7 +115,7 @@
                 @error('founder_name') <p class="field-error">{{ $message }}</p> @enderror
             </div>
             <div class="field">
-                <label class="required" for="current_owner_name">{{ __('Current owner name') }}</label>
+                <label for="current_owner_name">{{ __('Current owner name') }}</label>
                 <input
                     id="current_owner_name"
                     name="current_owner_name"
@@ -84,7 +125,7 @@
                 @error('current_owner_name') <p class="field-error">{{ $message }}</p> @enderror
             </div>
             <div class="field full">
-                <label class="required" for="founder_background">{{ __('Founder background') }}</label>
+                <label for="founder_background">{{ __('Founder background') }}</label>
                 <textarea
                     id="founder_background"
                     name="founder_background"
@@ -216,6 +257,35 @@
                             placeholder="{{ __('Briefly describe the traditional dish') }}"
                         >
                     </div>
+                    <div>
+                        @if ($index === 0) <label>{{ __('Food image') }}</label> @endif
+                        @php($foodItemImageUrl = $contribution?->foodItemImageUrl($item['image_path'] ?? null))
+                        @if ($foodItemImageUrl)
+                            <img
+                                class="food-item-image-preview"
+                                src="{{ $foodItemImageUrl }}"
+                                alt="{{ __('Saved food item image') }}"
+                                data-food-item-preview
+                            >
+                        @else
+                            <img
+                                class="food-item-image-preview"
+                                alt="{{ __('Selected food item image preview') }}"
+                                data-food-item-preview
+                                hidden
+                            >
+                        @endif
+                        @if (filled($item['image_path'] ?? null))
+                            <input type="hidden" name="food_items[{{ $index }}][image_path]" value="{{ $item['image_path'] }}">
+                            <p class="food-item-image-note">{{ __('Current image saved. Upload a new image to replace it.') }}</p>
+                        @endif
+                        <input
+                            name="food_items[{{ $index }}][image]"
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                        >
+                        @error("food_items.$index.image") <p class="field-error">{{ $message }}</p> @enderror
+                    </div>
                     <div class="repeat-actions">
                         <button type="button" class="mini-button remove-food-item" aria-label="{{ __('Remove food item') }}">{{ __('Remove') }}</button>
                     </div>
@@ -261,7 +331,7 @@
             {{ $isEdit ? __('Save changes') : __('Save as draft') }}
         </button>
         <button class="button primary" type="submit" name="submission_action" value="submit">
-            {{ $contribution?->status === \App\Models\HeritageShopContribution::STATUS_REVISION_REQUIRED? __('Resubmit revision'): __('Submit for review') }}{{ __('Cancel') }}
+            {{ $contribution?->status === \App\Models\HeritageShopContribution::STATUS_REVISION_REQUIRED ? __('Resubmit revision') : __('Submit for review') }}
         </button>
         @if ($isEdit)
             <a class="button secondary" href="{{ $contribution->status === \App\Models\HeritageShopContribution::STATUS_DRAFT ? route('community-contribution.drafts') : route('community-contribution.contributions.show', $contribution) }}">Cancel</a>
@@ -277,6 +347,10 @@
     <div class="repeat-row food-item-row">
         <div><input name="food_items[__INDEX__][name]" placeholder="{{ __('Example: Hainanese chicken chop') }}"></div>
         <div><input name="food_items[__INDEX__][desc]"placeholder="{{ __('Briefly describe the traditional dish') }}"></div>
+        <div>
+            <img class="food-item-image-preview" alt="{{ __('Selected food item image preview') }}" data-food-item-preview hidden>
+            <input name="food_items[__INDEX__][image]" type="file" accept="image/jpeg,image/png,image/webp">
+        </div>
         <div class="repeat-actions"><button type="button" class="mini-button remove-food-item">{{ __('Remove') }}</button></div>
     </div>
 </template>
@@ -296,21 +370,46 @@
                 input.name = input.name.replace(/food_items\[\d+]/, `food_items[${index}]`);
             });
         });
+        const bindFoodImagePreview = (row) => {
+            const imageInput = row.querySelector('input[type="file"][name^="food_items["]');
+            const previewImage = row.querySelector('[data-food-item-preview]');
+
+            imageInput?.addEventListener('change', () => {
+                const file = imageInput.files?.[0];
+                if (! file || ! previewImage) {
+                    return;
+                }
+
+                const url = URL.createObjectURL(file);
+                previewImage.src = url;
+                previewImage.hidden = false;
+                previewImage.onload = () => URL.revokeObjectURL(url);
+            });
+        };
         const bindRemove = (row) => row.querySelector('.remove-food-item')?.addEventListener('click', () => {
             if (shell.querySelectorAll('.food-item-row').length === 1) {
                 row.querySelectorAll('input').forEach((input) => input.value = '');
+                const previewImage = row.querySelector('[data-food-item-preview]');
+                if (previewImage) {
+                    previewImage.removeAttribute('src');
+                    previewImage.hidden = true;
+                }
                 return;
             }
             row.remove();
             reindex();
         });
 
-        shell?.querySelectorAll('.food-item-row').forEach(bindRemove);
+        shell?.querySelectorAll('.food-item-row').forEach((row) => {
+            bindFoodImagePreview(row);
+            bindRemove(row);
+        });
         addButton?.addEventListener('click', () => {
             const wrapper = document.createElement('div');
             wrapper.innerHTML = template.innerHTML.replaceAll('__INDEX__', String(shell.querySelectorAll('.food-item-row').length)).trim();
             const row = wrapper.firstElementChild;
             shell.appendChild(row);
+            bindFoodImagePreview(row);
             bindRemove(row);
         });
 
@@ -322,24 +421,31 @@
         hourRows.forEach((row) => {
             const timeInputs = row.querySelectorAll('input[type="time"]');
             const closedInput = row.querySelector('.operating-hours-closed');
+            const syncClosedState = () => {
+                timeInputs.forEach((timeInput) => {
+                    timeInput.disabled = Boolean(closedInput?.checked);
+                });
+            };
 
             timeInputs.forEach((timeInput) => {
                 timeInput.addEventListener('input', () => {
                     if (timeInput.value && closedInput) {
                         closedInput.checked = false;
+                        syncClosedState();
                     }
                 });
             });
 
             closedInput?.addEventListener('change', () => {
-                if (! closedInput.checked) {
-                    return;
+                if (closedInput.checked) {
+                    timeInputs.forEach((timeInput) => {
+                        timeInput.value = '';
+                    });
                 }
-
-                timeInputs.forEach((timeInput) => {
-                    timeInput.value = '';
-                });
+                syncClosedState();
             });
+
+            syncClosedState();
         });
 
         form?.addEventListener('submit', (event) => {

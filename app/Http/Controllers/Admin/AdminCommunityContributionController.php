@@ -4,21 +4,32 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\CorrectionRequest;
+use App\Models\HeritageShop;
 use App\Models\HeritageShopContribution;
+use App\Models\Media;
 use App\Models\ModerationActivity;
 use App\Models\User;
 use App\Notifications\ContributionStatusChanged;
 use App\Notifications\CorrectionRequestStatusChanged;
+use App\Services\HeritageShopImageService;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use RuntimeException;
 use Throwable;
 
 class AdminCommunityContributionController extends Controller
 {
+    public function __construct(private HeritageShopImageService $imageService)
+    {
+    }
+
     public function submissions(Request $request): View
     {
         $request->validate([
@@ -125,6 +136,8 @@ class AdminCommunityContributionController extends Controller
                 'string',
                 'max:1000',
             ],
+            'publish_media_ids' => ['nullable', 'array'],
+            'publish_media_ids.*' => ['integer'],
         ]);
 
         if ($validated['moderation_action'] !== 'delete' && $contribution->status !== HeritageShopContribution::STATUS_UNDER_REVIEW) {
@@ -144,71 +157,92 @@ class AdminCommunityContributionController extends Controller
         $feedback = filled($validated['feedback'] ?? null)
             ? trim(strip_tags($validated['feedback']))
             : null;
+        $publishableMedia = $validated['moderation_action'] === 'approve'
+            ? $this->validatePublishableMediaSelection($contribution, $validated['publish_media_ids'] ?? [])
+            : new EloquentCollection();
+        $copiedShopImagePaths = [];
 
-        DB::transaction(function () use (
-            $validated,
-            $contribution,
-            $admin,
-            $fromStatus,
-            $feedback
-        ): void {
-            if ($validated['moderation_action'] === 'approve') {
-                $contribution->forceFill(['admin_feedback' => $feedback])->save();
-                $contribution->approve($admin);
-                $toStatus = HeritageShopContribution::STATUS_APPROVED;
-            } elseif ($validated['moderation_action'] === 'reject') {
-                $toStatus = HeritageShopContribution::STATUS_REJECTED;
-                $contribution->forceFill([
-                    'status' => $toStatus,
-                    'admin_feedback' => $feedback,
-                    'rejection_reason' => $feedback,
-                    'approved_by_user_id' => null,
-                    'approved_at' => null,
-                ])->save();
-            } elseif ($validated['moderation_action'] === 'request_revision') {
-                $toStatus = HeritageShopContribution::STATUS_REVISION_REQUIRED;
-                $contribution->forceFill([
-                    'status' => $toStatus,
-                    'admin_feedback' => $feedback,
-                    'rejection_reason' => null,
-                ])->save();
-            } else {
-                $reason = $validated['deletion_reason'];
-                $comment = $reason === 'Other'
-                    ? trim(strip_tags($validated['deletion_comment'] ?? ''))
-                    : $reason;
+        try {
+            DB::transaction(function () use (
+                $validated,
+                $contribution,
+                $admin,
+                $fromStatus,
+                $feedback,
+                $publishableMedia,
+                &$copiedShopImagePaths
+            ): void {
+                if ($validated['moderation_action'] === 'approve') {
+                    $contribution->forceFill(['admin_feedback' => $feedback])->save();
+                    $shop = $contribution->approve($admin);
+                    $this->publishSelectedMediaAsShopImages($contribution, $shop, $publishableMedia, $copiedShopImagePaths);
+                    $toStatus = HeritageShopContribution::STATUS_APPROVED;
+                } elseif ($validated['moderation_action'] === 'reject') {
+                    $toStatus = HeritageShopContribution::STATUS_REJECTED;
+                    $contribution->forceFill([
+                        'status' => $toStatus,
+                        'admin_feedback' => $feedback,
+                        'rejection_reason' => $feedback,
+                        'approved_by_user_id' => null,
+                        'approved_at' => null,
+                    ])->save();
+                } elseif ($validated['moderation_action'] === 'request_revision') {
+                    $toStatus = HeritageShopContribution::STATUS_REVISION_REQUIRED;
+                    $contribution->forceFill([
+                        'status' => $toStatus,
+                        'admin_feedback' => $feedback,
+                        'rejection_reason' => null,
+                    ])->save();
+                } else {
+                    $reason = $validated['deletion_reason'];
+                    $comment = $reason === 'Other'
+                        ? trim(strip_tags($validated['deletion_comment'] ?? ''))
+                        : $reason;
 
-                $contribution->forceFill([
-                    'status' => HeritageShopContribution::STATUS_DELETED,
-                    'admin_feedback' => $comment,
-                    'reviewed_by_user_id' => $admin->id,
-                    'review_started_at' => $contribution->review_started_at ?? now(),
-                ])->save();
+                    $contribution->forceFill([
+                        'status' => HeritageShopContribution::STATUS_DELETED,
+                        'admin_feedback' => $comment,
+                        'reviewed_by_user_id' => $admin->id,
+                        'review_started_at' => $contribution->review_started_at ?? now(),
+                    ])->save();
+
+                    $this->recordActivity(
+                        $contribution,
+                        $admin->id,
+                        'deleted',
+                        $fromStatus,
+                        HeritageShopContribution::STATUS_DELETED,
+                        $comment,
+                        ['deletion_reason' => $reason]
+                    );
+
+                    $contribution->delete();
+
+                    return;
+                }
 
                 $this->recordActivity(
                     $contribution,
                     $admin->id,
-                    'deleted',
+                    $validated['moderation_action'],
                     $fromStatus,
-                    HeritageShopContribution::STATUS_DELETED,
-                    $comment,
-                    ['deletion_reason' => $reason]
+                    $toStatus,
+                    $feedback
                 );
-
-                $contribution->delete();
-
-                return;
+            });
+        } catch (Throwable $exception) {
+            foreach ($copiedShopImagePaths as $path) {
+                $this->imageService->delete($path);
             }
 
-            $this->recordActivity(
-                $contribution,
-                $admin->id,
-                $validated['moderation_action'],
-                $fromStatus,
-                $toStatus,
-                $feedback
-            );
-        });
+            if ($exception instanceof RuntimeException) {
+                return back()
+                    ->withInput()
+                    ->withErrors(['publish_media_ids' => $exception->getMessage()]);
+            }
+
+            throw $exception;
+        }
 
         if ($validated['moderation_action'] === 'delete') {
             $this->notifyContributorOfStatusChange($contribution);
@@ -444,6 +478,161 @@ class AdminCommunityContributionController extends Controller
                 'exception' => $exception::class,
             ]);
         }
+    }
+
+    /**
+     * @param  array<int, mixed>  $mediaIds
+     * @return EloquentCollection<int, Media>
+     */
+    private function validatePublishableMediaSelection(HeritageShopContribution $contribution, array $mediaIds): EloquentCollection
+    {
+        $ids = collect($mediaIds)
+            ->map(fn ($id): int => (int) $id)
+            ->filter(fn (int $id): bool => $id > 0)
+            ->unique()
+            ->values();
+
+        if ($ids->isEmpty()) {
+            return new EloquentCollection();
+        }
+
+        $media = $contribution->media()
+            ->whereKey($ids->all())
+            ->get()
+            ->keyBy('id');
+
+        if ($media->count() !== $ids->count()) {
+            throw ValidationException::withMessages([
+                'publish_media_ids' => 'Only media attached to this contribution can be published.',
+            ]);
+        }
+
+        $mediaDisk = config('filesystems.media_disk');
+        if (! is_string($mediaDisk) || $mediaDisk === '') {
+            throw ValidationException::withMessages([
+                'publish_media_ids' => 'Contribution media storage is not configured.',
+            ]);
+        }
+
+        foreach ($ids as $id) {
+            $item = $media->get($id);
+            if (! $item || ! $this->isPublishableImageMedia($item)) {
+                throw ValidationException::withMessages([
+                    'publish_media_ids' => 'Only supported image evidence can be published to the Heritage Shop gallery.',
+                ]);
+            }
+
+            if (! $this->isValidStoragePath($item->r2_object_key) || ! Storage::disk($mediaDisk)->exists($item->r2_object_key)) {
+                throw ValidationException::withMessages([
+                    'publish_media_ids' => 'A selected supporting image is missing from contribution media storage.',
+                ]);
+            }
+        }
+
+        return new EloquentCollection($ids->map(fn (int $id): Media => $media->get($id))->all());
+    }
+
+    /**
+     * @param  EloquentCollection<int, Media>  $media
+     * @param  array<int, string>  $copiedShopImagePaths
+     */
+    private function publishSelectedMediaAsShopImages(
+        HeritageShopContribution $contribution,
+        HeritageShop $shop,
+        EloquentCollection $media,
+        array &$copiedShopImagePaths
+    ): void {
+        if ($media->isEmpty()) {
+            return;
+        }
+
+        $sourceDisk = config('filesystems.media_disk');
+        if (! is_string($sourceDisk) || $sourceDisk === '') {
+            throw new RuntimeException('Contribution media storage is not configured.');
+        }
+
+        $shopAlreadyHasImages = $shop->images()->exists();
+        $primaryAssigned = false;
+
+        foreach ($media as $item) {
+            $targetPath = $this->shopImagePathForContributionMedia($contribution, $shop, $item);
+
+            if ($shop->images()->withTrashed()->where('path', $targetPath)->exists()) {
+                continue;
+            }
+
+            $targetExistsBeforeCopy = Storage::disk($this->imageService->diskName())->exists($targetPath);
+            $this->imageService->copyFromDisk($sourceDisk, $item->r2_object_key, $targetPath);
+            if (! $targetExistsBeforeCopy) {
+                $copiedShopImagePaths[] = $targetPath;
+            }
+
+            $shop->images()->create([
+                'path' => $targetPath,
+                'is_primary' => ! $shopAlreadyHasImages && ! $primaryAssigned,
+            ]);
+
+            $primaryAssigned = true;
+        }
+    }
+
+    private function shopImagePathForContributionMedia(HeritageShopContribution $contribution, HeritageShop $shop, Media $media): string
+    {
+        $extension = $this->extensionForMedia($media);
+
+        if ($extension === null) {
+            throw new RuntimeException('The selected supporting image type is unsupported.');
+        }
+
+        return $this->imageService->directory()
+            .'/community-contributions/'
+            .$shop->getKey()
+            .'/'
+            .$contribution->getKey()
+            .'/media-'
+            .$media->getKey()
+            .'.'
+            .$extension;
+    }
+
+    private function isPublishableImageMedia(Media $media): bool
+    {
+        return $media->media_type === 'image'
+            && $this->extensionForMedia($media) !== null
+            && $this->isValidStoragePath($media->r2_object_key);
+    }
+
+    private function extensionForMedia(Media $media): ?string
+    {
+        $mimeExtension = match (strtolower((string) $media->mime_type)) {
+            'image/jpeg', 'image/jpg' => 'jpg',
+            'image/png' => 'png',
+            'image/webp' => 'webp',
+            default => null,
+        };
+
+        if ($mimeExtension !== null) {
+            return $mimeExtension;
+        }
+
+        $extension = strtolower(pathinfo((string) ($media->original_name ?: $media->r2_object_key), PATHINFO_EXTENSION));
+
+        return match ($extension) {
+            'jpg', 'jpeg' => 'jpg',
+            'png' => 'png',
+            'webp' => 'webp',
+            default => null,
+        };
+    }
+
+    private function isValidStoragePath(?string $path): bool
+    {
+        return is_string($path)
+            && $path !== ''
+            && ! str_starts_with($path, '/')
+            && ! str_starts_with($path, '\\')
+            && ! str_contains($path, '..')
+            && ! str_contains($path, '\\');
     }
 
     private function recordCorrectionActivity(

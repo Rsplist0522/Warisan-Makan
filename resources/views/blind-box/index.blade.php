@@ -1,27 +1,32 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ __('Blind Box Recommendation') }} | WarisanMakan</title>
+@extends('layouts.user')
+@section('title', __('Blind Box'))
+@section('user-topbar-title', __('Blind Box Recommendation'))
+@section('user-topbar-subtitle', __('Reveal surprise heritage food suggestions matched to your taste.'))
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+@section('user-topbar-actions')
+<a class="user-topbar-link" href="{{ route('heritage-shops.index') }}">{{ __('Heritage Shops') }}</a>
+<a class="user-topbar-link" href="{{ route('foodtrails.index') }}">{{ __('Food Trail') }}</a>
+@endsection
 
-    @php
-        $shops = $shops ?? [];
-        $categories = $categories ?? ['Main Dishes', 'Desserts', 'Drinks'];
-        $activeFilters = $activeFilters ?? ['category' => ''];
-        $period = $period ?? 'night';
-        $periodInfo = $periodInfo ?? ['key' => 'night', 'label' => 'Night', 'tag' => 'Dinner time', 'icon' => '🌙'];
-        $alreadyDrew = $alreadyDrew ?? false;
-        $currentDraw = $currentDraw ?? null;
-        $totalInCatalog = $totalInCatalog ?? 0;
+@push('head')
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+@endpush
 
-        $heritageShopsUrl = '/heritage-shops';
-        $foodtrailUrl = '/foodtrails';
-    @endphp
+@php
+    $shops = $shops ?? [];
+    $categories = $categories ?? ['Main Dishes', 'Desserts', 'Drinks'];
+    $activeFilters = $activeFilters ?? ['category' => ''];
+    $period = $period ?? 'night';
+    $periodInfo = $periodInfo ?? ['key' => 'night', 'label' => 'Night', 'tag' => 'Dinner time', 'icon' => '🌙'];
+    $alreadyDrew = $alreadyDrew ?? false;
+    $currentDraw = $currentDraw ?? null;
+    $totalInCatalog = $totalInCatalog ?? 0;
+    $mysteryShops = $mysteryShops ?? [];
+@endphp
 
-    <style>
+@push('styles')
+<style>
         :root{--red:#8c1f1f;--red-dark:#691616;--cream:#f7efe4;--cream-2:#efe0c9;--text:#2f241d;--muted:#6f5845;--gold:#c98b16;--gold-light:#f7c948;--bg-start:#fcf7ef;--bg-end:#f7efe4}
         *{box-sizing:border-box}
         body{margin:0;font-family:"Segoe UI",Arial,sans-serif;background:linear-gradient(135deg,var(--bg-start ),var(--bg-end));color:var(--text);line-height:1.6}
@@ -41,6 +46,34 @@
         .illustration{min-height:260px;border-radius:20px;background:linear-gradient(135deg,var(--red-dark),var(--red));position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;color:white;padding:24px}
         .illustration-card{position:relative;z-index:1;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.22);padding:20px;border-radius:18px;width:100%}
         .section{padding:28px;margin-top:24px}
+
+        /* --- SPARKLE ANIMATIONS --- */
+        .sparkle-particle {
+            position: absolute;
+            pointer-events: none;
+            font-size: 0.8rem;
+            opacity: 0.3;
+            animation: float-sparkle 6s infinite ease-in-out;
+        }
+        .sparkle-particle:nth-child(2) { animation-delay: 2s; font-size: 1.2rem; opacity: 0.2; }
+        .sparkle-particle:nth-child(3) { animation-delay: 4s; font-size: 0.6rem; opacity: 0.4; }
+        .sparkle-particle:nth-child(4) { animation-delay: 1s; font-size: 0.9rem; opacity: 0.25; }
+        .sparkle-particle:nth-child(5) { animation-delay: 3s; font-size: 1rem; opacity: 0.2; }
+
+        @keyframes float-sparkle {
+            0% { transform: translateY(0) scale(0.5); opacity: 0; }
+            30% { opacity: 0.4; }
+            70% { opacity: 0.4; }
+            100% { transform: translateY(-100px) scale(0); opacity: 0; }
+        }
+
+        /* --- CAROUSEL TRANSITIONS --- */
+        .carousel-content {
+            transition: opacity 0.6s ease;
+        }
+        .carousel-content.fade-out {
+            opacity: 0;
+        }
 
         /* --- BLIND BOX WOW FACTOR UPGRADE --- */
         .mystery-guide {
@@ -216,7 +249,80 @@
         .item-card:hover .item-media img { transform: scale(1.1); }
         .item-body{padding:24px}
         
-        .pagination-container { margin-top: 45px; display: flex; justify-content: center; }
+        .pagination-container { 
+            margin-top: 45px; 
+            display: flex; 
+            justify-content: center; 
+        }
+        
+        .pagination-container nav {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .pagination-container .pagination {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 6px;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .pagination-container .pagination li {
+            display: inline-block;
+        }
+
+        .pagination-container .pagination a,
+        .pagination-container .pagination span {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 38px;
+            height: 38px;
+            padding: 0 12px;
+            border: 1px solid rgba(140,31,31,0.15);
+            border-radius: 9px;
+            color: var(--text);
+            background: #fff;
+            font-weight: 700;
+            font-size: 0.9rem;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .pagination-container .pagination a:hover {
+            border-color: var(--gold);
+            background: #fdf6ea;
+            transform: translateY(-1px);
+        }
+
+        .pagination-container .pagination span[aria-current="page"] {
+            color: #fff;
+            background: var(--red-dark);
+            border-color: var(--red-dark);
+        }
+
+        .pagination-container .pagination .disabled span {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        @media (max-width: 600px) {
+            .pagination-container .pagination {
+                gap: 4px;
+            }
+            .pagination-container .pagination a,
+            .pagination-container .pagination span {
+                min-width: 32px;
+                height: 32px;
+                padding: 0 8px;
+                font-size: 0.8rem;
+            }
+        }
         
         .filter-row select {
             border: 2px solid var(--gold);
@@ -231,6 +337,19 @@
             transition: all 0.3s ease;
         }
         .filter-row select:hover { border-color: var(--red); transform: translateY(-2px); }
+
+        .filter-reset {
+            background: none;
+            border: none;
+            color: var(--red);
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 1rem;
+            padding: 8px 16px;
+            margin-left: 15px;
+            transition: color 0.2s;
+        }
+        .filter-reset:hover { color: var(--red-dark); text-decoration: underline; }
 
         .meta-chip {
             display: inline-flex;
@@ -270,19 +389,72 @@
             font-weight: 700;
             cursor: pointer;
             transition: all 0.2s;
+            border: none;
         }
         .error-action:hover { background: #9b2c2c; transform: scale(1.05); }
 
         @media(max-width:800px){
+            .hero-grid {
+                grid-template-columns: 1fr;
+            }
+            .hero {
+                padding: 16px;
+            }
+            .hero .illustration {
+                min-height: 180px;
+            }
             .shop-grid{grid-template-columns:1fr}
             .mystery-guide { flex-direction: column; align-items: flex-start; gap: 12px; }
             .box-stage { width: 260px; height: 280px; }
             .box { width: 190px; height: 190px; }
+            .filter-row {
+                display: flex;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 10px;
+            }
+            .filter-row select {
+                width: 100%;
+            }
+            .filter-reset {
+                margin-left: 0 !important;
+                text-align: center;
+            }
+            .result .renewal-tag {
+                font-size: 0.9rem;
+                padding: 8px 16px;
+            }
+            .result > div {
+                flex-direction: column !important;
+                align-items: center !important;
+            }
+            .result > div > div:first-child {
+                width: 200px !important;
+                height: 200px !important;
+            }
+            .result > div > div:last-child {
+                min-width: auto !important;
+                text-align: center;
+            }
+            .period-banner {
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 8px;
+            }
+            .illustration-card .carousel-emoji {
+                font-size: 2.5rem !important;
+            }
+            .illustration-card .carousel-title {
+                font-size: 0.95rem !important;
+            }
+            .illustration-card .carousel-desc {
+                font-size: 0.75rem !important;
+            }
         }
     </style>
-</head>
+@endpush
 
-<body>
+@section('content')
 <div class="page">
 
     <section class="hero">
@@ -298,10 +470,34 @@
             </div>
             <div class="illustration">
                 <div class="illustration-card">
-                    <h3>{{ __('A heritage food trail, made playful.') }}</h3>
-                    <p style="color:#fbeedc;opacity:.95;font-weight:500;">
-                        {{ __('Warm spice-market energy, editorial storytelling, and one surprise discovery at a time.') }}
-                    </p>
+                    <span style="position: absolute; top: 12px; left: 12px; background: rgba(201,139,22,0.2); color: #f7c948; padding: 4px 12px; border-radius: 999px; font-size: 0.55rem; 
+                    font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.1); z-index: 5;">
+                        ✦ WarisanMakan
+                    </span> 
+
+                    <span class="sparkle-particle">✦</span>
+                    <span class="sparkle-particle">✦</span>
+                    <span class="sparkle-particle">✦</span>
+                    <span class="sparkle-particle">✦</span>
+                    <span class="sparkle-particle">✦</span>
+
+                    <!-- Carousel Content -->
+                    <div style="text-align: center; position: relative; z-index: 2;">
+                        <div id="carousel-emoji" class="carousel-content carousel-emoji" style="display: block; transition: opacity 0.5s;">
+                            <i class="fas fa-bowl-rice" style="font-size: 3.5rem; color: #f7c948;"></i>
+                        </div>
+                        <div id="carousel-title" class="carousel-content carousel-title" style="font-weight: 800; font-size: 1.1rem; color: #f7c948; margin: 8px 0 4px; transition: opacity 0.5s;">
+                            Nasi Lemak
+                        </div>
+                        <div id="carousel-desc" class="carousel-content carousel-desc" style="font-size: 0.85rem; opacity: 0.9; max-width: 260px; margin: 0 auto; transition: opacity 0.5s;">
+                            Fragrant coconut rice with sambal, anchovies, and egg.
+                        </div>
+                        <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.15);">
+                            <span id="mystery-preview" style="font-size: 0.75rem; opacity: 0.7; transition: opacity 0.5s;">
+                                🎁 Try the Blind Box to discover more!
+                            </span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -325,25 +521,21 @@
             <span class="period-rule">One surprise draw per period</span>
         </div>
 
-        <form action="{{ url('/blind-box') }}#blind-box" method="GET">
-            <div class="filter-row" style="justify-content: center; margin-bottom: 30px;">
-                <select id="category-filter" name="category" onchange="this.form.submit()">
-                    <option value="">All food categories</option>
-                    @foreach($categories as $option)
-                        <option
-                            value="{{ $option }}"
-                                @selected($activeFilters['category'] === $option)
-                        >
-                            {{ __($option) }}
-                        </option>
-                    @endforeach
-                </select>
+        <!-- FILTER ROW – WITHOUT FORM (no page refresh) -->
+        <div class="filter-row" style="justify-content: center; margin-bottom: 30px;">
+            <select id="category-filter" name="category">
+                <option value="">All food categories</option>
+                @foreach($categories as $option)
+                    <option value="{{ $option }}" @selected($activeFilters['category'] === $option)>
+                        {{ __($option) }}
+                    </option>
+                @endforeach
+            </select>
 
-                @if($activeFilters['category'] !== '')
-                    <a class="filter-reset" style="margin-left: 15px;" href="{{ url('/blind-box') }}#blind-box">Reset filter</a>
-                @endif
-            </div>
-        </form>
+            @if($activeFilters['category'] !== '')
+                <button id="reset-filter-btn" class="filter-reset">Reset filter</button>
+            @endif
+        </div>
 
         <div class="blind-box-card">
             <div class="mystery-glow"></div>
@@ -353,8 +545,8 @@
             <div id="draw-error" class="draw-error-box" style="display: none; position: relative; z-index: 30;">
                 <span class="error-icon">🏮</span>
                 <span class="error-title">No Shops Found</span>
-                <span id="draw-error-text" class="error-text">No heritage shops match your current filters in our curated pool.</span>
-                <div class="error-action" onclick="window.location.href='{{ url('/blind-box') }}#blind-box'">Reset Filters & Try Again</div>
+                <span id="draw-error-text" class="error-text">No heritage shops match your current category in our curated pool.</span>
+                <button id="reset-error-btn" class="error-action">Reset Filters & Try Again</button>
             </div>
 
             <div id="box-container" class="box-stage">
@@ -422,46 +614,185 @@
     const BLIND_BOX_CONFIG = {
         drawUrl: '{{ route('blind-box.draw') }}',
         csrfToken: '{{ csrf_token() }}',
-        heritageShopsUrl: '{{ $heritageShopsUrl }}',
-        foodtrailUrl: '{{ $foodtrailUrl }}',
+        heritageShopsUrl: '{{ route('heritage-shops.index') }}',
+        foodtrailUrl: '{{ url('/foodtrails') }}',
         initialDraw: @json($currentDraw),
         alreadyDrew: @json($alreadyDrew),
         periodKey: @json($periodInfo['key']),
     };
 
     const BLIND_BOX_TEXT = {
-    surpriseDiscoveryUnlocked: @json(__('Surprise Discovery Unlocked')),
-    heritageShop: @json(__('Heritage Shop')),
-    estimated: @json(__('Est.')),
-    noDescription: @json(__('No description available.')),
-    category: @json(__('Category')),
-    state: @json(__('State')),
-    whatNext: @json(__('What would you like to do next?')),
-    exploreFoodTrails: @json(__('Explore Food Trails')),
-    browseHeritageShops: @json(__('Browse Heritage Shops')),
-    openedDuring: @json(__('You opened this Blind Box during the :period period. Come back next period for another surprise!')),
-    current: @json(__('current')),
-    tryAgainLater: @json(__('Try Again Later')),
-    tryLater: @json(__('TRY LATER')),
-    somethingWentWrong: @json(__('Something went wrong. Please try again.')),
-    oops: @json(__('Oops')),
-    tryAgain: @json(__('TRY AGAIN')),
-    opened: @json(__('OPENED')),
-};
+        surpriseDiscoveryUnlocked: @json(__('Surprise Discovery Unlocked')),
+        heritageShop: @json(__('Heritage Shop')),
+        estimated: @json(__('Est.')),
+        noDescription: @json(__('No description available.')),
+        category: @json(__('Category')),
+        state: @json(__('State')),
+        whatNext: @json(__('What would you like to do next?')),
+        exploreFoodTrails: @json(__('Explore Food Trails')),
+        browseHeritageShops: @json(__('Browse Heritage Shops')),
+        openedDuring: @json(__('You opened this Blind Box during the :period period. Come back next period for another surprise!')),
+        current: @json(__('current')),
+        tryAgainLater: @json(__('Try Again Later')),
+        tryLater: @json(__('TRY LATER')),
+        somethingWentWrong: @json(__('Something went wrong. Please try again.')),
+        oops: @json(__('Oops')),
+        tryAgain: @json(__('TRY AGAIN')),
+        opened: @json(__('OPENED')),
+    };
 
-const BLIND_BOX_PERIODS = {
-    morning: @json(__('Morning')),
-    afternoon: @json(__('Afternoon')),
-    evening: @json(__('Evening')),
-    night: @json(__('Night')),
-};
-
+    const BLIND_BOX_PERIODS = {
+        morning: @json(__('Morning')),
+        afternoon: @json(__('Afternoon')),
+        evening: @json(__('Evening')),
+        night: @json(__('Night')),
+    };
 
     document.addEventListener('DOMContentLoaded', function () {
+        // --- CAROUSEL DATA (FontAwesome icons) ---
+        const carouselData = [
+            { 
+                icon: '<i class="fas fa-bowl-rice" style="font-size: 3.5rem; color: #f7c948;"></i>', 
+                title: 'Nasi Lemak', 
+                desc: 'Fragrant coconut rice with sambal, anchovies, and egg.' 
+            },
+            { 
+                icon: '<i class="fas fa-drumstick-bite" style="font-size: 3.5rem; color: #f7c948;"></i>', 
+                title: 'Rendang', 
+                desc: 'Slow‑cooked beef in rich coconut milk and spices.' 
+            },
+            { 
+                icon: '<i class="fas fa-utensils" style="font-size: 3.5rem; color: #f7c948;"></i>', 
+                title: 'Laksa', 
+                desc: 'Spicy noodle soup with a creamy coconut broth.' 
+            },
+            { 
+                icon: '<i class="fas fa-utensils" style="font-size: 3.5rem; color: #f7c948;"></i>', 
+                title: 'Char Kuey Teow', 
+                desc: 'Wok‑fried flat rice noodles with prawns and cockles.' 
+            },
+            { 
+                icon: '<i class="fas fa-mug-saucer" style="font-size: 3.5rem; color: #f7c948;"></i>', 
+                title: 'Kopi & Roti Bakar', 
+                desc: 'Classic kopitiam breakfast – toast, butter, and kaya.' 
+            },
+            { 
+                icon: '<i class="fas fa-utensils" style="font-size: 3.5rem; color: #f7c948;"></i>', 
+                title: 'Satay', 
+                desc: 'Grilled skewered meat with rich peanut sauce.' 
+            },
+        ];
+
+        // --- MYSTERY SHOPS (from the backend – real shops) ---
+        const mysteryShops = @json(array_map(function($shop) {
+            return ($shop['name'] ?? 'Heritage Shop') . ' · Est. ' . ($shop['year'] ?? '');
+        }, $mysteryShops ?? []));
+
+        // Fallback if no shops exist
+        if (mysteryShops.length === 0) {
+            mysteryShops.push('✨ Discover a heritage shop today!');
+        }
+
+        const emojiEl = document.getElementById('carousel-emoji');
+        const titleEl = document.getElementById('carousel-title');
+        const descEl = document.getElementById('carousel-desc');
+        const mysteryEl = document.getElementById('mystery-preview');
+
+        let idx = 0;
+        let mysteryIdx = 0;
+        let isFading = false;
+
+        function updateCarousel() {
+            if (isFading) return;
+            const item = carouselData[idx];
+            
+            isFading = true;
+            emojiEl.style.opacity = '0';
+            titleEl.style.opacity = '0';
+            descEl.style.opacity = '0';
+
+            setTimeout(() => {
+                // Update food
+                emojiEl.innerHTML = item.icon;
+                titleEl.textContent = item.title;
+                descEl.textContent = item.desc;
+
+                // Update mystery preview EVERY cycle
+                if (mysteryShops.length > 0) {
+                    mysteryEl.textContent = '🎁 ' + mysteryShops[mysteryIdx % mysteryShops.length];
+                } else {
+                    mysteryEl.textContent = '🎁 Try the Blind Box to discover more!';
+                }
+                mysteryIdx++;
+
+                // Fade in
+                emojiEl.style.opacity = '1';
+                titleEl.style.opacity = '1';
+                descEl.style.opacity = '1';
+
+                idx = (idx + 1) % carouselData.length;
+                isFading = false;
+            }, 500);
+        }
+
+        // Initial opacity
+        emojiEl.style.opacity = '1';
+        titleEl.style.opacity = '1';
+        descEl.style.opacity = '1';
+
+        // Start carousel
+        setInterval(updateCarousel, 4000);
+
+        // --- FILTER HANDLING (no page reload) ---
+        const categoryFilter = document.getElementById('category-filter');
+        const resetBtn = document.getElementById('reset-filter-btn');
+
+        function updateUrlCategory(category) {
+            const url = new URL(window.location.href);
+            if (category) {
+                url.searchParams.set('category', category);
+            } else {
+                url.searchParams.delete('category');
+            }
+            window.history.pushState({ category }, '', url.toString());
+        }
+
+        if (categoryFilter) {
+            categoryFilter.addEventListener('change', function () {
+                updateUrlCategory(this.value);
+            });
+        }
+
+        if (resetBtn) {
+            resetBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                categoryFilter.value = '';
+                updateUrlCategory('');
+            });
+        }
+
+        // --- BLIND BOX DRAW LOGIC ---
         const box = document.getElementById('box');
         const boxContainer = document.getElementById('box-container');
         const result = document.getElementById('result');
         const beam = document.getElementById('light-beam');
+
+        // --- RESET ERROR STATE ---
+        const errorResetBtn = document.getElementById('reset-error-btn');
+        if (errorResetBtn) {
+            errorResetBtn.addEventListener('click', function () {
+                categoryFilter.value = '';
+                updateUrlCategory('');
+                document.getElementById('draw-error').style.display = 'none';
+                boxContainer.style.display = 'flex';
+                box.dataset.disabled = '0';
+                box.classList.remove('opening');
+                box.classList.add('animate__pulse', 'animate__infinite');
+                result.className = 'result';
+                result.innerHTML = '';
+                beam.classList.remove('active');
+            });
+        }
 
         if (!box || !result) return;
 
@@ -546,7 +877,7 @@ const BLIND_BOX_PERIODS = {
                     box.classList.add('animate__pulse', 'animate__infinite');
                     document.getElementById('draw-error-text').innerText = data.error;
                     document.getElementById('draw-error').style.display = 'block';
-                    boxContainer.style.display = 'none'; // Hide the box to show the error card clearly
+                    boxContainer.style.display = 'none';
                     return;
                 }
 
@@ -570,6 +901,4 @@ const BLIND_BOX_PERIODS = {
 </script>
 
 @include('partials.chatbox')
-
-</body>
-</html>
+@endsection

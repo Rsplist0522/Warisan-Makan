@@ -1,12 +1,20 @@
-<!doctype html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+@extends('layouts.user')
 
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ __('Food Passport') }}</title>
-    <style>
+@section('title', __('Food Passport'))
+@section('user-topbar-title', __('Food Passport'))
+@section('user-topbar-subtitle', __('Collect stamps, unlock achievements, and compare your progress.'))
+
+@section('user-topbar-actions')
+<a class="user-topbar-link" href="{{ route('heritage-shops.index') }}">{{ __('Heritage Shops') }}</a>
+<a class="user-topbar-link" href="{{ route('passport.index') }}#leaderboard">{{ __('Leaderboard') }}</a>
+@endsection
+
+@push('head')
+<meta name="csrf-token" content="{{ csrf_token() }}">
+@endpush
+
+@push('styles')
+<style>
         :root {
             --primary: #8C1F1F;
             --primary-deep: #6D1717;
@@ -915,20 +923,11 @@
             }
         }
     </style>
-</head>
-<body>
-    <div class="passport-shell">
-        <header class="topbar">
-            <a class="brand" href="{{ url('/') }}" aria-label="Return to the Warisan Makan home page">
-                <span class="brand-mark">W</span>
-                <span>Warisan Makan</span>
-            </a>
-            <nav class="nav" aria-label="Main navigation">
-                <a class="home-link" href="{{ url('/') }}">Home</a>
-            </nav>
-        </header>
+@endpush
 
-        <main>
+@section('content')
+<div class="passport-shell">
+<main>
             <section class="hero" aria-label="{{ __('Heritage passport hero section') }}">
                 <div class="hero-copy">
                     <p class="eyebrow">{{ __('Food Passport') }}</p>
@@ -1827,5 +1826,4 @@
             }, { enableHighAccuracy: true, timeout: 10000 });
         });
     </script>
-</body>
-</html>
+@endsection

@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Throwable;
 
 class HeritageShopContribution extends Model
 {
@@ -118,9 +120,104 @@ class HeritageShopContribution extends Model
         return $this->hasMany(ModerationActivity::class)->latest();
     }
 
+    public function latestRevisionRequestActivity(): ?ModerationActivity
+    {
+        if ($this->relationLoaded('moderationActivities')) {
+            return $this->moderationActivities
+                ->where('action', 'request_revision')
+                ->sort(function (ModerationActivity $first, ModerationActivity $second): int {
+                    $dateComparison = ($second->created_at?->getTimestamp() ?? 0)
+                        <=> ($first->created_at?->getTimestamp() ?? 0);
+
+                    return $dateComparison !== 0
+                        ? $dateComparison
+                        : ((int) $second->id <=> (int) $first->id);
+                })
+                ->first();
+        }
+
+        return $this->moderationActivities()
+            ->where('action', 'request_revision')
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->first();
+    }
+
+    public function currentRevisionFeedback(): ?string
+    {
+        if ($this->status !== self::STATUS_REVISION_REQUIRED) {
+            return null;
+        }
+
+        $activityFeedback = $this->latestRevisionRequestActivity()?->comment;
+
+        return filled($activityFeedback) ? $activityFeedback : $this->admin_feedback;
+    }
+
+    public function previousRevisionFeedback(): ?string
+    {
+        if ($this->status === self::STATUS_REVISION_REQUIRED) {
+            return null;
+        }
+
+        return $this->latestRevisionRequestActivity()?->comment;
+    }
+
+    public function latestSubmissionOccurredAt(): ?DateTimeInterface
+    {
+        return $this->resubmitted_at ?: $this->submitted_at;
+    }
+
+    public function wasResubmitted(): bool
+    {
+        return $this->resubmitted_at !== null;
+    }
+
     public function media()
     {
         return $this->morphMany(Media::class, 'attachable')->orderBy('display_order');
+    }
+
+    public function foodItemImageUrl(?string $path): ?string
+    {
+        if (! $this->isValidFoodItemImagePath($path)) {
+            return null;
+        }
+
+        $diskName = config('filesystems.media_disk');
+        if (! is_string($diskName) || $diskName === '') {
+            return null;
+        }
+
+        $disk = Storage::disk($diskName);
+
+        try {
+            if (! $disk->exists($path)) {
+                return null;
+            }
+        } catch (Throwable) {
+            return null;
+        }
+
+        if ($diskName === 'r2') {
+            try {
+                return $disk->temporaryUrl($path, now()->addMinutes(15));
+            } catch (Throwable) {
+            }
+        }
+
+        return $disk->url($path);
+    }
+
+    private function isValidFoodItemImagePath(?string $path): bool
+    {
+        return is_string($path)
+            && $path !== ''
+            && str_starts_with($path, 'contributions/')
+            && ! str_starts_with($path, '/')
+            && ! str_starts_with($path, '\\')
+            && ! str_contains($path, '..')
+            && ! str_contains($path, '\\');
     }
 
     public function canBeEditedBy(User $user): bool

@@ -8,6 +8,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\Cache;
 
 class BlindBoxController extends Controller
 {
@@ -27,21 +28,38 @@ class BlindBoxController extends Controller
         $period = $this->currentPeriod();
         $periodInfo = $this->periodInfo($period);
 
-        // Discovery Grid shows the catalogue and honours its discovery filters.
+        // Get removed shop IDs (cached for 1 hour to reduce repeated checks)
+        $removedIds = Cache::remember('blind_box_removed_ids', 3600, function () {
+            $allShops = $this->heritageCatalog->all();
+            $removed = [];
+            foreach ($allShops as $shop) {
+                if ($this->blindBoxCatalog->isRemoved($shop)) {
+                    $removed[] = $shop['id'] ?? null;
+                }
+            }
+            return array_filter($removed);
+        });
+
+        // Get all active shops (non-removed)
         $allCatalogShops = array_values(array_filter(
             $this->heritageCatalog->all(),
-            fn (array $shop): bool => ! $this->blindBoxCatalog->isRemoved($shop),
+            fn(array $shop): bool => !in_array($shop['id'] ?? null, $removedIds)
         ));
 
+        // Select up to 6 random shops for the mystery preview
+        $randomShops = $allCatalogShops;
+        shuffle($randomShops);
+        $mysteryShops = array_slice($randomShops, 0, 6);
+
+        // Only category filter is used (for the dropdown selected state and blind box draw)
         $activeFilters = [
-            'state' => trim((string) $request->query('state', '')),
             'category' => trim((string) $request->query('category', '')),
         ];
 
-        // Manual pagination for the discovery grid (unfiltered) - Final requirement: 4 items per page
-        $perPage = 4; 
+        // Paginate the active shops (in memory, but only active shops)
+        $perPage = 4;
         $currentPage = Paginator::resolveCurrentPage() ?: 1;
-        $shopsCollection = collect($this->filterShops($allCatalogShops, $activeFilters));
+        $shopsCollection = collect($allCatalogShops);
         $paginatedShops = new LengthAwarePaginator(
             $shopsCollection->forPage($currentPage, $perPage)->values(),
             $shopsCollection->count(),
@@ -62,6 +80,7 @@ class BlindBoxController extends Controller
             'periodInfo' => $periodInfo,
             'alreadyDrew' => $alreadyDrew,
             'currentDraw' => $currentDraw,
+            'mysteryShops' => $mysteryShops, // Pass random shops for the preview
         ]);
     }
 
@@ -75,25 +94,30 @@ class BlindBoxController extends Controller
             ], 429);
         }
 
-        $activeFilters = [
-            'state' => trim((string) $request->query('state', '')),
-            'category' => trim((string) $request->query('category', '')),
-        ];
+        // Only category filter is applied to the blind box draw
+        $category = trim((string) $request->query('category', ''));
 
-        // Surprise Draw: ONLY picks from the admin-managed Blind Box pool, using the user's filters
+        // Get active shops from the blind box pool
         $allBlindBoxShops = $this->blindBoxCatalog->activeShops();
-        $shops = $this->filterShops($allBlindBoxShops, $activeFilters);
 
-        if (count($shops) === 0) {
-            $errorMessage = count($allBlindBoxShops) === 0 
-                ? 'The curated Blind Box pool is currently empty. Our admins are working on it!'
-                : 'No heritage shops match your current filters in our curated pool. Try widening your filters!';
-
+        if (empty($allBlindBoxShops)) {
             return response()->json([
-                'error' => $errorMessage,
+                'error' => 'The curated Blind Box pool is currently empty. Our admins are working on it!',
             ], 422);
         }
 
+        // Filter by category if specified
+        $shops = array_values(array_filter($allBlindBoxShops, function (array $shop) use ($category): bool {
+            return $category === '' || ($shop['category'] ?? '') === $category;
+        }));
+
+        if (count($shops) === 0) {
+            return response()->json([
+                'error' => 'No heritage shops match your current category in our curated pool. Try choosing a different category!',
+            ], 422);
+        }
+
+        // Pick a random shop
         $indexedShops = array_values($shops);
         $shop = $indexedShops[random_int(0, count($indexedShops) - 1)];
 
@@ -113,7 +137,7 @@ class BlindBoxController extends Controller
         ]));
 
         return response()->json([
-            'shop' => $shop,
+            'shop' => $drawData,
             'period' => $period,
             'period_info' => $this->periodInfo($period),
         ]);
@@ -142,13 +166,5 @@ class BlindBoxController extends Controller
         $draw = $request->session()->get("blind_box_draws.{$period}");
         if (!is_array($draw)) return false;
         return isset($draw['drawn_at']) && Carbon::parse($draw['drawn_at'], 'Asia/Kuala_Lumpur')->isToday();
-    }
-
-    private function filterShops(array $shops, array $filters): array
-    {
-        return array_values(array_filter($shops, function (array $shop) use ($filters): bool {
-            return ($filters['state'] === '' || ($shop['state'] ?? '') === $filters['state'])
-                && ($filters['category'] === '' || ($shop['category'] ?? '') === $filters['category']);
-        }));
     }
 }

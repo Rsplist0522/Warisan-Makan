@@ -3,6 +3,39 @@
 @section('title', __('Manage Contributions'))
 
 @section('content')
+    <style>
+        .record-food-items {
+            display: grid;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .record-food-item {
+            display: grid;
+            grid-template-columns: 54px minmax(0, 1fr);
+            gap: 10px;
+            align-items: center;
+            color: var(--wm-muted);
+            font-size: .82rem;
+        }
+
+        .record-food-item.no-image {
+            grid-template-columns: 1fr;
+        }
+
+        .record-food-item img {
+            width: 54px;
+            height: 46px;
+            border: 1px solid var(--wm-border);
+            border-radius: 8px;
+            object-fit: cover;
+        }
+
+        .record-food-item p {
+            margin: 2px 0 0;
+        }
+    </style>
+
     <header class="page-header">
         <div>
             <p class="eyebrow">{{ __('Contribution history') }}</p>
@@ -139,6 +172,25 @@
                                 <span>Deleted by admin: {{ $contribution->admin_feedback }}</span>
                             @endif
                         </div>
+
+                        @if (! empty($contribution->food_items))
+                            <div class="record-food-items">
+                                @foreach ($contribution->food_items as $item)
+                                    @php($foodItemImageUrl = $contribution->foodItemImageUrl($item['image_path'] ?? null))
+                                    <article class="record-food-item {{ $foodItemImageUrl ? '' : 'no-image' }}">
+                                        @if ($foodItemImageUrl)
+                                            <img src="{{ $foodItemImageUrl }}" alt="{{ $item['name'] ?? 'Food item image' }}">
+                                        @endif
+                                        <div>
+                                            <strong>{{ $item['name'] ?: __('Unnamed item') }}</strong>
+                                            @if (filled($item['desc'] ?? null))
+                                                <p>{{ $item['desc'] }}</p>
+                                            @endif
+                                        </div>
+                                    </article>
+                                @endforeach
+                            </div>
+                        @endif
                     </div>
 
                     <div class="record-actions">

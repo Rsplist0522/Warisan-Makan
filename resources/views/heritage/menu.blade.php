@@ -1,11 +1,16 @@
-<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $shop->shop_name }} · Menu &amp; Stories - Warisan Makan</title>
-    @fonts
-    <style>
+@extends('layouts.user')
+
+@section('title', $shop->shop_name.' - Menu & Stories')
+@section('user-topbar-title', __('Heritage Discovery'))
+@section('user-topbar-subtitle', __('Explore verified dishes and living food heritage stories.'))
+
+@section('user-topbar-actions')
+<a class="user-topbar-link" href="{{ route('heritage-shops.show', ['id' => $shop->id]) }}">{{ __('View details') }}</a>
+<a class="user-topbar-link" href="{{ route('heritage-shops.index') }}">{{ __('All heritage shops') }}</a>
+@endsection
+
+@push('styles')
+<style>
         :root {
             color-scheme: light;
             --bg:#f7f1ea;
@@ -71,16 +76,10 @@
         @media (max-width:430px) { .button { flex:1 1 100%; width:100%; } main { padding-top:22px; } .hero h1 { font-size:2.25rem; } }
         @media (prefers-reduced-motion:reduce) { .menu-card { transition:none; } }
     </style>
-</head>
-<body>
-    <header class="topbar">
-        <div class="brand"><span class="brand-mark">W</span><strong>Warisan Makan</strong></div>
-        <div class="topbar-actions">
-            <a class="button" href="{{ route('heritage-shops.show', ['id' => $shop->id]) }}">← View details</a>
-            <a class="button" href="{{ route('heritage-shops.index') }}">All heritage shops</a>
-        </div>
-    </header>
-    <main>
+@endpush
+
+@section('content')
+<main>
         <a class="back-link" href="{{ route('heritage-shops.show', ['id' => $shop->id]) }}">← Back to {{ $shop->shop_name }} profile</a>
         <section class="hero">
             <div>
@@ -145,5 +144,4 @@
             <a class="button primary" href="{{ route('heritage-shops.index') }}">Discover more heritage shops</a>
         </div>
     </main>
-</body>
-</html>
+@endsection

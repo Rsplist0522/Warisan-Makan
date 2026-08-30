@@ -15,6 +15,7 @@ use App\Http\Controllers\FoodTrailController;
 use App\Http\Controllers\Admin\FoodTrailSuggestionController;
 use App\Http\Controllers\HeritageShopController;
 use App\Http\Controllers\PassportController;
+use App\Models\SiteBranding;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -32,6 +33,20 @@ Route::post('/admin-login', [AuthController::class, 'adminLogin'])
     ->middleware('throttle:6,1')
     ->name('admin.login.submit');
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
+
+Route::get('/brand-logo', function () {
+    $branding = SiteBranding::current();
+
+    abort_unless($branding?->hasLogo(), 404);
+
+    $logoBytes = $branding->logoBytes();
+
+    return response($logoBytes, 200, [
+        'Content-Type' => $branding->logo_mime_type,
+        'Content-Length' => (string) strlen($logoBytes),
+        'Cache-Control' => 'public, max-age=3600',
+    ]);
+})->name('brand.logo');
 
 Route::view('/landing', 'landing')->name('landing');
 
@@ -166,43 +181,6 @@ Route::prefix('admin')
             Route::patch('/{shop}/toggle', [AdminBlindBoxController::class, 'toggle'])->whereNumber('shop')->name('toggle');
         });
 
-        Route::get('/modules/{moduleSlug}', function (string $moduleSlug) {
-            if ($moduleSlug === 'events-trails') {
-                return redirect()->route('admin.food-trails.index');
-            }
-            $modules = [
-                'heritage-registry' => [
-                    'name' => 'Heritage Registry',
-                    'description' => 'A future workspace for approved shop records, ownership notes, and heritage metadata.',
-                ],
-                'food-map' => [
-                    'name' => 'Food Map',
-                    'description' => 'A planned map and discovery module for browsing heritage eateries by location.',
-                ],
-                'stories-editorial' => [
-                    'name' => 'Stories & Editorial',
-                    'description' => 'A future editorial queue for oral histories, guides, and feature stories.',
-                ],
-                'events-trails' => [
-                    'name' => 'Events & Trails',
-                    'description' => 'A planned module for curated food trails, walking routes, and community events.',
-                ],
-                'users-roles' => [
-                    'name' => 'Users & Roles',
-                    'description' => 'A future workspace for contributor profiles, reviewer roles, and access controls.',
-                ],
-                'reports-analytics' => [
-                    'name' => 'Reports & Analytics',
-                    'description' => 'A planned reporting area for contribution trends and moderation throughput.',
-                ],
-            ];
-
-            abort_unless(array_key_exists($moduleSlug, $modules), 404);
-
-            return view('admin.module-placeholder', [
-                'module' => $modules[$moduleSlug],
-            ]);
-        })->name('modules.show');
     });
 
 // Blind Box routes

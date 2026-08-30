@@ -1,11 +1,16 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ __('Profile - Warisan Makan') }}</title>
-    @fonts
-    <style>
+@extends('layouts.user')
+
+@section('title', __('Profile'))
+@section('user-topbar-title', __('Profile'))
+@section('user-topbar-subtitle', __('Manage your WarisanMakan account and identity.'))
+
+@section('user-topbar-actions')
+<a class="user-topbar-link" href="{{ route('profile.edit') }}">{{ __('Edit Profile') }}</a>
+<a class="user-topbar-link" href="{{ route('home') }}">{{ __('Back to Home') }}</a>
+@endsection
+
+@push('styles')
+<style>
         :root {
             color-scheme: light;
             --wm-bg: #fbf2e7;
@@ -290,9 +295,10 @@
             font-size: .72rem;
         }
     </style>
-</head>
-<body>
-    <div class="page">
+@endpush
+
+@section('content')
+<div class="page">
         <header class="topbar">
             <div>
                 <h1 class="section-heading">{{ __('Profile') }}</h1>
@@ -388,5 +394,4 @@
             @endif
         </section>
     </div>
-</body>
-</html>
+@endsection

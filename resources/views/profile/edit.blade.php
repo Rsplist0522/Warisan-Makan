@@ -1,12 +1,20 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ __('Edit Profile - Warisan Makan') }}</title>
-    @fonts
-    @vite(['resources/js/profile.js'])
-    <style>
+@extends('layouts.user')
+
+@section('title', __('Edit Profile'))
+@section('user-topbar-title', __('Edit Profile'))
+@section('user-topbar-subtitle', __('Update your contact details, language, and profile photo.'))
+
+@section('user-topbar-actions')
+<a class="user-topbar-link" href="{{ route('profile.show') }}">{{ __('View Profile') }}</a>
+<a class="user-topbar-link" href="{{ route('home') }}">{{ __('Back to Home') }}</a>
+@endsection
+
+@push('head-scripts')
+@vite(['resources/js/profile.js'])
+@endpush
+
+@push('styles')
+<style>
         :root {
             color-scheme: light;
             --wm-bg: #fbf2e7;
@@ -314,9 +322,10 @@
             .photo-row { flex-wrap: wrap; }
         }
     </style>
-</head>
-<body>
-    <div class="page">
+@endpush
+
+@section('content')
+<div class="page">
         <header class="topbar">
             <div>
                 <h1 class="section-heading">{{ __('Edit your profile') }}</h1>
@@ -416,5 +425,4 @@
             unavailableCamera: @json(__('Camera access was unavailable. Check your browser permission and try again.'))
         };
     </script>
-</body>
-</html>
+@endsection

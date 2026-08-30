@@ -1,11 +1,17 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+@extends('layouts.user')
 
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Start Trail | {{ config('app.name', 'Warisan Makan') }}</title>
-    <script>
+@section('title', __('Current Food Trail'))
+@section('user-topbar-title', __('Food Trail'))
+@section('user-topbar-subtitle', __('Navigate, reorder, complete, and share your current route.'))
+@section('body-class', 'start-trail-page bg-[#FBF5EC] text-[#1F1B19] min-h-screen')
+
+@section('user-topbar-actions')
+<a class="user-topbar-link" href="{{ route('foodtrails.index') }}">{{ __('Generate Trail') }}</a>
+<a class="user-topbar-link" href="{{ route('passport.index') }}">{{ __('Food Passport') }}</a>
+@endsection
+
+@push('head-scripts')
+<script>
         window.googleMapsApiKey = @json(config('services.google.maps_api_key'));
         window.googleMapsLoaded = false;
         window._onGoogleMapsLoaded = function () {
@@ -22,7 +28,10 @@
         <script async defer
             src="https://maps.googleapis.com/maps/api/js?key={{ urlencode(config('services.google.maps_api_key')) }}&callback=_onGoogleMapsLoaded"></script>
     @endif
-    <style>
+@endpush
+
+@push('styles')
+<style>
         .trail-stop-card {
             display: grid;
             grid-template-columns: 32px 30px 72px minmax(0, 1fr) auto;
@@ -221,75 +230,7 @@
                 min-width: 96px;
             }
         }
-
-        .wm-foodtrail-nav {
-            position: sticky;
-            top: 0;
-            z-index: 30;
-            display: flex;
-            min-height: 68px;
-            align-items: center;
-            justify-content: space-between;
-            gap: 20px;
-            border-bottom: 1px solid #E9D7BF;
-            background: rgba(255, 255, 255, 0.88);
-            padding: 12px clamp(16px, 4vw, 32px);
-            backdrop-filter: blur(12px);
-        }
-
-        .wm-foodtrail-brand,
-        .wm-foodtrail-links,
-        .wm-foodtrail-links form {
-            display: flex;
-            align-items: center;
-        }
-
-        .wm-foodtrail-brand {
-            gap: 12px;
-            color: #B8874A;
-            font-size: 18px;
-            font-weight: 800;
-            text-decoration: none;
-        }
-
-        .wm-foodtrail-brand-mark {
-            display: inline-flex;
-            width: 42px;
-            height: 42px;
-            align-items: center;
-            justify-content: center;
-            border-radius: 14px;
-            background: #FDE7CA;
-            color: #B8874A;
-        }
-
-        .wm-foodtrail-links {
-            flex-wrap: wrap;
-            justify-content: flex-end;
-            gap: 8px;
-        }
-
-        .wm-foodtrail-links a,
-        .wm-foodtrail-links button {
-            border: 1px solid #E9D7BF;
-            border-radius: 999px;
-            background: #FFFFFF;
-            color: #6B553F;
-            padding: 9px 14px;
-            font-size: 13px;
-            font-weight: 700;
-            text-decoration: none;
-            transition: background-color 160ms ease, color 160ms ease;
-        }
-
-        .wm-foodtrail-links a.active,
-        .wm-foodtrail-links a:hover,
-        .wm-foodtrail-links button:hover {
-            background: #B8874A;
-            color: #FFFFFF;
-        }
-
-        .trail-directions-list {
+.trail-directions-list {
             margin-top: 12px;
             display: grid;
             gap: 10px;
@@ -478,12 +419,10 @@
             font-weight: 700 !important;
         }
     </style>
-</head>
+@endpush
 
-<body class="start-trail-page bg-[#FBF5EC] text-[#1F1B19] min-h-screen">
-    @include('partials.foodtrail-nav')
-
-    <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+@section('content')
+<main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div class="trail-page-header mb-6 rounded-[32px] bg-white p-6 shadow-[0_18px_40px_rgba(62,44,23,0.08)]">
             <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
                 <div class="flex items-start gap-4">
@@ -1761,6 +1700,6 @@
             updateRouteStats();
         });
     </script>
-</body>
+@endsection
 
-</html>
+

@@ -1,12 +1,23 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ isset($shop) ? $shop->shop_name.' - Heritage Shop' : 'Heritage Shops' }} - Warisan Makan</title>
-    @fonts
-    <style>
+@extends('layouts.user')
+
+@section('title', isset($shop) ? $shop->shop_name.' - Heritage Shop' : __('Heritage Shops'))
+@section('user-topbar-title', __('Heritage Discovery'))
+@section('user-topbar-subtitle', __('Explore verified heritage food businesses and their cultural stories.'))
+
+@section('user-topbar-actions')
+@auth
+    <a class="user-topbar-link" href="{{ route('home') }}">{{ __('Back to dashboard') }}</a>
+@else
+    <a class="user-topbar-link" href="{{ route('login') }}">{{ __('Log in') }}</a>
+@endauth
+@endsection
+
+@push('head')
+<meta name="csrf-token" content="{{ csrf_token() }}">
+@endpush
+
+@push('styles')
+<style>
         :root {
             color-scheme: light;
             --wm-sidebar: #3b1b18;
@@ -62,8 +73,6 @@
         .shell.nav-collapsed .brand-word, .shell.nav-collapsed .nav-label, .shell.nav-collapsed .nav-item span, .shell.nav-collapsed .user-name, .shell.nav-collapsed .user-role { display:none; }
         .shell.nav-collapsed .nav-item { width: 44px; min-height: 44px; justify-content:center; margin-inline:auto; padding-inline:8px; overflow:hidden; }
         .shell.nav-collapsed .nav-item::before { width:28px; height:28px; border-color:transparent; background:rgba(255,255,255,.04); }
-        .shell[data-heritage-public-nav].nav-collapsed .nav-item:hover::after, .shell[data-heritage-public-nav].nav-collapsed .nav-item:focus-visible::after { content:attr(data-label); position:absolute; z-index:60; left:calc(100% + 10px); top:50%; display:block; min-width:max-content; transform:translateY(-50%); padding:8px 10px; border:1px solid rgba(255,255,255,.12); border-radius:8px; color:#fffaf4; background:#3b1b18; box-shadow:0 10px 22px rgba(0,0,0,.18); font-size:.75rem; font-weight:800; }
-        .shell[data-heritage-public-nav].nav-collapsed .nav-item:hover { overflow:visible; }
         .nav-toggle { display:inline-flex; align-items:center; gap:8px; min-height:38px; padding:0 12px; border:1px solid var(--wm-line); border-radius:10px; color:var(--wm-ink); background:#fff; cursor:pointer; font-size:.8rem; font-weight:800; }
         .nav-toggle:hover { border-color:rgba(163,58,45,.35); background:#fffaf4; }
         .nav-backdrop { display:none; }
@@ -71,8 +80,6 @@
         .nav { display: grid; gap: 5px; }
         .nav-item { position: relative; display: flex; min-width: 0; align-items: center; gap: 11px; padding: 11px 12px; border-radius: 10px; color: rgba(255, 245, 236, .72); font-size: .88rem; font-weight: 700; text-decoration: none; white-space: nowrap; }
         .nav-item::before { content: ''; width: 7px; height: 7px; flex: 0 0 auto; border: 1px solid currentColor; border-radius: 50%; }
-        .shell[data-heritage-public-nav] .nav-item::before { content: attr(data-icon); width: 25px; height: 25px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.15); border-radius: 8px; font-size: .75rem; line-height: 1; }
-        .shell[data-heritage-public-nav] .nav-item.active::before { border-color: rgba(200,148,50,.42); }
         .nav-item.active, .nav-item:hover { color: #fff; background: var(--wm-sidebar-soft); }
         .nav-item.active::before { border-color: var(--wm-gold); background: var(--wm-gold); }
         .sidebar-footer { margin-top: auto; padding-top: 22px; border-top: 1px solid rgba(255, 255, 255, .1); }
@@ -207,56 +214,75 @@
         @media (prefers-reduced-motion: reduce) { .sidebar, .shop-card, .menu-card { transition:none; } }
         @media (max-width: 620px) { .nav, .filter-grid, .shop-grid { grid-template-columns: 1fr; } .topbar, .page-header, .detail-heading { display: grid; } .topbar > div { min-width: 0; } .content { width: 100%; padding: 22px 16px 34px; } .page-header, .detail-panel { padding: 22px; } .header-pill { justify-self: start; } .filter-actions { grid-column: auto; flex-direction: column; align-items: stretch; } .filter-actions .button, .card-actions .button { width: 100%; flex-basis:100%; } .card-support { padding-top: 14px; } }
     </style>
-</head>
-<body>
-    <div class="shell" data-heritage-public-nav>
-        <aside class="sidebar" id="public-heritage-sidebar">
-            <div class="brand"><span class="brand-mark">W</span><span class="brand-word">WarisanMakan</span></div>
-            <p class="nav-label">Home</p>
-            <nav class="nav" aria-label="User home navigation">
-                @auth
-                    <a class="nav-item" data-icon="⌂" data-label="Dashboard" title="Dashboard" href="{{ route('home') }}"><span>Dashboard</span></a>
-                    <a class="nav-item" data-icon="◎" data-label="Profile" title="Profile" href="{{ route('profile.show') }}"><span>Profile</span></a>
-                @else
-                    <a class="nav-item" data-icon="⌂" data-label="Landing page" title="Landing page" href="{{ route('landing') }}"><span>Landing page</span></a>
-                    <a class="nav-item" data-icon="↪" data-label="Log in" title="Log in" href="{{ route('login') }}"><span>Log in</span></a>
-                @endauth
-            </nav>
-            <p class="nav-label">Modules</p>
-            <nav class="nav" aria-label="WarisanMakan modules">
-                <a class="nav-item active" data-icon="✦" data-label="Heritage Shop Tracking" title="Heritage Shop Tracking" href="{{ route('heritage-shops.index') }}"><span>Heritage Shop Tracking</span></a>
-                <a class="nav-item" data-icon="◇" data-label="Food Passport" title="Food Passport" href="{{ route('passport.index') }}"><span>Food Passport</span></a>
-                <a class="nav-item" data-icon="⌁" data-label="Food Trail &amp; Navigation" title="Food Trail &amp; Navigation" href="{{ url('/foodtrails') }}"><span>Food Trail &amp; Navigation</span></a>
-            </nav>
-            @auth
-                <div class="sidebar-footer">
-                    <p class="user-name">{{ auth()->user()->name }}</p>
-                    <p class="user-role">WarisanMakan member</p>
-                    <form method="POST" action="{{ route('logout') }}">
-                        @csrf
-                        <button class="logout" type="submit">Log out</button>
-                    </form>
-                </div>
-            @endauth
-        </aside>
-        <button class="nav-backdrop" id="public-nav-backdrop" type="button" aria-label="Close navigation"></button>
+@endpush
 
-        <section class="main">
-            <header class="topbar">
-                <button class="nav-toggle" id="public-nav-toggle" type="button" aria-controls="public-heritage-sidebar" aria-expanded="true"><span aria-hidden="true">☰</span><span id="public-nav-toggle-label">Collapse</span></button>
-                <div>
-                    <h2>Heritage Shop Tracking</h2>
-                    <p>Explore verified heritage food businesses and their cultural stories.</p>
-                </div>
-                @auth
-                    <a class="topbar-link" href="{{ route('home') }}">Back to dashboard</a>
-                @else
-                    <a class="topbar-link" href="{{ route('login') }}">Log in</a>
-                @endauth
-            </header>
+@push('scripts')
+@if (isset($shop))
+        <script>
+            (() => {
+                const root = document.querySelector('[data-ai-guide]');
+                if (!root) return;
+                const form = root.querySelector('[data-ai-form]');
+                const input = root.querySelector('#ai-guide-question');
+                const submit = form.querySelector('button[type="submit"]');
+                const status = root.querySelector('[data-ai-status]');
+                const answer = root.querySelector('[data-ai-answer]');
+                const answerText = root.querySelector('[data-ai-answer-text]');
+                const highlights = root.querySelector('[data-ai-highlights]');
+                const source = root.querySelector('[data-ai-source]');
+                const endpoint = @json(route('heritage-shops.ai-guide', ['heritageShop' => $shop->id]));
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
 
-            <main class="content">
-                @if (isset($shop))
+                async function askGuide(question) {
+                    const trimmed = String(question || '').trim();
+                    if (!trimmed) return;
+                    submit.disabled = true;
+                    status.className = 'ai-guide-status';
+                    status.textContent = 'The guide is checking the verified profile…';
+                    answer.classList.remove('visible');
+                    try {
+                        const response = await fetch(endpoint, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+                            body: JSON.stringify({ question: trimmed }),
+                        });
+                        const payload = await response.json();
+                        if (!response.ok) throw new Error(payload.message || 'The guide is unavailable right now.');
+                        answerText.textContent = payload.answer || 'No grounded answer was available.';
+                        highlights.replaceChildren();
+                        (Array.isArray(payload.highlights) ? payload.highlights : []).forEach((item) => {
+                            const li = document.createElement('li');
+                            li.textContent = item;
+                            highlights.appendChild(li);
+                        });
+                        source.textContent = payload.source_note || 'Grounded in the verified profile shown on this page.';
+                        answer.classList.add('visible');
+                        status.textContent = payload.status === 'fallback' ? 'AI is taking a break; the saved verified facts are still available.' : 'Answer grounded in this HeritageShop profile.';
+                    } catch (error) {
+                        status.className = 'ai-guide-status error';
+                        status.textContent = error.message || 'The guide is unavailable right now.';
+                    } finally {
+                        submit.disabled = false;
+                    }
+                }
+
+                form.addEventListener('submit', (event) => {
+                    event.preventDefault();
+                    askGuide(input.value);
+                });
+                root.querySelectorAll('[data-ai-question]').forEach((button) => {
+                    button.addEventListener('click', () => {
+                        input.value = button.dataset.aiQuestion || '';
+                        askGuide(input.value);
+                    });
+                });
+            })();
+        </script>
+    @endif
+@endpush
+
+@section('content')
+@if (isset($shop))
                     @php
                         $primaryImage = $shop->images->first();
                         $primaryImageUrl = $primaryImage ? $imageService->url($primaryImage) : null;
@@ -528,112 +554,5 @@
                         <nav class="pagination" aria-label="Heritage shop pages">{{ $shops->onEachSide(1)->links() }}</nav>
                     @endif
                 @endif
-            </main>
-        </section>
-    </div>
-    <script>
-    (() => {
-        const shell = document.querySelector('[data-heritage-public-nav]');
-        const toggle = document.getElementById('public-nav-toggle');
-        const label = document.getElementById('public-nav-toggle-label');
-        const backdrop = document.getElementById('public-nav-backdrop');
-        if (!shell || !toggle || !label) return;
-        const key = 'warisan-heritage-public-nav-collapsed';
-        const mobile = () => window.matchMedia('(max-width: 850px)').matches;
-        const sync = () => {
-            if (mobile()) {
-                shell.classList.remove('nav-collapsed');
-                const open = shell.classList.contains('nav-open');
-                toggle.setAttribute('aria-expanded', String(open));
-                toggle.setAttribute('aria-label', open ? 'Close navigation' : 'Open navigation');
-                label.textContent = open ? 'Close' : 'Menu';
-            } else {
-                shell.classList.remove('nav-open');
-                const collapsed = localStorage.getItem(key) === 'true';
-                shell.classList.toggle('nav-collapsed', collapsed);
-                toggle.setAttribute('aria-expanded', String(!collapsed));
-                toggle.setAttribute('aria-label', collapsed ? 'Expand navigation' : 'Collapse navigation');
-                label.textContent = collapsed ? 'Expand' : 'Collapse';
-            }
-        };
-        toggle.addEventListener('click', () => {
-            if (mobile()) shell.classList.toggle('nav-open');
-            else {
-                const collapsed = !shell.classList.contains('nav-collapsed');
-                shell.classList.toggle('nav-collapsed', collapsed);
-                localStorage.setItem(key, String(collapsed));
-            }
-            sync();
-        });
-        backdrop?.addEventListener('click', () => { shell.classList.remove('nav-open'); sync(); });
-        document.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape') { shell.classList.remove('nav-open'); sync(); }
-        });
-        window.addEventListener('resize', sync, {passive:true});
-        sync();
-    })();
-    </script>
-    @if (isset($shop))
-        <script>
-            (() => {
-                const root = document.querySelector('[data-ai-guide]');
-                if (!root) return;
-                const form = root.querySelector('[data-ai-form]');
-                const input = root.querySelector('#ai-guide-question');
-                const submit = form.querySelector('button[type="submit"]');
-                const status = root.querySelector('[data-ai-status]');
-                const answer = root.querySelector('[data-ai-answer]');
-                const answerText = root.querySelector('[data-ai-answer-text]');
-                const highlights = root.querySelector('[data-ai-highlights]');
-                const source = root.querySelector('[data-ai-source]');
-                const endpoint = @json(route('heritage-shops.ai-guide', ['heritageShop' => $shop->id]));
-                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+@endsection
 
-                async function askGuide(question) {
-                    const trimmed = String(question || '').trim();
-                    if (!trimmed) return;
-                    submit.disabled = true;
-                    status.className = 'ai-guide-status';
-                    status.textContent = 'The guide is checking the verified profile…';
-                    answer.classList.remove('visible');
-                    try {
-                        const response = await fetch(endpoint, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken },
-                            body: JSON.stringify({ question: trimmed }),
-                        });
-                        const payload = await response.json();
-                        if (!response.ok) throw new Error(payload.message || 'The guide is unavailable right now.');
-                        answerText.textContent = payload.answer || 'No grounded answer was available.';
-                        highlights.replaceChildren();
-                        (Array.isArray(payload.highlights) ? payload.highlights : []).forEach((item) => {
-                            const li = document.createElement('li');
-                            li.textContent = item;
-                            highlights.appendChild(li);
-                        });
-                        source.textContent = payload.source_note || 'Grounded in the verified profile shown on this page.';
-                        answer.classList.add('visible');
-                        status.textContent = payload.status === 'fallback' ? 'AI is taking a break; the saved verified facts are still available.' : 'Answer grounded in this HeritageShop profile.';
-                    } catch (error) {
-                        status.className = 'ai-guide-status error';
-                        status.textContent = error.message || 'The guide is unavailable right now.';
-                    } finally {
-                        submit.disabled = false;
-                    }
-                }
-
-                form.addEventListener('submit', (event) => {
-                    event.preventDefault();
-                    askGuide(input.value);
-                });
-                root.querySelectorAll('[data-ai-question]').forEach((button) => {
-                    button.addEventListener('click', () => {
-                        input.value = button.dataset.aiQuestion || '';
-                        askGuide(input.value);
-                    });
-                });
-            })();
-        </script>
-    @endif
-</body>
-</html>

@@ -1,26 +1,32 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ __('Blind Box Recommendation') }} | WarisanMakan</title>
+@extends('layouts.user')
+@section('title', __('Blind Box'))
+@section('user-topbar-title', __('Blind Box Recommendation'))
+@section('user-topbar-subtitle', __('Reveal surprise heritage food suggestions matched to your taste.'))
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+@section('user-topbar-actions')
+<a class="user-topbar-link" href="{{ route('heritage-shops.index') }}">{{ __('Heritage Shops') }}</a>
+<a class="user-topbar-link" href="{{ route('foodtrails.index') }}">{{ __('Food Trail') }}</a>
+@endsection
 
-    @php
-        $shops = $shops ?? [];
-        $categories = $categories ?? ['Main Dishes', 'Desserts', 'Drinks'];
-        $activeFilters = $activeFilters ?? ['category' => ''];
-        $period = $period ?? 'night';
-        $periodInfo = $periodInfo ?? ['key' => 'night', 'label' => 'Night', 'tag' => 'Dinner time', 'icon' => '🌙'];
-        $alreadyDrew = $alreadyDrew ?? false;
-        $currentDraw = $currentDraw ?? null;
-        $totalInCatalog = $totalInCatalog ?? 0;
-        $mysteryShops = $mysteryShops ?? [];
-    @endphp
+@push('head')
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+@endpush
 
-    <style>
+@php
+    $shops = $shops ?? [];
+    $categories = $categories ?? ['Main Dishes', 'Desserts', 'Drinks'];
+    $activeFilters = $activeFilters ?? ['category' => ''];
+    $period = $period ?? 'night';
+    $periodInfo = $periodInfo ?? ['key' => 'night', 'label' => 'Night', 'tag' => 'Dinner time', 'icon' => '🌙'];
+    $alreadyDrew = $alreadyDrew ?? false;
+    $currentDraw = $currentDraw ?? null;
+    $totalInCatalog = $totalInCatalog ?? 0;
+    $mysteryShops = $mysteryShops ?? [];
+@endphp
+
+@push('styles')
+<style>
         :root{--red:#8c1f1f;--red-dark:#691616;--cream:#f7efe4;--cream-2:#efe0c9;--text:#2f241d;--muted:#6f5845;--gold:#c98b16;--gold-light:#f7c948;--bg-start:#fcf7ef;--bg-end:#f7efe4}
         *{box-sizing:border-box}
         body{margin:0;font-family:"Segoe UI",Arial,sans-serif;background:linear-gradient(135deg,var(--bg-start ),var(--bg-end));color:var(--text);line-height:1.6}
@@ -446,9 +452,9 @@
             }
         }
     </style>
-</head>
+@endpush
 
-<body>
+@section('content')
 <div class="page">
 
     <section class="hero">
@@ -895,6 +901,4 @@
 </script>
 
 @include('partials.chatbox')
-
-</body>
-</html>
+@endsection

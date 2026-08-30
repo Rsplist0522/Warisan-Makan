@@ -11,7 +11,7 @@
 
 <aside class="user-sidebar" id="user-sidebar">
     <a class="user-brand" href="{{ route('home') }}">
-        <span class="user-brand-mark">W</span>
+        <span class="user-brand-mark">@include('partials.brand-logo', ['imageClass' => 'user-brand-image', 'placeholderClass' => 'user-brand-placeholder'])</span>
         <span class="user-brand-word">WarisanMakan</span>
     </a>
 

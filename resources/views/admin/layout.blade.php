@@ -29,7 +29,9 @@
         .sidebar { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; overflow-y: auto; padding: 28px 20px; color: #fff5ec; background: linear-gradient(180deg, var(--sidebar), #281010); -ms-overflow-style: none; scrollbar-width: none; }
         .sidebar::-webkit-scrollbar { display: none; }
         .brand { display: flex; align-items: center; gap: 12px; padding: 2px 10px 28px; border-bottom: 1px solid rgba(255,255,255,.1); font-family: Georgia, serif; font-size: 1.2rem; font-weight: 800; }
-        .brand-mark { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.2); border-radius: 12px; color: #3b1b16; background: var(--gold); font-family: Georgia, serif; }
+        .brand-mark { width: 38px; height: 38px; display: grid; place-items: center; flex: 0 0 auto; overflow: hidden; border: 0; border-radius: 12px; background: transparent; }
+        .brand-mark img { width: 100%; height: 100%; display: block; object-fit: contain; object-position: center; transform: scale(1.28); }
+        .brand-logo-placeholder { width: 100%; height: 100%; display: block; border-radius: 12px; background: rgba(200,148,50,.16); }
         .nav-label { margin: 27px 12px 10px; color: rgba(255,245,236,.48); font-size: .68rem; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
         .nav { display: grid; gap: 5px; }
         .nav-item { position: relative; display: flex; width: 100%; min-width: 0; align-items: center; gap: 11px; padding: 11px 12px; border-radius: 10px; color: rgba(255,245,236,.7); font-size: .88rem; text-decoration: none; white-space: nowrap; }
@@ -191,7 +193,7 @@
     @endphp
     <div class="shell" data-admin-nav>
         <aside class="sidebar" id="admin-sidebar">
-            <div class="brand"><span class="brand-mark">W</span><span class="brand-word">Warisan Makan</span></div>
+            <div class="brand"><span class="brand-mark">@include('partials.brand-logo', ['imageClass' => 'brand-logo-image', 'placeholderClass' => 'brand-logo-placeholder'])</span><span class="brand-word">Warisan Makan</span></div>
             <p class="nav-label">Admin home</p>
             <nav class="nav" aria-label="Administrator modules">
                 <a class="nav-item {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}" data-label="Dashboard" title="Dashboard" href="{{ route('admin.dashboard') }}"><span class="admin-nav-icon" aria-hidden="true">@include('partials.module-icon', ['icon' => 'dashboard'])</span><span>Dashboard</span></a>

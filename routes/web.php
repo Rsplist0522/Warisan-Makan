@@ -15,6 +15,7 @@ use App\Http\Controllers\FoodTrailController;
 use App\Http\Controllers\Admin\FoodTrailSuggestionController;
 use App\Http\Controllers\HeritageShopController;
 use App\Http\Controllers\PassportController;
+use App\Models\SiteBranding;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -32,6 +33,20 @@ Route::post('/admin-login', [AuthController::class, 'adminLogin'])
     ->middleware('throttle:6,1')
     ->name('admin.login.submit');
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
+
+Route::get('/brand-logo', function () {
+    $branding = SiteBranding::current();
+
+    abort_unless($branding?->hasLogo(), 404);
+
+    $logoBytes = $branding->logoBytes();
+
+    return response($logoBytes, 200, [
+        'Content-Type' => $branding->logo_mime_type,
+        'Content-Length' => (string) strlen($logoBytes),
+        'Cache-Control' => 'public, max-age=3600',
+    ]);
+})->name('brand.logo');
 
 Route::view('/landing', 'landing')->name('landing');
 

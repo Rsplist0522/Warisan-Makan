@@ -99,11 +99,13 @@
             display: grid;
             place-items: center;
             flex: 0 0 auto;
+            overflow: hidden;
+            border: 0;
             border-radius: 12px;
-            color: #3b1b16;
-            background: var(--wm-highlight);
-            font-family: Georgia, 'Times New Roman', serif;
+            background: transparent;
         }
+        .user-brand-mark img { width: 100%; height: 100%; display: block; object-fit: contain; object-position: center; transform: scale(1.28); }
+        .user-brand-placeholder { width: 100%; height: 100%; display: block; border-radius: 12px; background: rgba(200,148,50,.16); }
 
         .user-nav-label {
             margin: 27px 12px 10px;

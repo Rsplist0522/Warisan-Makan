@@ -385,12 +385,6 @@
             </div>
         </header>
 
-        @if (session('success'))
-            <div class="status-alert">
-                {{ session('success') }}
-            </div>
-        @endif
-
         @if ($errors->any())
             <div class="status-alert">
                 <strong>{{ __('There were some issues with your submission.') }}</strong>

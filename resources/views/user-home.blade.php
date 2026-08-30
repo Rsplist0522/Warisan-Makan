@@ -22,13 +22,13 @@
                 <option value="zh" @selected((auth()->user()->language ?? 'en') === 'zh')>{{ __('Chinese') }}</option>
             </select>
         </form>
-        <a href="{{ route('profile.show') }}" style="display:inline-flex;align-items:center;gap:10px;padding:10px 14px;border-radius:999px;border:1px solid rgba(46, 36, 32, .14);background:#fff;text-decoration:none;">
+        <a class="dashboard-profile-link" href="{{ route('profile.show') }}">
             @if (auth()->user()->profile_photo)
-                <img src="{{ auth()->user()->profilePhotoUrl() }}" alt="Profile photo" style="width:38px;height:38px;border-radius:999px;object-fit:cover;">
+                <img class="dashboard-profile-image" src="{{ auth()->user()->profilePhotoUrl() }}" alt="Profile photo">
             @else
-                <span style="display:inline-flex;width:38px;height:38px;align-items:center;justify-content:center;border-radius:999px;background:#f2e7dd;color:var(--wm-accent);font-weight:800;">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</span>
+                <span class="dashboard-profile-avatar">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</span>
             @endif
-            <span style="font-size:.92rem;font-weight:700">{{ auth()->user()->name }}</span>
+            <span class="dashboard-profile-name">{{ auth()->user()->name }}</span>
         </a>
     </div>
 @else
@@ -233,17 +233,23 @@
         }
 
         .page-header {
+            position: relative;
+            overflow: hidden;
             display: flex;
             justify-content: space-between;
             align-items: end;
             gap: 20px;
             margin-bottom: 24px;
             padding: 30px;
-            border-radius: 14px;
+            border-radius: 18px;
             color: #fffaf4;
             background: linear-gradient(125deg, #96352c, #54201b);
             box-shadow: 0 20px 50px rgba(91, 29, 29, .18);
         }
+
+        .page-header::after { content: ''; position: absolute; top: -100px; right: -68px; width: 240px; height: 240px; border: 1px solid rgba(255,255,255,.16); border-radius: 50%; box-shadow: 0 0 0 22px rgba(255,255,255,.04), 0 0 0 46px rgba(255,255,255,.025); pointer-events: none; }
+        .page-header > * { position: relative; z-index: 1; }
+        .page-header > div { min-width: 0; }
 
         .eyebrow {
             margin: 0 0 8px;
@@ -270,15 +276,20 @@
 
         .header-pill {
             display: inline-flex;
+            flex: 0 0 auto;
+            max-width: 100%;
+            align-self: flex-end;
             align-items: center;
+            justify-content: center;
             min-height: 38px;
-            padding: 0 14px;
+            padding: 7px 14px;
             border: 1px solid rgba(255, 255, 255, .18);
             border-radius: 999px;
             color: #fff5ec;
             background: rgba(255, 255, 255, .08);
             font-size: .8rem;
             font-weight: 800;
+            text-align: center;
             white-space: nowrap;
         }
 
@@ -392,6 +403,12 @@
         .language-form { display: inline-flex; align-items: center; }
         .language-form select { min-height: 44px; padding: 0 34px 0 13px; border: 1px solid rgba(46, 36, 32, .14); border-radius: 999px; color: var(--wm-accent); background: #fff; font: inherit; font-weight: 800; cursor: pointer; }
         .topbar-account-group { display: inline-flex; align-items: center; justify-content: flex-end; gap: 8px; margin-left: auto; }
+        .dashboard-profile-link { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 7px 13px; border: 1px solid var(--wm-border); border-radius: 999px; color: var(--wm-text); background: #fff; font-size: .92rem; font-weight: 700; text-decoration: none; }
+        .dashboard-profile-link:hover { border-color: rgba(163, 58, 45, .35); background: #fffaf4; }
+        .dashboard-profile-image, .dashboard-profile-avatar { width: 30px; height: 30px; flex: 0 0 auto; border-radius: 50%; }
+        .dashboard-profile-image { object-fit: cover; }
+        .dashboard-profile-avatar { display: inline-grid; place-items: center; color: var(--wm-accent); background: #f2e7dd; font-weight: 800; }
+        .dashboard-profile-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         @media (max-width: 980px) {
             .shell { grid-template-columns: 1fr; }
             .sidebar {
@@ -403,6 +420,7 @@
             .module-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
             .topbar,
             .content { padding-inline: 22px; }
+            .dashboard-profile-name { display: none; }
         }
 
         @media (max-width: 620px) {
@@ -414,7 +432,7 @@
             .nav,
             .module-grid { grid-template-columns: 1fr; }
             .page-header { padding: 24px; }
-            .header-pill { justify-self: start; }
+            .header-pill { justify-self: center; }
         }
     </style>
 @endpush

@@ -160,43 +160,6 @@ Route::prefix('admin')
             Route::patch('/{shop}/toggle', [AdminBlindBoxController::class, 'toggle'])->whereNumber('shop')->name('toggle');
         });
 
-        Route::get('/modules/{moduleSlug}', function (string $moduleSlug) {
-            if ($moduleSlug === 'events-trails') {
-                return redirect()->route('admin.food-trails.index');
-            }
-            $modules = [
-                'heritage-registry' => [
-                    'name' => 'Heritage Registry',
-                    'description' => 'A future workspace for approved shop records, ownership notes, and heritage metadata.',
-                ],
-                'food-map' => [
-                    'name' => 'Food Map',
-                    'description' => 'A planned map and discovery module for browsing heritage eateries by location.',
-                ],
-                'stories-editorial' => [
-                    'name' => 'Stories & Editorial',
-                    'description' => 'A future editorial queue for oral histories, guides, and feature stories.',
-                ],
-                'events-trails' => [
-                    'name' => 'Events & Trails',
-                    'description' => 'A planned module for curated food trails, walking routes, and community events.',
-                ],
-                'users-roles' => [
-                    'name' => 'Users & Roles',
-                    'description' => 'A future workspace for contributor profiles, reviewer roles, and access controls.',
-                ],
-                'reports-analytics' => [
-                    'name' => 'Reports & Analytics',
-                    'description' => 'A planned reporting area for contribution trends and moderation throughput.',
-                ],
-            ];
-
-            abort_unless(array_key_exists($moduleSlug, $modules), 404);
-
-            return view('admin.module-placeholder', [
-                'module' => $modules[$moduleSlug],
-            ]);
-        })->name('modules.show');
     });
 
 // Blind Box routes

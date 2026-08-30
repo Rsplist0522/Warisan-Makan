@@ -96,10 +96,11 @@
         .page-header { position: relative; overflow: hidden; display: flex; justify-content: space-between; align-items: end; gap: 20px; margin-bottom: 24px; padding: 30px; border-radius: 18px; color: #fffaf4; background: linear-gradient(125deg, #96352c, #54201b); box-shadow: 0 20px 50px rgba(91, 29, 29, .18); }
         .page-header::after { content: ''; position: absolute; width: 240px; height: 240px; right: -68px; top: -100px; border: 1px solid rgba(255,255,255,.16); border-radius: 50%; box-shadow: 0 0 0 22px rgba(255,255,255,.04), 0 0 0 46px rgba(255,255,255,.025); pointer-events: none; }
         .page-header > * { position: relative; z-index: 1; }
+        .page-header > div { min-width: 0; }
         .eyebrow { margin: 0 0 8px; color: #e7bf74; font-size: .72rem; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
         .page-header h1 { margin: 0; font-size: clamp(2rem, 5vw, 3.2rem); line-height: 1; }
         .page-header p:last-child { max-width: 720px; margin: 11px 0 0; color: rgba(255, 250, 244, .74); line-height: 1.6; }
-        .header-pill { display: inline-flex; align-items: center; min-height: 38px; padding: 0 14px; border: 1px solid rgba(255, 255, 255, .18); border-radius: 999px; color: #fff5ec; background: rgba(255, 255, 255, .08); font-size: .8rem; font-weight: 800; white-space: nowrap; }
+        .header-pill { display: inline-flex; flex: 0 1 auto; max-width: 100%; min-height: 38px; align-items: center; justify-content: center; padding: 7px 14px; border: 1px solid rgba(255, 255, 255, .18); border-radius: 999px; color: #fff5ec; background: rgba(255, 255, 255, .08); font-size: .8rem; font-weight: 800; text-align: center; white-space: normal; }
         .filter-panel, .shop-card, .detail-panel, .empty-state { border: 1px solid var(--wm-line); border-radius: 14px; background: var(--wm-panel); box-shadow: 0 12px 32px rgba(77, 48, 34, .07); }
         .filter-panel { margin-bottom: 22px; padding: 20px; }
         .filter-grid { display: grid; grid-template-columns: minmax(220px, 2fr) repeat(3, minmax(140px, 1fr)) auto; gap: 10px; align-items: end; }
@@ -184,7 +185,6 @@
                 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
         .ai-guide-panel { position: relative; overflow: hidden; margin-top: 22px;
  padding: 22px; border: 1px solid rgba(163, 58, 45, .2); border-radius: 16px; color: var(--wm-ink); background: linear-gradient(135deg, rgba(255, 247, 236, .98), rgba(255, 253, 249, .98)); box-shadow: 0 16px 38px rgba(91, 29, 29, .08); }
-        .ai-guide-panel::after { content: '✦'; position: absolute; right: 20px; top: 10px; color: rgba(200, 148, 50, .28); font-family: Georgia, serif; font-size: 5rem; line-height: 1; pointer-events: none; }
         .ai-guide-head, .ai-guide-form, .ai-guide-answer { position: relative; z-index: 1; }
         .ai-guide-head { display: flex; justify-content: space-between; gap: 18px; align-items: start; }
         .ai-guide-kicker { display: inline-flex; align-items: center; gap: 7px; margin-bottom: 8px; color: var(--wm-accent); font-size: .7rem; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
@@ -212,7 +212,7 @@
         @media (max-width: 1080px) { .filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .filter-actions { grid-column: 1 / -1; } .shop-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
         @media (max-width: 850px) { .shell, .shell.nav-collapsed { display:block; width:100%; max-width:100%; } .main { width:100%; min-width:0; overflow-x:hidden; } .sidebar { position:fixed; z-index:40; left:0; top:0; width:min(88vw,340px); height:100dvh; transform:translateX(-105%); transition:transform .2s ease; box-shadow:18px 0 45px rgba(44,18,12,.22); } .shell.nav-open .sidebar { transform:translateX(0); } .shell.nav-open .nav-backdrop { display:block; position:fixed; z-index:30; inset:0; border:0; background:rgba(34,16,12,.42); cursor:pointer; } .shell.nav-collapsed .brand { justify-content:flex-start; padding-inline:10px; } .shell.nav-collapsed .brand-word, .shell.nav-collapsed .nav-label, .shell.nav-collapsed .nav-item span, .shell.nav-collapsed .user-name, .shell.nav-collapsed .user-role { display:block; } .shell.nav-collapsed .nav-item { width:auto; min-height:0; justify-content:flex-start; margin-inline:0; padding-inline:12px; overflow:visible; } .nav { grid-template-columns:1fr; } .sidebar-footer { margin-top:24px; } .topbar, .content { padding-inline:20px; } .detail-grid { grid-template-columns:1fr; } }
         @media (prefers-reduced-motion: reduce) { .sidebar, .shop-card, .menu-card { transition:none; } }
-        @media (max-width: 620px) { .nav, .filter-grid, .shop-grid { grid-template-columns: 1fr; } .topbar, .page-header, .detail-heading { display: grid; } .topbar > div { min-width: 0; } .content { width: 100%; padding: 22px 16px 34px; } .page-header, .detail-panel { padding: 22px; } .header-pill { justify-self: start; } .filter-actions { grid-column: auto; flex-direction: column; align-items: stretch; } .filter-actions .button, .card-actions .button { width: 100%; flex-basis:100%; } .card-support { padding-top: 14px; } }
+        @media (max-width: 620px) { .nav, .filter-grid, .shop-grid { grid-template-columns: 1fr; } .topbar, .page-header, .detail-heading { display: grid; } .topbar > div { min-width: 0; } .content { width: 100%; padding: 22px 16px 34px; } .page-header, .detail-panel { padding: 22px; } .header-pill { justify-self: center; } .filter-actions { grid-column: auto; flex-direction: column; align-items: stretch; } .filter-actions .button, .card-actions .button { width: 100%; flex-basis:100%; } .card-support { padding-top: 14px; } }
     </style>
 @endpush
 
@@ -544,7 +544,7 @@
                                             @endif
                                             <div class="card-actions">
                                                 <a class="button secondary" href="{{ route('heritage-shops.show', ['id' => $shop->id]) }}">View details</a>
-                                                <a class="button primary" href="{{ route('heritage-shops.menu', $shop) }}">Explore menu &amp; stories</a>
+                                                <a class="button primary" href="{{ route('heritage-shops.menu', $shop) }}">Explore Menu</a>
                                             </div>
                                         </div>
                                     </div>
@@ -555,4 +555,3 @@
                     @endif
                 @endif
 @endsection
-

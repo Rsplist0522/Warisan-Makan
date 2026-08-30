@@ -14,8 +14,7 @@ RUN composer install --no-dev --optimize-autoloader
 RUN cp .env.example .env
 RUN chown -R www-data:www-data /var/www/html
 
-# Cache Laravel config, routes, and views for production
-RUN php artisan config:cache
+# Cache Laravel routes and views (safe at build time — no secrets needed)
 RUN php artisan route:cache
 RUN php artisan view:cache
 

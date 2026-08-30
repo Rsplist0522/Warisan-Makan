@@ -617,6 +617,7 @@
     })();
     </script>
 
+    @include('partials.chatbox')
     @stack('scripts')
 </body>
 </html>

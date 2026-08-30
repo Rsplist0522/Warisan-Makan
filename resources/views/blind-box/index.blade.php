@@ -351,6 +351,20 @@
         }
         .filter-reset:hover { color: var(--red-dark); text-decoration: underline; }
 
+        .image-placeholder {
+            width: 100%;
+            height: 240px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #efe0cf, #fff8ef);
+            color: var(--muted);
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-align: center;
+            padding: 20px;
+        }
+
         .meta-chip {
             display: inline-flex;
             align-items: center;
@@ -582,8 +596,12 @@
                 @foreach($shops as $shop)
                     <article class="item-card">
                         <div class="item-media">
-                            <img src="{{ $shop['image'] ?? '' }}" alt="{{ $shop['name'] ?? '' }}">
-                            @if(!empty($shop['year']))
+                            @if(!empty($shop['image']))
+                                <img src="{{ $shop['image'] }}" alt="{{ $shop['name'] ?? 'Heritage Shop' }}" loading="lazy">
+                            @else
+                                <div class="image-placeholder">No image available</div>
+                            @endif
+                            @if(!empty($shop['year']) && $shop['year'] !== 'Heritage')
                                 <span class="year-badge" style="font-size: 0.9rem; padding: 8px 15px; position: absolute; bottom: 15px; right: 15px; background: var(--red-dark); color: white; border-radius: 50px;">Est. {{ $shop['year'] }}</span>
                             @endif
                         </div>
@@ -818,6 +836,7 @@
             }
         }
 
+        // --- RENDER RESULT WITH IMAGE FALLBACK (FIXED) ---
         function renderResult(shop, periodKey, { animateIn = false } = {}) {
             result.className = 'result show';
             const shopName = shop.name || shop.shop_name || 'Heritage Shop';
@@ -828,7 +847,10 @@
                 </div>
                 <div style="display: flex; gap: 30px; align-items: start; flex-wrap: wrap; justify-content: center;">
                     <div style="position: relative; width: 300px; height: 300px; flex-shrink: 0;">
-                        <img src="${shop.image || ''}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 25px; border: 5px solid var(--gold); box-shadow: 0 15px 35px rgba(0,0,0,0.2);">
+                        ${shop.image ? 
+                            `<img src="${shop.image}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 25px; border: 5px solid var(--gold); box-shadow: 0 15px 35px rgba(0,0,0,0.2);">` :
+                            `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #f1e5d7; border-radius: 25px; border: 5px solid var(--gold); color: var(--muted); font-weight: 600; font-size: 1rem; text-align: center; padding: 20px;">No image available</div>`
+                        }
                         <span class="year-badge" style="font-size: 0.9rem; padding: 8px 15px; position: absolute; bottom: 15px; right: 15px; background: var(--red-dark); color: white; border-radius: 50px;">Est. ${shop.year || 'Heritage'}</span>
                     </div>
                     <div style="flex: 1; min-width: 320px;">
@@ -900,5 +922,4 @@
     });
 </script>
 
-@include('partials.chatbox')
 @endsection

@@ -474,12 +474,12 @@
     <section class="hero">
         <div class="hero-grid">
             <div>
-                <span class="eyebrow">WarisanMakan • Heritage Discovery</span>
-                <h1>Preserve Malaysia's culinary heritage through every bite.</h1>
-                <p class="lead">Discover forgotten food stories, celebrate traditional vendors, and let every visit feel like a cultural expedition.</p>
+                <span class="eyebrow">{{ __('WarisanMakan • Heritage Discovery') }}</span>
+                <h1>{{ __("Preserve Malaysia's culinary heritage through every bite.") }}</h1>
+                <p class="lead">{{ __('Discover forgotten food stories, celebrate traditional vendors, and let every visit feel like a cultural expedition.') }}</p>
                 <div class="button-row">
-                    <a class="btn btn-primary" href="#blind-box">✨ Try Blind Box</a>
-                    <a class="btn btn-secondary" href="/">Go to main page</a>
+                    <a class="btn btn-primary" href="#blind-box">✨ {{ __('Try Blind Box') }}</a>
+                    <a class="btn btn-secondary" href="/">{{ __('Go to main page') }}</a>
                 </div>
             </div>
             <div class="illustration">
@@ -508,7 +508,7 @@
                         </div>
                         <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.15);">
                             <span id="mystery-preview" style="font-size: 0.75rem; opacity: 0.7; transition: opacity 0.5s;">
-                                🎁 Try the Blind Box to discover more!
+                                🎁 {{ __('Try the Blind Box to discover more!') }}
                             </span>
                         </div>
                     </div>
@@ -519,26 +519,31 @@
 
     <section id="blind-box" class="section">
         <div style="text-align: center; margin-bottom: 30px;">
-            <h2 style="font-size: 2.8rem; color: var(--red-dark); font-family: Georgia, serif;">🎁 The Heritage Blind Box</h2>
-            <p class="lead" style="margin: 0 auto; font-size: 1.2rem;">Feeling adventurous? Let fate decide your next heritage meal.</p>
+            <h2 style="font-size: 2.8rem; color: var(--red-dark); font-family: Georgia, serif;">🎁 {{ __('The Heritage Blind Box') }}</h2>
+            <p class="lead" style="margin: 0 auto; font-size: 1.2rem;">{{ __('Feeling adventurous? Let fate decide your next heritage meal.') }}</p>
         </div>
 
         <div class="mystery-guide">
-            <div class="guide-step"><span>1</span> Pick Category</div>
-            <div class="guide-step"><span>2</span> Tap the Box</div>
-            <div class="guide-step"><span>3</span> Enjoy Surprise!</div>
+            <div class="guide-step"><span>1</span> {{ __('Pick Category') }}</div>
+            <div class="guide-step"><span>2</span> {{ __('Tap the Box') }}</div>
+            <div class="guide-step"><span>3</span> {{ __('Enjoy Surprise!') }}</div>
         </div>
 
         <div class="period-banner animate__animated animate__fadeIn">
             <span class="period-icon">{{ $periodInfo['icon'] }}</span>
-            <span class="period-text">It is currently <strong>{{ $periodInfo['label'] }}</strong> &nbsp;·&nbsp; <em>({{ $periodInfo['tag'] }})</em></span>
-            <span class="period-rule">One surprise draw per period</span>
+            <span class="period-text">
+                {{ __('It is currently') }}
+                <strong>{{ __($periodInfo['label']) }}</strong>
+                &nbsp;·&nbsp;
+                <em>({{ __($periodInfo['tag']) }})</em>
+            </span>
+            <span class="period-rule">{{ __('One surprise draw per period') }}</span>
         </div>
 
         <!-- FILTER ROW – WITHOUT FORM (no page refresh) -->
         <div class="filter-row" style="justify-content: center; margin-bottom: 30px;">
             <select id="category-filter" name="category">
-                <option value="">All food categories</option>
+                <option value="">{{ __('All food categories') }}</option>
                 @foreach($categories as $option)
                     <option value="{{ $option }}" @selected($activeFilters['category'] === $option)>
                         {{ __($option) }}
@@ -547,7 +552,7 @@
             </select>
 
             @if($activeFilters['category'] !== '')
-                <button id="reset-filter-btn" class="filter-reset">Reset filter</button>
+                <button id="reset-filter-btn" class="filter-reset">{{ __('Reset filter') }}</button>
             @endif
         </div>
 
@@ -558,9 +563,9 @@
             <!-- ENHANCED ERROR STATE -->
             <div id="draw-error" class="draw-error-box" style="display: none; position: relative; z-index: 30;">
                 <span class="error-icon">🏮</span>
-                <span class="error-title">No Shops Found</span>
-                <span id="draw-error-text" class="error-text">No heritage shops match your current category in our curated pool.</span>
-                <button id="reset-error-btn" class="error-action">Reset Filters & Try Again</button>
+                <span class="error-title">{{ __('No Shops Found') }}</span>
+                <span id="draw-error-text" class="error-text"> {{ __('No heritage shops match your current category in our curated pool.') }}</span>
+                <button id="reset-error-btn" class="error-action">{{ __('Reset Filters & Try Again') }}</button>
             </div>
 
             <div id="box-container" class="box-stage">
@@ -572,8 +577,12 @@
                      @if($alreadyDrew) data-disabled="1" @endif>
                     <div class="box-lid"></div>
                     <div class="box-body">
-                        <div style="font-size: 5.5rem; font-weight: 800; text-shadow: 0 8px 20px rgba(0,0,0,0.35);">{{ $alreadyDrew ? '✓' : '?' }}</div>
-                        <div style="letter-spacing: 0.35em; font-weight: 900; background: rgba(255,255,255,0.25); padding: 6px 25px; border-radius: 50px; font-size: 0.9rem;">{{ $alreadyDrew ? 'OPENED' : 'TAP TO OPEN' }}</div>
+                        <div style="font-size: 5.5rem; font-weight: 800; text-shadow: 0 8px 20px rgba(0,0,0,0.35);">
+                            {{ $alreadyDrew ? '✓' : '?' }}
+                        </div>
+                        <div style="letter-spacing: 0.35em; font-weight: 900; background: rgba(255,255,255,0.25); padding: 6px 25px; border-radius: 50px; font-size: 0.9rem;">
+                            {{ $alreadyDrew ? __('OPENED') : __('TAP TO OPEN') }}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -584,12 +593,12 @@
 
     <section id="discover" class="section">
         <h2 style="font-family: Georgia, serif;">🏮 {{ __('Heritage Shop Discovery') }}</h2>
-        <p class="lead">Explore the full collection of Malaysia's culinary gems.</p>
+        <p class="lead">{{ __("Explore the full collection of Malaysia's culinary gems.") }}</p>
 
         @if($shops->isEmpty())
             <div class="empty-message">
-                <p><strong>Catalog is currently empty.</strong></p>
-                <p>We are gathering more heritage stories. Please check back later!</p>
+                <p><strong>{{ __('Catalog is currently empty.') }}</strong></p>
+                <p>{{ __('We are gathering more heritage stories. Please check back later!') }}</p>
             </div>
         @else
             <div class="shop-grid">
@@ -606,12 +615,14 @@
                             @endif
                         </div>
                         <div class="item-body">
-                            <span class="tag">{{ $shop['category'] ?? 'Heritage' }}</span>
+                            <span class="tag">{{ $shop['category'] ?? __('Heritage') }}</span>
                             <h3 style="font-size: 1.4rem; color: var(--red-dark); margin-bottom: 12px;">{{ $shop['name'] ?? '' }}</h3>
                             <p class="muted" style="font-size: 0.95rem; line-height: 1.5; margin-bottom: 20px;">{{ $shop['description'] ?? '' }}</p>
                             <div class="item-meta">
-                                <span class="state-chip" style="background: var(--bg-start); border: 1px solid rgba(140,31,31,0.15);">📍 {{ $shop['state'] ?? 'Malaysia' }}</span>
-                                <span style="font-weight: 600; color: var(--muted);">Since {{ $shop['year'] ?? 'Heritage' }}</span>
+                                <span class="state-chip" style="background: var(--bg-start); border: 1px solid rgba(140,31,31,0.15);">📍 {{ $shop['state'] ?? __('Malaysia') }}</span>
+                                <span style="font-weight: 600; color: var(--muted);">
+                                    {{ __('Since') }} {{ $shop['year'] ?? __('Heritage') }}
+                                </span>
                             </div>
                         </div>
                     </article>
@@ -642,6 +653,8 @@
     const BLIND_BOX_TEXT = {
         surpriseDiscoveryUnlocked: @json(__('Surprise Discovery Unlocked')),
         heritageShop: @json(__('Heritage Shop')),
+        heritage: @json(__('Heritage')),
+        malaysia: @json(__('Malaysia')),
         estimated: @json(__('Est.')),
         noDescription: @json(__('No description available.')),
         category: @json(__('Category')),
@@ -657,6 +670,13 @@
         oops: @json(__('Oops')),
         tryAgain: @json(__('TRY AGAIN')),
         opened: @json(__('OPENED')),
+        surpriseRevealed: @json(__('SURPRISE REVEALED')),
+        exploreTrails: @json(__('Explore Trails')),
+        viewDetails: @json(__('View Details')),
+        discoveredGem: @json(__('You discovered this gem during the :period period. Come back later for a new surprise!')),
+        heritage: @json(__('Heritage')),
+        discoverHeritageShop: @json(__('Discover a heritage shop today!')),
+        tryBlindBoxDiscover: @json(__('Try the Blind Box to discover more!')),
     };
 
     const BLIND_BOX_PERIODS = {
@@ -669,46 +689,50 @@
     document.addEventListener('DOMContentLoaded', function () {
         // --- CAROUSEL DATA (FontAwesome icons) ---
         const carouselData = [
-            { 
-                icon: '<i class="fas fa-bowl-rice" style="font-size: 3.5rem; color: #f7c948;"></i>', 
-                title: 'Nasi Lemak', 
-                desc: 'Fragrant coconut rice with sambal, anchovies, and egg.' 
+            {
+                icon: '<i class="fas fa-bowl-rice" style="font-size: 3.5rem; color: #f7c948;"></i>',
+                title: @json(__('Nasi Lemak')),
+                desc: @json(__('Fragrant coconut rice with sambal, anchovies, and egg.'))
             },
-            { 
-                icon: '<i class="fas fa-drumstick-bite" style="font-size: 3.5rem; color: #f7c948;"></i>', 
-                title: 'Rendang', 
-                desc: 'Slow‑cooked beef in rich coconut milk and spices.' 
+            {
+                icon: '<i class="fas fa-drumstick-bite" style="font-size: 3.5rem; color: #f7c948;"></i>',
+                title: @json(__('Rendang')),
+                desc: @json(__('Slow-cooked beef in rich coconut milk and spices.'))
             },
-            { 
-                icon: '<i class="fas fa-utensils" style="font-size: 3.5rem; color: #f7c948;"></i>', 
-                title: 'Laksa', 
-                desc: 'Spicy noodle soup with a creamy coconut broth.' 
+            {
+                icon: '<i class="fas fa-utensils" style="font-size: 3.5rem; color: #f7c948;"></i>',
+                title: @json(__('Laksa')),
+                desc: @json(__('Spicy noodle soup with a creamy coconut broth.'))
             },
-            { 
-                icon: '<i class="fas fa-utensils" style="font-size: 3.5rem; color: #f7c948;"></i>', 
-                title: 'Char Kuey Teow', 
-                desc: 'Wok‑fried flat rice noodles with prawns and cockles.' 
+            {
+                icon: '<i class="fas fa-utensils" style="font-size: 3.5rem; color: #f7c948;"></i>',
+                title: @json(__('Char Kuey Teow')),
+                desc: @json(__('Wok-fried flat rice noodles with prawns and cockles.'))
             },
-            { 
-                icon: '<i class="fas fa-mug-saucer" style="font-size: 3.5rem; color: #f7c948;"></i>', 
-                title: 'Kopi & Roti Bakar', 
-                desc: 'Classic kopitiam breakfast – toast, butter, and kaya.' 
+            {
+                icon: '<i class="fas fa-mug-saucer" style="font-size: 3.5rem; color: #f7c948;"></i>',
+                title: @json(__('Kopi & Roti Bakar')),
+                desc: @json(__('Classic kopitiam breakfast – toast, butter, and kaya.'))
             },
-            { 
-                icon: '<i class="fas fa-utensils" style="font-size: 3.5rem; color: #f7c948;"></i>', 
-                title: 'Satay', 
-                desc: 'Grilled skewered meat with rich peanut sauce.' 
+                {
+                    icon: '<i class="fas fa-utensils" style="font-size: 3.5rem; color: #f7c948;"></i>',
+                title: @json(__('Satay')),
+                desc: @json(__('Grilled skewered meat with rich peanut sauce.'))
             },
         ];
 
         // --- MYSTERY SHOPS (from the backend – real shops) ---
-        const mysteryShops = @json(array_map(function($shop) {
-            return ($shop['name'] ?? 'Heritage Shop') . ' · Est. ' . ($shop['year'] ?? '');
-        }, $mysteryShops ?? []));
+const mysteryShops = @json(array_map(function($shop) { 
+    return ($shop['name'] ?? __('Heritage Shop')) 
+        . ' · ' 
+        . __('Est.') 
+        . ' ' 
+        . ($shop['year'] ?? ''); 
+}, $mysteryShops ?? []));
 
         // Fallback if no shops exist
         if (mysteryShops.length === 0) {
-            mysteryShops.push('✨ Discover a heritage shop today!');
+            mysteryShops.push('✨ ' + BLIND_BOX_TEXT.discoverHeritageShop);
         }
 
         const emojiEl = document.getElementById('carousel-emoji');
@@ -739,7 +763,7 @@
                 if (mysteryShops.length > 0) {
                     mysteryEl.textContent = '🎁 ' + mysteryShops[mysteryIdx % mysteryShops.length];
                 } else {
-                    mysteryEl.textContent = '🎁 Try the Blind Box to discover more!';
+                    mysteryEl.textContent =  '🎁 ' + BLIND_BOX_TEXT.tryBlindBoxDiscover;
                 }
                 mysteryIdx++;
 
@@ -843,7 +867,7 @@
             
             result.innerHTML = `
                 <div style="text-align: center; margin-bottom: 25px;">
-                    <span class="renewal-tag">✨ SURPRISE REVEALED ✨</span>
+                    <span class="renewal-tag">✨ ${BLIND_BOX_TEXT.surpriseRevealed} ✨</span>
                 </div>
                 <div style="display: flex; gap: 30px; align-items: start; flex-wrap: wrap; justify-content: center;">
                     <div style="position: relative; width: 300px; height: 300px; flex-shrink: 0;">
@@ -855,19 +879,19 @@
                     </div>
                     <div style="flex: 1; min-width: 320px;">
                         <h3 style="font-size: 2.4rem; color: var(--red-dark); margin-bottom: 15px; font-family: Georgia, serif;">${shopName}</h3>
-                        <p style="font-size: 1.15rem; color: var(--muted); margin-bottom: 25px; line-height: 1.6;">${shop.description || 'A unique piece of Malaysia\'s culinary history awaits you here.'}</p>
+                        <p style="font-size: 1.15rem; color: var(--muted); margin-bottom: 25px; line-height: 1.6;">${shop.description || BLIND_BOX_TEXT.noDescription}</p>
                         <div style="display: flex; gap: 12px; margin-bottom: 30px;">
-                            <span class="meta-chip">🍱 ${shop.category || 'Heritage'}</span>
-                            <span class="meta-chip">📍 ${shop.state || 'Malaysia'}</span>
+                            <span class="meta-chip">🍱 ${shop.category || BLIND_BOX_TEXT.heritage}</span>
+                            <span class="meta-chip">📍 ${shop.state || BLIND_BOX_TEXT.malaysia}</span>
                         </div>
                         <div class="cta-row" style="display: flex; gap: 15px;">
-                            <a class="cta-btn cta-primary" style="padding: 16px 30px; font-size: 1.1rem; border-radius: 15px; background: var(--red-dark); color: white; font-weight: 700;" href="${BLIND_BOX_CONFIG.foodtrailUrl}">Explore Trails</a>
-                            <a class="cta-btn cta-outline" style="padding: 16px 30px; font-size: 1.1rem; border-radius: 15px; border: 2px solid var(--red-dark); color: var(--red-dark); font-weight: 700;" href="${BLIND_BOX_CONFIG.heritageShopsUrl}">View Details</a>
+                            <a class="cta-btn cta-primary" style="padding: 16px 30px; font-size: 1.1rem; border-radius: 15px; background: var(--red-dark); color: white; font-weight: 700;" href="${BLIND_BOX_CONFIG.foodtrailUrl}">${BLIND_BOX_TEXT.exploreTrails}</a>
+                            <a class="cta-btn cta-outline" style="padding: 16px 30px; font-size: 1.1rem; border-radius: 15px; border: 2px solid var(--red-dark); color: var(--red-dark); font-weight: 700;" href="${BLIND_BOX_CONFIG.heritageShopsUrl}">${BLIND_BOX_TEXT.viewDetails}</a>
                         </div>
                     </div>
                 </div>
-                <p style="margin-top: 30px; text-align: center; color: var(--muted); font-style: italic; font-size: 0.95rem;">
-                    You discovered this gem during the <strong>${periodKey}</strong> period. Come back later for a new surprise!
+                <p style="margin-top: 30px; text-align: center; color: var(--muted); font-style: italic; font-size: 0.95rem;"> 
+                    ${BLIND_BOX_TEXT.discoveredGem.replace(':period', `<strong>${periodKey}</strong>`)}
                 </p>
             `;
         }

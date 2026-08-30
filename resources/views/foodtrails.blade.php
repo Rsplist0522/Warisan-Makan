@@ -66,7 +66,7 @@
                         </p>
                     </div>
                     <div class="flex gap-3"><button id="clearTrailSearchButton"
-                            class="rounded-full border border-[#D8B58F] bg-white px-5 py-3 text-sm font-semibold text-[#6B553F] hover:bg-[#F8F0E6]">Clear</button><button
+                            class="rounded-full border border-[#D8B58F] bg-white px-5 py-3 text-sm font-semibold text-[#6B553F] hover:bg-[#F8F0E6]">{{ __('Clear') }}</button><button
                             id="generateTrailButton"
                             class="rounded-full bg-[#B8874A] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#9c6f33]">{{ __('Generate Trail') }}</button>
                     </div>
@@ -86,7 +86,7 @@
                     <div class="grid gap-4 sm:grid-cols-2">
                         <select id="categorySelect"
                             class="rounded-3xl border border-[#E6D8C4] bg-[#FFFBF6] px-4 py-4 text-sm text-[#1F1B19] shadow-sm outline-none">
-                            <option value="all">All food categories</option>
+                            <option value="all">{{ __('All food categories') }}</option>
                             @foreach ($categories as $category)
                                 <option value="{{ $category }}">{{ $category }}</option>
                             @endforeach
@@ -215,12 +215,11 @@
                     <div class="rounded-[32px] bg-white p-6 shadow-[0_12px_30px_rgba(46,32,16,0.08)]">
                         <div class="flex items-center justify-between gap-4">
                             <div>
-                                <p class="text-sm uppercase tracking-[0.2em] text-[#B08B59]">Map</p>
-                                <h2 class="mt-2 text-xl font-semibold text-[#1F1B19]">Restaurant route</h2>
+                                <p class="text-sm uppercase tracking-[0.2em] text-[#B08B59]">{{ __('Map') }}</p>
+                                <h2 class="mt-2 text-xl font-semibold text-[#1F1B19]">{{ __('Restaurant route') }}</h2>
                             </div>
                             <span id="mapMarkerCount"
-                                class="rounded-full bg-[#F7E4C1] px-3 py-1 text-sm font-semibold text-[#8A5A24]">0
-                                markers</span>
+                                class="rounded-full bg-[#F7E4C1] px-3 py-1 text-sm font-semibold text-[#8A5A24]">0 {{ __('markers') }}</span>
                         </div>
                         <div id="mapContainer"
                             class="relative mt-6 aspect-[4/3] overflow-hidden rounded-[28px] border border-[#E8D4BE] bg-[#FBF6F1] shadow-inner">
@@ -233,7 +232,7 @@
                             </div>
                             <div
                                 class="absolute bottom-4 left-4 rounded-3xl bg-black/10 px-4 py-2 text-xs text-white backdrop-blur-sm">
-                                Click a restaurant card to view route details.</div>
+                                {{ __('Click a restaurant card to view route details.') }}</div>
                         </div>
                     </div>
 
@@ -243,11 +242,11 @@
                             class="rounded-[32px] bg-white p-6 shadow-[0_12px_30px_rgba(46,32,16,0.08)]">
                             <div class="flex items-center justify-between gap-4">
                                 <div>
-                                    <p class="text-sm uppercase tracking-[0.2em] text-[#B08B59]">Restaurant details</p>
-                                    <h2 class="mt-2 text-xl font-semibold text-[#1F1B19]">Selected restaurant</h2>
+                                    <p class="text-sm uppercase tracking-[0.2em] text-[#B08B59]">{{ __('Restaurant details') }}</p>
+                                    <h2 class="mt-2 text-xl font-semibold text-[#1F1B19]">{{ __('Selected restaurant') }}</h2>
                                 </div>
                                 <button id="closeRestaurantDrawer"
-                                    class="inline-flex items-center rounded-full border border-[#D8B58F] bg-white px-4 py-2 text-sm font-semibold text-[#6B553F] transition hover:bg-[#f8efe5]">Close</button>
+                                    class="inline-flex items-center rounded-full border border-[#D8B58F] bg-white px-4 py-2 text-sm font-semibold text-[#6B553F] transition hover:bg-[#f8efe5]">{{ __('Close') }}</button>
                             </div>
                             <div id="restaurantDetailsContent" class="mt-6 text-sm text-[#6B5B4B]"></div>
                         </div>
@@ -273,6 +272,8 @@
     'pickRestaurant' => __('Pick a restaurant'),
     'pickRestaurantHelp' => __('Select a restaurant from the list to see details, add to your trail, or mark it as visited.'),
     'removeFromTrail' => __('Remove from trail'),
+    'removedFromTrail' => __('Removed from trail'),
+    'markedVisited' => __('Marked visited'),
     'addToTrail' => __('+ Add to trail'),
     'visited' => __('Visited'),
     'markVisited' => __('Mark visited'),
@@ -299,10 +300,24 @@
                 'Ipoh',
             ],
             categories: ['all', 'Street Food', 'Dessert', 'Seafood', 'Snacks'],
-            defaultFavorites: [
-                { id: 'fav-1', title: 'KL Heritage Walk', location: 'Kuala Lumpur', description: 'A classic route for local favorites and street food.', tags: ['Street Food', 'Local'], stops: 3 },
-                { id: 'fav-2', title: 'Penang Sweet Tour', location: 'Penang', description: 'A dessert-focused trail for local heritage sweets.', tags: ['Dessert', 'Heritage'], stops: 3 },
-            ],
+            defaultFavorites: [ 
+                { 
+                id: 'fav-1', 
+                    title: @json(__('KL Heritage Walk')), 
+                    location: @json(__('Kuala Lumpur')), 
+                    description: @json(__('A classic route for local favorites and street food.')), 
+                    tags: [@json(__('Street Food')), @json(__('Local'))], 
+                    stops: 3 
+                }, 
+                { 
+                    id: 'fav-2', 
+                    title: @json(__('Penang Sweet Tour')), 
+                    location: @json(__('Penang')), 
+                    description: @json(__('A dessert-focused trail for local heritage sweets.')), 
+                    tags: [@json(__('Dessert')), @json(__('Heritage'))], 
+                    stops: 3 
+                }, 
+            ],  
             curated: @json($curatedSuggestions),
             restaurants: @json($restaurants),
             favoritesKey: 'foodtrails-favorites',

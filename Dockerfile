@@ -1,4 +1,4 @@
-FROM php:8.2-apache
+FROM php:8.3-apache
 WORKDIR /var/www/html
 RUN apt-get update && apt-get install -y libonig-dev libzip-dev unzip git
 RUN docker-php-ext-install mbstring zip pdo pdo_mysql

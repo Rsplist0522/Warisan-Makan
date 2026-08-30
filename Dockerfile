@@ -1,6 +1,6 @@
 FROM php:8.3-apache
 WORKDIR /var/www/html
-RUN apt-get update && apt-get install -y libonig-dev libzip-dev unzip git
+RUN apt-get update && apt-get install -y libonig-dev libzip-dev unzip git curl
 RUN docker-php-ext-install mbstring zip pdo pdo_mysql
 
 # Enable OPcache for performance
@@ -8,13 +8,19 @@ RUN docker-php-ext-install opcache
 RUN echo "opcache.enable=1" >> /usr/local/etc/php/conf.d/opcache.ini
 RUN echo "opcache.validate_timestamps=0" >> /usr/local/etc/php/conf.d/opcache.ini
 
+# Install Node.js for building frontend assets
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && apt-get install -y nodejs
+
 COPY . .
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
-RUN composer install --no-dev --optimize-autoloader
+RUN composer install --no-dev --optimize-autoloader --no-interaction
+
+RUN npm install
+RUN npm run build
+
 RUN cp .env.example .env
 RUN chown -R www-data:www-data /var/www/html
 
-# Cache Laravel routes and views (safe at build time — no secrets needed)
 RUN php artisan route:cache
 RUN php artisan view:cache
 

@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\HeritageShopContribution;
-use App\Services\HeritageShopCatalog;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -24,7 +23,6 @@ class CommunityContributionController extends Controller
         return view('community-contribution', [
             'contribution' => null,
             'formToken' => (string) Str::uuid(),
-            'foodCategoryOptions' => $this->foodCategoryOptions(),
         ]);
     }
 
@@ -33,7 +31,6 @@ class CommunityContributionController extends Controller
         return view('community-contribution', [
             'contribution' => null,
             'formToken' => (string) Str::uuid(),
-            'foodCategoryOptions' => $this->foodCategoryOptions(),
         ]);
     }
 
@@ -125,7 +122,6 @@ class CommunityContributionController extends Controller
 
         return view('community-contribution', [
             'contribution' => $contribution,
-            'foodCategoryOptions' => $this->foodCategoryOptions($contribution->primary_food_category),
         ]);
     }
 
@@ -393,7 +389,6 @@ class CommunityContributionController extends Controller
                 'nullable',
                 'string',
                 'max:255',
-                Rule::in($this->foodCategoryOptions($request->route('contribution')?->primary_food_category)),
             ],
             'establishment_year' => ['required_if:submission_action,submit', 'nullable', 'integer', 'min:1000', 'max:'.now()->year],
             'founder_name' => ['nullable', 'string', 'max:255'],
@@ -406,9 +401,13 @@ class CommunityContributionController extends Controller
             'operating_hours.*.open' => ['nullable', 'date_format:H:i'],
             'operating_hours.*.close' => ['nullable', 'date_format:H:i'],
             'operating_hours.*.closed' => ['nullable', 'boolean'],
+            'operating_hours.*.periods' => ['nullable', 'array', 'max:6'],
+            'operating_hours.*.periods.*.open' => ['nullable', 'date_format:H:i'],
+            'operating_hours.*.periods.*.close' => ['nullable', 'date_format:H:i'],
             'food_items' => ['nullable', 'array'],
             'food_items.*.name' => ['nullable', 'string', 'max:255'],
             'food_items.*.desc' => ['nullable', 'string', 'max:1000'],
+            'food_items.*.price' => ['nullable', 'numeric', 'min:0'],
             'food_items.*.image' => ['nullable', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:'.(int) config('heritage_shop.max_image_kb', 1024)],
             'food_items.*.image_path' => ['nullable', 'string', 'max:500', 'starts_with:contributions/'],
             'contact_number' => ['nullable', 'string', 'max:30', 'regex:/^[0-9+()\-\s]*$/'],
@@ -424,6 +423,8 @@ class CommunityContributionController extends Controller
             'remove_media.*' => ['integer'],
         ]);
 
+        $this->validateOperatingHoursPayload($validated['operating_hours'] ?? [], 'operating_hours');
+
         if (($validated['submission_action'] ?? null) === 'draft'
             && ! $this->hasMinimumDraftContent($validated)) {
             throw ValidationException::withMessages([
@@ -432,6 +433,87 @@ class CommunityContributionController extends Controller
         }
 
         return $validated;
+    }
+
+    private function validateOperatingHoursPayload(array $payload, string $fieldPrefix): void
+    {
+        $errors = [];
+
+        foreach ($payload as $day => $schedule) {
+            if (! is_array($schedule)) {
+                $errors["{$fieldPrefix}.{$day}"] = __('The schedule for :day is malformed.', ['day' => (string) $day]);
+                continue;
+            }
+
+            $closed = filter_var($schedule['closed'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            if ($closed) {
+                continue;
+            }
+
+            $periods = is_array($schedule['periods'] ?? null) ? $schedule['periods'] : [];
+            if ($periods === []) {
+                $open = trim((string) ($schedule['open'] ?? ''));
+                $close = trim((string) ($schedule['close'] ?? ''));
+
+                if ($open !== '' || $close !== '') {
+                    $periods = [['open' => $open, 'close' => $close]];
+                }
+            }
+
+            $dayPeriods = [];
+            $seenPairs = [];
+            foreach ($periods as $index => $period) {
+                if (! is_array($period)) {
+                    $errors["{$fieldPrefix}.{$day}.periods.{$index}"] = __('The time period for :day is malformed.', ['day' => (string) $day]);
+                    continue;
+                }
+
+                $open = trim((string) ($period['open'] ?? ''));
+                $close = trim((string) ($period['close'] ?? ''));
+
+                if ($open === '' && $close === '') {
+                    continue;
+                }
+
+                if ($open === '' || $close === '') {
+                    $errors["{$fieldPrefix}.{$day}.periods.{$index}.open"] = __('Opening and closing time are both required for each open period.');
+                    continue;
+                }
+
+                if ($open === $close) {
+                    $errors["{$fieldPrefix}.{$day}.periods.{$index}.close"] = __('Opening and closing time cannot be identical.');
+                    continue;
+                }
+
+                $pairKey = $open.'|'.$close;
+                if (isset($seenPairs[$pairKey])) {
+                    $errors["{$fieldPrefix}.{$day}.periods.{$index}.open"] = __('Duplicate operating periods on the same day are not allowed.');
+                    continue;
+                }
+
+                $seenPairs[$pairKey] = true;
+                $dayPeriods[] = ['open' => $open, 'close' => $close];
+            }
+
+            foreach ($dayPeriods as $index => $period) {
+                $periodStart = strtotime('1970-01-01 '.$period['open']);
+                $periodEnd = strtotime('1970-01-01 '.$period['close']);
+
+                foreach (array_slice($dayPeriods, $index + 1) as $otherIndex => $other) {
+                    $otherStart = strtotime('1970-01-01 '.$other['open']);
+                    $otherEnd = strtotime('1970-01-01 '.$other['close']);
+
+                    if ($periodStart < $otherEnd && $otherStart < $periodEnd) {
+                        $errors["{$fieldPrefix}.{$day}.periods.{$index}.open"] = __('Operating periods on the same day must not overlap.');
+                        $errors["{$fieldPrefix}.{$day}.periods.".(($index + 1) + $otherIndex).'.open'] = __('Operating periods on the same day must not overlap.');
+                    }
+                }
+            }
+        }
+
+        if ($errors !== []) {
+            throw ValidationException::withMessages($errors);
+        }
     }
 
     private function contributionData(Request $request, array $validated): array
@@ -462,40 +544,94 @@ class CommunityContributionController extends Controller
             : null;
         $data['latitude'] = isset($validated['latitude']) ? (float) $validated['latitude'] : null;
         $data['longitude'] = isset($validated['longitude']) ? (float) $validated['longitude'] : null;
-        $data['operating_hours'] = collect($request->input('operating_hours', []))
-            ->filter(fn (array $schedule) => filled($schedule['day'] ?? null))
-            ->map(function (array $schedule): array {
-                $open = $this->normalizeText($schedule['open'] ?? null);
-                $close = $this->normalizeText($schedule['close'] ?? null);
-                $closed = filter_var(
-                    $schedule['closed'] ?? false,
-                    FILTER_VALIDATE_BOOLEAN,
-                    FILTER_NULL_ON_FAILURE
-                ) ?? false;
-
-                return [
-                    'day' => $this->normalizeText($schedule['day'] ?? null),
-                    'open' => $closed ? null : $open,
-                    'close' => $closed ? null : $close,
-                    'closed' => $closed,
-                ];
-            })
-            ->filter(fn (array $schedule): bool => $schedule['closed'] || filled($schedule['open']) || filled($schedule['close']))
-            ->values()
-            ->all();
+        $data['operating_hours'] = $this->normalizeOperatingHoursInput($request->input('operating_hours', []));
         $data['food_items'] = $this->foodItemsFromRequest($request);
 
         return $data;
     }
 
-    private function foodCategoryOptions(?string $currentCategory = null): array
+    private function normalizeOperatingHoursInput(mixed $input): array
     {
-        return collect([...HeritageShopCatalog::CATEGORIES, 'Other', $currentCategory])
-            ->filter(fn ($category): bool => filled($category))
-            ->map(fn ($category): string => trim((string) $category))
-            ->unique()
-            ->values()
-            ->all();
+        $raw = is_array($input) ? $input : [];
+        $normalized = [];
+
+        if ($raw === []) {
+            return [];
+        }
+
+        if (array_is_list($raw)) {
+            foreach ($raw as $schedule) {
+                if (! is_array($schedule)) {
+                    continue;
+                }
+
+                $day = $this->normalizeText($schedule['day'] ?? null);
+                if (! filled($day)) {
+                    continue;
+                }
+
+                $closed = filter_var($schedule['closed'] ?? false, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? false;
+                $open = $this->normalizeText($schedule['open'] ?? null);
+                $close = $this->normalizeText($schedule['close'] ?? null);
+
+                if ($closed) {
+                    $normalized[] = ['day' => $day, 'open' => null, 'close' => null, 'closed' => true];
+                    continue;
+                }
+
+                if (filled($open) || filled($close)) {
+                    $normalized[] = ['day' => $day, 'open' => $open, 'close' => $close, 'closed' => false];
+                }
+            }
+
+            return $normalized;
+        }
+
+        foreach ($raw as $day => $schedule) {
+            if (! is_array($schedule)) {
+                continue;
+            }
+
+            $dayLabel = $this->normalizeText(is_string($day) ? $day : ($schedule['day'] ?? null));
+            if (! filled($dayLabel)) {
+                continue;
+            }
+
+            $closed = filter_var($schedule['closed'] ?? false, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? false;
+            $periods = is_array($schedule['periods'] ?? null) ? $schedule['periods'] : [];
+
+            if ($closed) {
+                $normalized[] = ['day' => $dayLabel, 'open' => null, 'close' => null, 'closed' => true];
+                continue;
+            }
+
+            if ($periods !== []) {
+                foreach ($periods as $period) {
+                    if (! is_array($period)) {
+                        continue;
+                    }
+
+                    $open = $this->normalizeText($period['open'] ?? null);
+                    $close = $this->normalizeText($period['close'] ?? null);
+
+                    if ($open === null && $close === null) {
+                        continue;
+                    }
+
+                    $normalized[] = ['day' => $dayLabel, 'open' => $open, 'close' => $close, 'closed' => false];
+                }
+
+                continue;
+            }
+
+            $open = $this->normalizeText($schedule['open'] ?? null);
+            $close = $this->normalizeText($schedule['close'] ?? null);
+            if (filled($open) || filled($close)) {
+                $normalized[] = ['day' => $dayLabel, 'open' => $open, 'close' => $close, 'closed' => false];
+            }
+        }
+
+        return $normalized;
     }
 
     private function foodItemsFromRequest(Request $request, bool $includeFormIndex = false): array
@@ -506,6 +642,7 @@ class CommunityContributionController extends Controller
             ->filter(function (array $item, int|string $index) use ($fileRows): bool {
                 return filled($item['name'] ?? null)
                     || filled($item['desc'] ?? null)
+                    || filled($item['price'] ?? null)
                     || filled($item['image_path'] ?? null)
                     || ($this->foodItemImageFile($fileRows, $index) instanceof UploadedFile);
             })
@@ -513,6 +650,7 @@ class CommunityContributionController extends Controller
                 $normalized = [
                     'name' => $this->normalizeText($item['name'] ?? null),
                     'desc' => $this->normalizeText($item['desc'] ?? null),
+                    'price' => HeritageShopContribution::normalizeFoodItemPrice($item['price'] ?? null),
                     'image_path' => $this->normalizeFoodItemImagePath($item['image_path'] ?? null),
                 ];
 
@@ -520,7 +658,7 @@ class CommunityContributionController extends Controller
                     $normalized['_form_index'] = $index;
                 }
 
-                return array_filter($normalized, fn ($value): bool => filled($value) || $value === 0);
+                return array_filter($normalized, fn ($value, string $key): bool => $key === 'price' || filled($value) || $value === 0, ARRAY_FILTER_USE_BOTH);
             })
             ->values()
             ->all();

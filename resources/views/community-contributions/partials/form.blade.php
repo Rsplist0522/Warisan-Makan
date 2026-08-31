@@ -1,24 +1,31 @@
 @php
     $isEdit = filled($contribution);
     $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-    $savedHours = collect($contribution?->operating_hours ?? [])->keyBy('day');
-    $hours = old('operating_hours', collect($days)->map(fn ($day) => $savedHours->get($day, [
-        'day' => $day,
-        'open' => '08:00',
-        'close' => '17:00',
+    $savedHours = collect($contribution?->operating_hours ?? [])
+        ->groupBy(fn (array $row): string => (string) ($row['day'] ?? ''))
+        ->map(function ($rows, string $day): array {
+            $periods = $rows
+                ->filter(fn (array $row): bool => ! filter_var($row['closed'] ?? false, FILTER_VALIDATE_BOOLEAN))
+                ->map(fn (array $row): array => [
+                    'open' => trim((string) ($row['open'] ?? '')),
+                    'close' => trim((string) ($row['close'] ?? '')),
+                ])
+                ->filter(fn (array $row): bool => filled($row['open']) || filled($row['close']))
+                ->values()
+                ->all();
+
+            return [
+                'closed' => $rows->contains(fn (array $row): bool => filter_var($row['closed'] ?? false, FILTER_VALIDATE_BOOLEAN)) && $periods === [],
+                'periods' => $periods === [] ? [['open' => '08:00', 'close' => '17:00']] : $periods,
+            ];
+        });
+    $hours = old('operating_hours', collect($days)->mapWithKeys(fn (string $day): array => [$day => $savedHours->get($day, [
         'closed' => false,
-    ]))->all());
-    $foodItems = old('food_items', $contribution?->food_items ?: [['name' => '', 'desc' => '']]);
+        'periods' => [['open' => '08:00', 'close' => '17:00']],
+    ])])->all());
+    $foodItems = old('food_items', $contribution?->food_items ?: [['name' => '', 'desc' => '', 'price' => '']]);
     $existingMedia = $contribution?->media ?? collect();
     $fieldValue = fn (string $name, mixed $fallback = null) => old($name, $contribution?->{$name} ?? $fallback);
-    $selectedFoodCategory = $fieldValue('primary_food_category');
-    $foodCategoryOptions = collect($foodCategoryOptions ?? \App\Services\HeritageShopCatalog::CATEGORIES)
-        ->push('Other')
-        ->push($contribution?->primary_food_category)
-        ->filter(fn ($category) => filled($category))
-        ->unique()
-        ->values()
-        ->all();
     $submissionToken = old('submission_token', $contribution?->submission_token ?? $formToken ?? (string) \Illuminate\Support\Str::uuid());
     $isClosed = function (array $schedule): bool {
         $closed = filter_var($schedule['closed'] ?? false, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? false;
@@ -29,28 +36,165 @@
 
 <style>
     .food-item-row {
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) minmax(170px, .85fr) auto;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 14px;
+        min-width: 0;
+        padding: 16px;
+        border: 1px solid var(--wm-border);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, .58);
+        align-items: stretch;
+    }
+
+    .food-item-row:first-child {
+        padding-top: 16px;
+        border-top: 1px solid var(--wm-border);
+    }
+
+    .food-item-fields {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, .7fr);
+        gap: 12px;
+        align-items: start;
+        min-width: 0;
+    }
+
+    .food-item-field {
+        display: grid;
+        gap: 7px;
+        min-width: 0;
+    }
+
+    .food-item-price-control {
+        display: flex;
+        align-items: center;
+        min-height: 42px;
+        border: 1px solid var(--wm-border);
+        border-radius: 10px;
+        background: #fffaf3;
+        overflow: hidden;
+    }
+
+    .food-item-price-control span {
+        align-self: stretch;
+        display: inline-flex;
+        align-items: center;
+        padding: 0 11px;
+        border-right: 1px solid var(--wm-border);
+        color: var(--wm-muted);
+        background: #f1e5d7;
+        font-size: .82rem;
+        font-weight: 850;
+    }
+
+    .food-item-price-control input {
+        min-width: 0;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+    }
+
+    .food-item-media {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 10px;
+        min-width: 0;
+    }
+
+    .food-item-image-field {
+        display: grid;
+        gap: 7px;
+        min-width: 0;
+    }
+
+    .food-item-upload-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+    }
+
+    .food-item-file-input {
+        display: none;
+    }
+
+    .food-item-upload-button {
+        flex: 0 0 auto;
+        min-height: 38px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px dashed var(--wm-accent);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, .72);
+        color: var(--wm-accent);
+        padding: 0 13px;
+        font-weight: 800;
+        cursor: pointer;
+    }
+
+    .food-item-upload-button:hover {
+        background: rgba(200, 148, 50, .1);
+    }
+
+    .remove-food-item-image {
+        flex: 0 0 auto;
+        min-height: 38px;
+        border: 1px solid rgba(180, 35, 24, .18);
+        border-radius: 10px;
+        background: rgba(180, 35, 24, .06);
+        color: var(--wm-danger);
+        padding: 0 12px;
+        font-weight: 800;
+        cursor: pointer;
+    }
+
+    .food-item-preview-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+    }
+
+    .food-item-row .repeat-actions {
+        padding-top: 0;
+        justify-self: end;
     }
 
     .food-item-image-note {
-        margin: 6px 0 0;
+        margin: 0;
         color: var(--wm-muted);
         font-size: .78rem;
+        overflow-wrap: anywhere;
     }
 
     .food-item-image-preview {
         display: block;
-        width: 100%;
-        height: 112px;
-        margin-bottom: 8px;
+        width: 58px;
+        height: 58px;
+        margin: 0;
         border: 1px solid var(--wm-border);
         border-radius: 10px;
         background: #f1e5d7;
         object-fit: cover;
     }
 
+    .food-item-image-preview[hidden],
+    .remove-food-item-image[hidden] {
+        display: none;
+    }
+
     @media (max-width: 760px) {
-        .food-item-row { grid-template-columns: 1fr; }
+        .food-item-fields {
+            grid-template-columns: 1fr;
+        }
+
+        .food-item-row .repeat-actions {
+            justify-self: start;
+        }
     }
 </style>
 
@@ -78,13 +222,15 @@
                 @error('shop_name') <p class="field-error">{{ $message }}</p> @enderror
             </div>
             <div class="field">
-                <label class="required" for="primary_food_category">{{ __('Primary food category') }}</label>
-                <select id="primary_food_category" name="primary_food_category">
-                    <option value="">{{ __('Select a category') }}</option>
-                    @foreach ($foodCategoryOptions as $categoryOption)
-                        <option value="{{ $categoryOption }}" @selected($selectedFoodCategory === $categoryOption)>{{ $categoryOption }}</option>
-                    @endforeach
-                </select>
+                <label class="required" for="primary_food_category">{{ __('Primary Food Category') }}</label>
+                <input
+                    id="primary_food_category"
+                    name="primary_food_category"
+                    type="text"
+                    maxlength="255"
+                    value="{{ $fieldValue('primary_food_category') }}"
+                    placeholder="{{ __('Example: Hakka Cuisine') }}"
+                >
                 @error('primary_food_category') <p class="field-error">{{ $message }}</p> @enderror
             </div>
             <div class="field">
@@ -211,25 +357,42 @@
         <div class="soft-card">
             <div class="soft-card-head">
                 <div>{{ __('Day') }}</div>
-                <div>{{ __('Open') }}</div>
-                <div>{{ __('Close / closed') }}</div>
+                <div>{{ __('Opening hours') }}</div>
+                <div>{{ __('Closed') }}</div>
             </div>
 
-            @foreach ($days as $index => $day)
+            @foreach ($days as $day)
                 @php
-                    $schedule = $hours[$index] ?? ['day' => $day, 'open' => '08:00', 'close' => '17:00', 'closed' => false];
-                    $closed = $isClosed($schedule);
+                    $schedule = $hours[$day] ?? ['closed' => false, 'periods' => [['open' => '08:00', 'close' => '17:00']]];
+                    $closed = filter_var($schedule['closed'] ?? false, FILTER_VALIDATE_BOOLEAN);
+                    $periods = collect($schedule['periods'] ?? [])->filter(fn ($period) => is_array($period))->values()->all();
+                    if ($periods === []) {
+                        $periods = [['open' => '', 'close' => '']];
+                    }
                 @endphp
-                <div class="soft-card-row">
+                <div class="soft-card-row hours-day-row" data-hours-day="{{ $day }}" @if ($closed) data-closed="1" @endif>
                     <div class="day-label">{{ __($day) }}</div>
-                    <div>
-                        <input name="operating_hours[{{ $index }}][open]" type="time" value="{{ $schedule['open'] ?? '' }}">
-                        <input type="hidden" name="operating_hours[{{ $index }}][day]" value="{{ $day }}">
+                    <div class="hours-periods" data-hours-periods>
+                        @foreach ($periods as $index => $period)
+                            <div class="hours-period-row" data-hours-period>
+                                <label>
+                                    <span>{{ __('Open') }}</span>
+                                    <input name="operating_hours[{{ $day }}][periods][{{ $index }}][open]" type="time" value="{{ $period['open'] ?? '' }}" @if ($closed) disabled @endif>
+                                </label>
+                                <label>
+                                    <span>{{ __('Close') }}</span>
+                                    <input name="operating_hours[{{ $day }}][periods][{{ $index }}][close]" type="time" value="{{ $period['close'] ?? '' }}" @if ($closed) disabled @endif>
+                                </label>
+                                @if ($index > 0)
+                                    <button class="mini-button remove-hours-period" type="button" @if ($closed) disabled @endif>{{ __('Remove') }}</button>
+                                @endif
+                            </div>
+                        @endforeach
                     </div>
                     <div class="close-cell">
-                        <input name="operating_hours[{{ $index }}][close]" type="time" value="{{ $schedule['close'] ?? '' }}">
-                        <input type="hidden" name="operating_hours[{{ $index }}][closed]" value="0">
-                        <label title="{{ __('Closed') }}"><input class="checkbox-input operating-hours-closed" name="operating_hours[{{ $index }}][closed]" value="1" type="checkbox" @checked($closed)>{{ __('Closed') }}</label>
+                        <input type="hidden" name="operating_hours[{{ $day }}][closed]" value="0">
+                        <label title="{{ __('Closed') }}"><input class="checkbox-input operating-hours-closed" name="operating_hours[{{ $day }}][closed]" value="1" type="checkbox" @checked($closed)>{{ __('Closed') }}</label>
+                        <button class="link-button add-hours-period" type="button" @if ($closed) disabled @endif>+ {{ __('Add time slot') }}</button>
                     </div>
                 </div>
             @endforeach
@@ -241,53 +404,71 @@
         <div id="food-items-shell" class="repeat-shell">
             @foreach ($foodItems as $index => $item)
                 <div class="repeat-row food-item-row">
-                    <div>
-                        @if ($index === 0) <label>{{ __('Item name') }}</label> @endif
-                        <input
-                            name="food_items[{{ $index }}][name]"
-                            value="{{ $item['name'] ?? '' }}"
-                            placeholder="{{ __('Example: Hainanese chicken chop') }}"
-                        >
-                    </div>
-                    <div>
-                        @if ($index === 0) <label>{{ __('Description') }}</label> @endif
-                        <input
-                            name="food_items[{{ $index }}][desc]"
-                            value="{{ $item['desc'] ?? '' }}"
-                            placeholder="{{ __('Briefly describe the traditional dish') }}"
-                        >
-                    </div>
-                    <div>
-                        @if ($index === 0) <label>{{ __('Food image') }}</label> @endif
-                        @php($foodItemImageUrl = $contribution?->foodItemImageUrl($item['image_path'] ?? null))
-                        @if ($foodItemImageUrl)
-                            <img
-                                class="food-item-image-preview"
-                                src="{{ $foodItemImageUrl }}"
-                                alt="{{ __('Saved food item image') }}"
-                                data-food-item-preview
+                    <div class="food-item-fields">
+                        <div class="food-item-field">
+                            <label class="required">{{ __('Food Item Name') }}</label>
+                            <input
+                                name="food_items[{{ $index }}][name]"
+                                value="{{ $item['name'] ?? '' }}"
+                                placeholder="{{ __('e.g. Chicken Rice') }}"
                             >
-                        @else
-                            <img
-                                class="food-item-image-preview"
-                                alt="{{ __('Selected food item image preview') }}"
-                                data-food-item-preview
-                                hidden
+                        </div>
+                        <div class="food-item-field">
+                            <label>{{ __('Description') }}</label>
+                            <input
+                                name="food_items[{{ $index }}][desc]"
+                                value="{{ $item['desc'] ?? '' }}"
+                                placeholder="{{ __('Brief description') }}"
                             >
-                        @endif
-                        @if (filled($item['image_path'] ?? null))
-                            <input type="hidden" name="food_items[{{ $index }}][image_path]" value="{{ $item['image_path'] }}">
-                            <p class="food-item-image-note">{{ __('Current image saved. Upload a new image to replace it.') }}</p>
-                        @endif
-                        <input
-                            name="food_items[{{ $index }}][image]"
-                            type="file"
-                            accept="image/jpeg,image/png,image/webp"
-                        >
-                        @error("food_items.$index.image") <p class="field-error">{{ $message }}</p> @enderror
+                        </div>
+                        <div class="food-item-field food-item-price-field">
+                            <label>{{ __('Price (Optional)') }}</label>
+                            <div class="food-item-price-control">
+                                <span>RM</span>
+                                <input
+                                    name="food_items[{{ $index }}][price]"
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    inputmode="decimal"
+                                    value="{{ \App\Models\HeritageShopContribution::foodItemPriceInputValue($item['price'] ?? null) }}"
+                                    placeholder="45.00"
+                                >
+                            </div>
+                            @error("food_items.$index.price") <p class="field-error">{{ $message }}</p> @enderror
+                        </div>
                     </div>
-                    <div class="repeat-actions">
-                        <button type="button" class="mini-button remove-food-item" aria-label="{{ __('Remove food item') }}">{{ __('Remove') }}</button>
+                    <div class="food-item-media">
+                        <div class="food-item-image-field">
+                            <label>{{ __('Food Image (Optional)') }}</label>
+                            <div class="food-item-upload-row">
+                                @php($foodItemImageUrl = $contribution?->foodItemImageUrl($item['image_path'] ?? null))
+                                <button type="button" class="food-item-upload-button" data-food-item-upload>{{ __('Upload Image') }}</button>
+                                <p class="food-item-image-note" data-food-item-file-name>{{ $foodItemImageUrl ? __('Current image saved') : __('JPG / PNG / WEBP, optional') }}</p>
+                            </div>
+                            <div class="food-item-preview-row">
+                                <img
+                                    class="food-item-image-preview"
+                                    @if ($foodItemImageUrl) src="{{ $foodItemImageUrl }}" @else hidden @endif
+                                    alt="{{ $foodItemImageUrl ? __('Saved food item image') : __('Selected food item image preview') }}"
+                                    data-food-item-preview
+                                >
+                                <button type="button" class="remove-food-item-image" data-remove-food-item-image @if (! $foodItemImageUrl) hidden @endif>{{ __('Remove image') }}</button>
+                            </div>
+                            @if (filled($item['image_path'] ?? null))
+                                <input type="hidden" name="food_items[{{ $index }}][image_path]" value="{{ $item['image_path'] }}">
+                            @endif
+                            <input
+                                class="food-item-file-input"
+                                name="food_items[{{ $index }}][image]"
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp"
+                            >
+                            @error("food_items.$index.image") <p class="field-error">{{ $message }}</p> @enderror
+                        </div>
+                        <div class="repeat-actions">
+                            <button type="button" class="mini-button remove-food-item" aria-label="{{ __('Remove food item') }}">{{ __('Remove food item') }}</button>
+                        </div>
                     </div>
                 </div>
             @endforeach
@@ -345,13 +526,38 @@
 
 <template id="food-item-template">
     <div class="repeat-row food-item-row">
-        <div><input name="food_items[__INDEX__][name]" placeholder="{{ __('Example: Hainanese chicken chop') }}"></div>
-        <div><input name="food_items[__INDEX__][desc]"placeholder="{{ __('Briefly describe the traditional dish') }}"></div>
-        <div>
-            <img class="food-item-image-preview" alt="{{ __('Selected food item image preview') }}" data-food-item-preview hidden>
-            <input name="food_items[__INDEX__][image]" type="file" accept="image/jpeg,image/png,image/webp">
+        <div class="food-item-fields">
+            <div class="food-item-field">
+                <label class="required">{{ __('Food Item Name') }}</label>
+                <input name="food_items[__INDEX__][name]" placeholder="{{ __('e.g. Chicken Rice') }}">
+            </div>
+            <div class="food-item-field">
+                <label>{{ __('Description') }}</label>
+                <input name="food_items[__INDEX__][desc]" placeholder="{{ __('Brief description') }}">
+            </div>
+            <div class="food-item-field food-item-price-field">
+                <label>{{ __('Price (Optional)') }}</label>
+                <div class="food-item-price-control">
+                    <span>RM</span>
+                    <input name="food_items[__INDEX__][price]" type="number" min="0" step="0.01" inputmode="decimal" placeholder="45.00">
+                </div>
+            </div>
         </div>
-        <div class="repeat-actions"><button type="button" class="mini-button remove-food-item">{{ __('Remove') }}</button></div>
+        <div class="food-item-media">
+            <div class="food-item-image-field">
+                <label>{{ __('Food Image (Optional)') }}</label>
+                <div class="food-item-upload-row">
+                    <button type="button" class="food-item-upload-button" data-food-item-upload>{{ __('Upload Image') }}</button>
+                    <p class="food-item-image-note" data-food-item-file-name>{{ __('JPG / PNG / WEBP, optional') }}</p>
+                </div>
+                <div class="food-item-preview-row">
+                    <img class="food-item-image-preview" alt="{{ __('Selected food item image preview') }}" data-food-item-preview hidden>
+                    <button type="button" class="remove-food-item-image" data-remove-food-item-image hidden>{{ __('Remove image') }}</button>
+                </div>
+                <input class="food-item-file-input" name="food_items[__INDEX__][image]" type="file" accept="image/jpeg,image/png,image/webp">
+            </div>
+            <div class="repeat-actions"><button type="button" class="mini-button remove-food-item">{{ __('Remove food item') }}</button></div>
+        </div>
     </div>
 </template>
 
@@ -373,6 +579,11 @@
         const bindFoodImagePreview = (row) => {
             const imageInput = row.querySelector('input[type="file"][name^="food_items["]');
             const previewImage = row.querySelector('[data-food-item-preview]');
+            const uploadButton = row.querySelector('[data-food-item-upload]');
+            const removeImageButton = row.querySelector('[data-remove-food-item-image]');
+            const fileName = row.querySelector('[data-food-item-file-name]');
+
+            uploadButton?.addEventListener('click', () => imageInput?.click());
 
             imageInput?.addEventListener('change', () => {
                 const file = imageInput.files?.[0];
@@ -383,16 +594,47 @@
                 const url = URL.createObjectURL(file);
                 previewImage.src = url;
                 previewImage.hidden = false;
+                if (removeImageButton) {
+                    removeImageButton.hidden = false;
+                }
+                if (fileName) {
+                    fileName.textContent = file.name;
+                }
                 previewImage.onload = () => URL.revokeObjectURL(url);
+            });
+
+            removeImageButton?.addEventListener('click', () => {
+                const savedImagePath = row.querySelector('input[type="hidden"][name$="[image_path]"]');
+
+                if (imageInput) {
+                    imageInput.value = '';
+                }
+                savedImagePath?.remove();
+                if (previewImage) {
+                    previewImage.removeAttribute('src');
+                    previewImage.hidden = true;
+                }
+                removeImageButton.hidden = true;
+                if (fileName) {
+                    fileName.textContent = @json(__('JPG / PNG / WEBP, optional'));
+                }
             });
         };
         const bindRemove = (row) => row.querySelector('.remove-food-item')?.addEventListener('click', () => {
             if (shell.querySelectorAll('.food-item-row').length === 1) {
                 row.querySelectorAll('input').forEach((input) => input.value = '');
                 const previewImage = row.querySelector('[data-food-item-preview]');
+                const removeImageButton = row.querySelector('[data-remove-food-item-image]');
+                const fileName = row.querySelector('[data-food-item-file-name]');
                 if (previewImage) {
                     previewImage.removeAttribute('src');
                     previewImage.hidden = true;
+                }
+                if (removeImageButton) {
+                    removeImageButton.hidden = true;
+                }
+                if (fileName) {
+                    fileName.textContent = @json(__('JPG / PNG / WEBP, optional'));
                 }
                 return;
             }
@@ -418,34 +660,140 @@
         const form = document.querySelector('form.form-grid');
         const hourRows = document.querySelectorAll('.soft-card-row');
 
-        hourRows.forEach((row) => {
-            const timeInputs = row.querySelectorAll('input[type="time"]');
-            const closedInput = row.querySelector('.operating-hours-closed');
-            const syncClosedState = () => {
-                timeInputs.forEach((timeInput) => {
-                    timeInput.disabled = Boolean(closedInput?.checked);
+        const reindexHourRow = (row) => {
+            const day = row.dataset.hoursDay;
+            row.querySelectorAll('[data-hours-period]').forEach((periodRow, index) => {
+                periodRow.querySelectorAll('input[type="time"]').forEach((timeInput) => {
+                    const part = timeInput.name.endsWith('[close]') ? 'close' : 'open';
+                    timeInput.name = `operating_hours[${day}][periods][${index}][${part}]`;
                 });
-            };
+                const removeButton = periodRow.querySelector('.remove-hours-period');
+                if (removeButton && index === 0) {
+                    removeButton.remove();
+                }
+                if (index > 0 && ! removeButton) {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = 'mini-button remove-hours-period';
+                    button.textContent = 'Remove';
+                    periodRow.appendChild(button);
+                    button.addEventListener('click', () => {
+                        const rows = Array.from(row.querySelectorAll('[data-hours-period]'));
+                        if (rows.length <= 1) {
+                            return;
+                        }
+                        periodRow.remove();
+                        reindexHourRow(row);
+                        syncHourRow(row);
+                    });
+                }
+            });
+        };
+
+        const syncHourRow = (row) => {
+            const day = row.dataset.hoursDay;
+            const closedInput = row.querySelector('.operating-hours-closed');
+            const timeInputs = row.querySelectorAll('input[type="time"]');
+            const addButton = row.querySelector('.add-hours-period');
+            const removeButtons = row.querySelectorAll('.remove-hours-period');
+            const closed = Boolean(closedInput?.checked);
 
             timeInputs.forEach((timeInput) => {
-                timeInput.addEventListener('input', () => {
-                    if (timeInput.value && closedInput) {
-                        closedInput.checked = false;
-                        syncClosedState();
+                timeInput.disabled = closed;
+            });
+            removeButtons.forEach((button) => {
+                button.disabled = closed;
+            });
+            if (addButton) {
+                addButton.disabled = closed;
+            }
+            if (closed) {
+                const hidden = row.querySelector('input[type="hidden"][name^="operating_hours[' + day + '][closed]"]');
+                if (hidden) {
+                    hidden.value = '1';
+                }
+            } else {
+                const hidden = row.querySelector('input[type="hidden"][name^="operating_hours[' + day + '][closed]"]');
+                if (hidden) {
+                    hidden.value = '0';
+                }
+            }
+        };
+
+        hourRows.forEach((row) => {
+            const day = row.dataset.hoursDay;
+            const addButton = row.querySelector('.add-hours-period');
+            const closedInput = row.querySelector('.operating-hours-closed');
+
+            row.querySelectorAll('[data-hours-period]').forEach((periodRow) => {
+                const removeButton = periodRow.querySelector('.remove-hours-period');
+                if (removeButton) {
+                    removeButton.addEventListener('click', () => {
+                        const rows = Array.from(row.querySelectorAll('[data-hours-period]'));
+                        if (rows.length <= 1) {
+                            return;
+                        }
+                        periodRow.remove();
+                        reindexHourRow(row);
+                        syncHourRow(row);
+                    });
+                }
+            });
+
+            addButton?.addEventListener('click', () => {
+                const periods = row.querySelector('[data-hours-periods]');
+                if (! periods) {
+                    return;
+                }
+                const rowIndex = periods.querySelectorAll('[data-hours-period]').length;
+                const newPeriod = document.createElement('div');
+                newPeriod.className = 'hours-period-row';
+                newPeriod.dataset.hoursPeriod = '';
+                newPeriod.innerHTML = `
+                    <label>
+                        <span>Open</span>
+                        <input name="operating_hours[${day}][periods][${rowIndex}][open]" type="time" value="">
+                    </label>
+                    <label>
+                        <span>Close</span>
+                        <input name="operating_hours[${day}][periods][${rowIndex}][close]" type="time" value="">
+                    </label>
+                    <button class="mini-button remove-hours-period" type="button">Remove</button>
+                `;
+                periods.appendChild(newPeriod);
+                const removeButton = newPeriod.querySelector('.remove-hours-period');
+                removeButton?.addEventListener('click', () => {
+                    const rows = Array.from(row.querySelectorAll('[data-hours-period]'));
+                    if (rows.length <= 1) {
+                        return;
                     }
+                    newPeriod.remove();
+                    reindexHourRow(row);
+                    syncHourRow(row);
                 });
+                syncHourRow(row);
             });
 
             closedInput?.addEventListener('change', () => {
                 if (closedInput.checked) {
-                    timeInputs.forEach((timeInput) => {
+                    row.querySelectorAll('input[type="time"]').forEach((timeInput) => {
                         timeInput.value = '';
                     });
                 }
-                syncClosedState();
+                syncHourRow(row);
             });
 
-            syncClosedState();
+            row.querySelectorAll('input[type="time"]').forEach((timeInput) => {
+                timeInput.addEventListener('input', () => {
+                    if (timeInput.value && closedInput) {
+                        closedInput.checked = false;
+                    }
+                    syncHourRow(row);
+                });
+            });
+
+            reindexHourRow(row);
+            syncHourRow(row);
         });
 
         form?.addEventListener('submit', (event) => {

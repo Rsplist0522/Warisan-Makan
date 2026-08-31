@@ -15,6 +15,8 @@ use App\Services\HeritageShopImageService;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -263,11 +265,13 @@ class AdminCommunityContributionController extends Controller
         $request->validate([
             'date_from' => ['nullable', 'date'],
             'date_to' => ['nullable', 'date'],
+            'status' => ['nullable', Rule::in(CorrectionRequest::activeStatuses())],
         ]);
 
-        $allowedStatuses = CorrectionRequest::statuses();
+        $allowedStatuses = CorrectionRequest::activeStatuses();
         $query = CorrectionRequest::query()
             ->with(['user', 'heritageShop'])
+            ->whereIn('status', $allowedStatuses)
             ->latest('created_at');
 
         if ($request->filled('status') && in_array($request->string('status')->toString(), $allowedStatuses, true)) {
@@ -357,9 +361,11 @@ class AdminCommunityContributionController extends Controller
 
         DB::transaction(function () use ($validated, $correctionRequest, $admin, $fromStatus, $comment): void {
             if ($validated['moderation_action'] === 'approve') {
-                $correctionRequest->heritageShop->forceFill(
-                    $correctionRequest->heritageShopUpdatePayload()
-                )->save();
+                $payload = $correctionRequest->heritageShopUpdatePayload();
+
+                if ($payload !== []) {
+                    $correctionRequest->heritageShop->forceFill($payload)->save();
+                }
 
                 $toStatus = CorrectionRequest::STATUS_APPROVED;
                 $action = 'correction_approved';
@@ -401,29 +407,54 @@ class AdminCommunityContributionController extends Controller
         $request->validate([
             'date_from' => ['nullable', 'date'],
             'date_to' => ['nullable', 'date'],
+            'record_type' => ['nullable', Rule::in(['shop_submission', 'correction_request'])],
         ]);
 
-        $historyStatuses = [
+        $historyStatuses = array_values(array_unique([
             HeritageShopContribution::STATUS_REVISION_REQUIRED,
             HeritageShopContribution::STATUS_APPROVED,
             HeritageShopContribution::STATUS_REJECTED,
             HeritageShopContribution::STATUS_WITHDRAWN,
             HeritageShopContribution::STATUS_DELETED,
+            CorrectionRequest::STATUS_APPROVED,
+            CorrectionRequest::STATUS_REJECTED,
+        ]));
+        $recordTypes = [
+            'shop_submission' => 'Shop Submission',
+            'correction_request' => 'Correction Request',
         ];
-        $query = HeritageShopContribution::withTrashed()
+
+        $shopHistoryQuery = HeritageShopContribution::withTrashed()
             ->with(['user', 'reviewedBy', 'moderationActivities.actor'])
-            ->whereIn('status', $historyStatuses)
-            ->latest('updated_at');
+            ->whereIn('status', $historyStatuses);
+
+        $correctionHistoryQuery = CorrectionRequest::query()
+            ->with(['user', 'heritageShop', 'moderationActivities.actor'])
+            ->whereIn('status', CorrectionRequest::processedStatuses());
 
         if ($request->filled('status') && in_array($request->string('status')->toString(), $historyStatuses, true)) {
-            $query->where('status', $request->string('status')->toString());
+            $shopHistoryQuery->where('status', $request->string('status')->toString());
+        }
+
+        if ($request->filled('status') && in_array($request->string('status')->toString(), CorrectionRequest::processedStatuses(), true)) {
+            $correctionHistoryQuery->where('status', $request->string('status')->toString());
         }
 
         if ($request->filled('search')) {
             $search = '%'.$request->string('search')->trim()->toString().'%';
-            $query->where(function ($builder) use ($search): void {
+            $shopHistoryQuery->where(function ($builder) use ($search): void {
                 $builder->where('contribution_title', 'like', $search)
                     ->orWhere('shop_name', 'like', $search)
+                    ->orWhereHas('user', fn ($userQuery) => $userQuery
+                        ->where('name', 'like', $search)
+                        ->orWhere('email', 'like', $search));
+            });
+            $correctionHistoryQuery->where(function ($builder) use ($search): void {
+                $builder->where('field_name', 'like', $search)
+                    ->orWhere('suggested_value', 'like', $search)
+                    ->orWhere('reason', 'like', $search)
+                    ->orWhereHas('heritageShop', fn ($shopQuery) => $shopQuery
+                        ->where('shop_name', 'like', $search))
                     ->orWhereHas('user', fn ($userQuery) => $userQuery
                         ->where('name', 'like', $search)
                         ->orWhere('email', 'like', $search));
@@ -431,16 +462,55 @@ class AdminCommunityContributionController extends Controller
         }
 
         if ($request->filled('date_from')) {
-            $query->whereDate('updated_at', '>=', $request->date('date_from'));
+            $dateFrom = $request->date('date_from');
+            $shopHistoryQuery->whereDate('updated_at', '>=', $dateFrom);
+            $correctionHistoryQuery->where(function ($builder) use ($dateFrom): void {
+                $builder->whereDate('reviewed_at', '>=', $dateFrom)
+                    ->orWhereDate('updated_at', '>=', $dateFrom)
+                    ->orWhereDate('created_at', '>=', $dateFrom);
+            });
         }
 
         if ($request->filled('date_to')) {
-            $query->whereDate('updated_at', '<=', $request->date('date_to'));
+            $dateTo = $request->date('date_to');
+            $shopHistoryQuery->whereDate('updated_at', '<=', $dateTo);
+            $correctionHistoryQuery->where(function ($builder) use ($dateTo): void {
+                $builder->whereDate('reviewed_at', '<=', $dateTo)
+                    ->orWhereDate('updated_at', '<=', $dateTo)
+                    ->orWhereDate('created_at', '<=', $dateTo);
+            });
         }
 
-        $history = $query->paginate(15)->withQueryString();
+        $history = collect()
+            ->merge($shopHistoryQuery->get()->map(fn ($record): object => (object) [
+                'record_type' => 'shop_submission',
+                'record' => $record,
+                'processed_at' => $record->approved_at ?? $record->updated_at ?? $record->submitted_at,
+            ]))
+            ->merge($correctionHistoryQuery->get()->map(fn ($record): object => (object) [
+                'record_type' => 'correction_request',
+                'record' => $record,
+                'processed_at' => $record->reviewed_at ?? $record->updated_at ?? $record->created_at,
+            ]))
+            ->filter(fn (object $entry): bool => $request->filled('record_type')
+                ? $entry->record_type === $request->string('record_type')->toString()
+                : true)
+            ->sortByDesc(fn (object $entry): int => $entry->processed_at instanceof Carbon
+                ? $entry->processed_at->getTimestamp()
+                : ($entry->processed_at ? Carbon::instance($entry->processed_at)->getTimestamp() : 0))
+            ->values();
 
-        return view('community-contributions.admin.history', compact('history', 'historyStatuses'));
+        $page = (int) $request->query('page', 1);
+        $perPage = 15;
+        $paginatedHistory = new LengthAwarePaginator(
+            $history->forPage($page, $perPage),
+            $history->count(),
+            $perPage,
+            $page,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+
+        return view('community-contributions.admin.history', compact('paginatedHistory', 'historyStatuses', 'recordTypes'));
     }
 
     private function recordActivity(

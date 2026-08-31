@@ -12,6 +12,7 @@ use App\Notifications\ContributionStatusChanged;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -190,9 +191,6 @@ class CommunityContributionTest extends TestCase
                 'shop_name',
                 'primary_food_category',
                 'establishment_year',
-                'founder_name',
-                'founder_background',
-                'current_owner_name',
                 'heritage_story',
                 'address',
             ]);
@@ -332,9 +330,208 @@ class CommunityContributionTest extends TestCase
         $this->actingAs($user)
             ->get(route('community-contribution.edit', $contribution))
             ->assertOk()
+            ->assertSee('name="operating_hours[Monday][periods][0][open]"', false)
             ->assertSee('value="09:00"', false)
+            ->assertSee('name="operating_hours[Monday][periods][0][close]"', false)
             ->assertSee('value="17:30"', false)
-            ->assertSee('operating_hours[1][closed]" value="1" type="checkbox" checked', false);
+            ->assertSee('name="operating_hours[Tuesday][closed]"', false)
+            ->assertSee('operating_hours[Tuesday][closed]" value="1" type="checkbox" checked', false);
+    }
+
+    public function test_multiple_runtime_slots_are_saved_and_reloaded_for_draft_round_trip(): void
+    {
+        $user = User::factory()->create();
+        $data = [
+            ...$this->validContributionData(),
+            'submission_action' => 'draft',
+            'operating_hours' => [
+                'Monday' => [
+                    'closed' => '0',
+                    'periods' => [
+                        ['open' => '08:00', 'close' => '14:00'],
+                        ['open' => '17:00', 'close' => '22:00'],
+                    ],
+                ],
+                'Sunday' => [
+                    'closed' => '1',
+                    'periods' => [],
+                ],
+            ],
+        ];
+
+        $this->actingAs($user)
+            ->post(route('community-contribution.store'), $data)
+            ->assertSessionHasNoErrors();
+
+        $contribution = HeritageShopContribution::firstOrFail();
+
+        $this->assertSame([
+            ['day' => 'Monday', 'open' => '08:00', 'close' => '14:00', 'closed' => false],
+            ['day' => 'Monday', 'open' => '17:00', 'close' => '22:00', 'closed' => false],
+            ['day' => 'Sunday', 'open' => null, 'close' => null, 'closed' => true],
+        ], $contribution->operating_hours);
+
+        $content = $this->actingAs($user)
+            ->get(route('community-contribution.edit', $contribution))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('name="operating_hours[Monday][periods][0][open]"', $content);
+        $this->assertStringContainsString('value="08:00"', $content);
+        $this->assertStringContainsString('name="operating_hours[Monday][periods][1][open]"', $content);
+        $this->assertStringContainsString('value="17:00"', $content);
+        $this->assertStringContainsString('name="operating_hours[Sunday][closed]"', $content);
+        $this->assertStringContainsString('checked', $content);
+    }
+
+    public function test_overlapping_operating_hour_slots_are_rejected(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('community-contribution.store'), [
+                ...$this->validContributionData(),
+                'submission_action' => 'draft',
+                'operating_hours' => [
+                    'Monday' => [
+                        'closed' => '0',
+                        'periods' => [
+                            ['open' => '08:00', 'close' => '14:00'],
+                            ['open' => '13:00', 'close' => '17:00'],
+                        ],
+                    ],
+                ],
+            ])
+            ->assertSessionHasErrors('operating_hours.Monday.periods.1.open');
+    }
+
+    public function test_food_item_prices_are_normalized_and_synced_on_approval(): void
+    {
+        Notification::fake();
+
+        $user = User::factory()->create();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $data = [
+            ...$this->validContributionData(),
+            'primary_food_category' => 'Malay Cuisine',
+            'food_items' => [
+                ['name' => 'Moi Choy Kiao Yok', 'desc' => 'Traditional Hakka pork belly dish', 'price' => '45'],
+                ['name' => 'Hakka Mee', 'desc' => 'Traditional handmade noodles', 'price' => '8.5'],
+                ['name' => 'Kuih Kosui', 'desc' => 'Palm sugar rice cake', 'price' => ''],
+            ],
+        ];
+
+        $this->actingAs($user)
+            ->post(route('community-contribution.store'), $data)
+            ->assertSessionHasNoErrors();
+
+        $contribution = HeritageShopContribution::firstOrFail();
+
+        $this->assertSame('RM 45.00', $contribution->food_items[0]['price']);
+        $this->assertSame('RM 8.50', $contribution->food_items[1]['price']);
+        $this->assertNull($contribution->food_items[2]['price']);
+        $this->assertDatabaseCount('heritage_food_items', 0);
+
+        $this->actingAs($admin)
+            ->post(route('admin.community-contributions.start-review', $contribution))
+            ->assertSessionHasNoErrors();
+
+        $this->actingAs($admin)
+            ->post(route('admin.community-contributions.moderate', $contribution->fresh()), [
+                'moderation_action' => 'approve',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $shop = HeritageShop::where('source_contribution_id', $contribution->id)->firstOrFail();
+        $shopFoodItems = $shop->fresh()->food_items;
+
+        $this->assertSame('RM 45.00', $shopFoodItems[0]['price']);
+        $this->assertSame('RM 8.50', $shopFoodItems[1]['price']);
+        $this->assertNull($shopFoodItems[2]['price']);
+        $this->assertDatabaseHas('heritage_food_items', [
+            'heritage_shop_id' => $shop->id,
+            'name' => 'Moi Choy Kiao Yok',
+            'description' => 'Traditional Hakka pork belly dish',
+            'price' => 'RM 45.00',
+            'display_order' => 1,
+            'is_active' => true,
+        ]);
+        $this->assertDatabaseHas('heritage_food_items', [
+            'heritage_shop_id' => $shop->id,
+            'name' => 'Hakka Mee',
+            'description' => 'Traditional handmade noodles',
+            'price' => 'RM 8.50',
+            'display_order' => 2,
+            'is_active' => true,
+        ]);
+        $this->assertDatabaseHas('heritage_food_items', [
+            'heritage_shop_id' => $shop->id,
+            'name' => 'Kuih Kosui',
+            'price' => null,
+            'display_order' => 3,
+            'is_active' => true,
+        ]);
+    }
+
+    public function test_food_item_price_is_optional_and_negative_values_are_rejected(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('community-contribution.store'), [
+                ...$this->validContributionData(),
+                'primary_food_category' => 'Malay Cuisine',
+                'food_items' => [[
+                    'name' => 'Hainanese chicken chop',
+                    'desc' => 'A long-standing family recipe.',
+                    'price' => '',
+                ]],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertNull(HeritageShopContribution::firstOrFail()->food_items[0]['price']);
+
+        $this->actingAs($user)
+            ->post(route('community-contribution.store'), [
+                ...$this->validContributionData(),
+                'primary_food_category' => 'Malay Cuisine',
+                'food_items' => [[
+                    'name' => 'Hainanese chicken chop',
+                    'desc' => 'A long-standing family recipe.',
+                    'price' => '-5',
+                ]],
+            ])
+            ->assertSessionHasErrors('food_items.0.price');
+    }
+
+    public function test_draft_edit_displays_saved_price_without_duplicate_rm_prefix(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('community-contribution.store'), [
+                ...$this->validContributionData(),
+                'primary_food_category' => 'Malay Cuisine',
+                'submission_action' => 'draft',
+                'food_items' => [[
+                    'name' => 'Hainanese chicken chop',
+                    'desc' => 'A long-standing family recipe.',
+                    'price' => '45',
+                ]],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $draft = HeritageShopContribution::firstOrFail();
+
+        $this->assertSame('RM 45.00', $draft->food_items[0]['price']);
+
+        $this->actingAs($user)
+            ->get(route('community-contribution.edit', $draft))
+            ->assertOk()
+            ->assertSee('Price (Optional)')
+            ->assertSee('<span>RM</span>', false)
+            ->assertSee('value="45.00"', false)
+            ->assertDontSee('RM RM 45.00');
     }
 
     public function test_user_can_edit_and_submit_a_complete_draft(): void
@@ -1240,7 +1437,7 @@ class CommunityContributionTest extends TestCase
         ]);
         $this->assertDatabaseHas('heritage_shops', [
             'source_contribution_id' => $contribution->id,
-            'primary_food_category' => 'Hainanese cuisine',
+            'primary_food_category' => 'Malay Cuisine',
             'publish_status' => HeritageShop::STATUS_PUBLISHED,
             'shop_name' => 'Capital Café',
         ]);
@@ -1613,6 +1810,1079 @@ class CommunityContributionTest extends TestCase
         ]);
         $this->assertDatabaseHas('notifications', [
             'notifiable_id' => $user->id,
+        ]);
+    }
+
+    public function test_correction_request_active_queue_only_shows_active_statuses(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $shop = HeritageShop::create([
+            'shop_name' => 'Hameediyah Restaurant',
+            'publish_status' => HeritageShop::STATUS_PUBLISHED,
+        ]);
+
+        CorrectionRequest::create([
+            'user_id' => User::factory()->create()->id,
+            'heritage_shop_id' => $shop->id,
+            'field_name' => 'shop_name',
+            'current_value' => 'Hameediyah Restaurant',
+            'suggested_value' => 'Hameediyah Café',
+            'reason' => 'Update name',
+            'status' => CorrectionRequest::STATUS_PENDING,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        CorrectionRequest::create([
+            'user_id' => User::factory()->create()->id,
+            'heritage_shop_id' => $shop->id,
+            'field_name' => 'contact_number',
+            'current_value' => '012-3456789',
+            'suggested_value' => '012-9876543',
+            'reason' => 'Contact update',
+            'status' => CorrectionRequest::STATUS_UNDER_REVIEW,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        CorrectionRequest::create([
+            'user_id' => User::factory()->create()->id,
+            'heritage_shop_id' => $shop->id,
+            'field_name' => 'address_location',
+            'current_value' => 'Old address',
+            'suggested_value' => json_encode(['address' => 'New address'], JSON_THROW_ON_ERROR),
+            'reason' => 'Address update',
+            'status' => CorrectionRequest::STATUS_NEEDS_INFORMATION,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        CorrectionRequest::create([
+            'user_id' => User::factory()->create()->id,
+            'heritage_shop_id' => $shop->id,
+            'field_name' => 'current_owner_information',
+            'current_value' => 'Old owner',
+            'suggested_value' => json_encode(['current_owner_name' => 'New owner'], JSON_THROW_ON_ERROR),
+            'reason' => 'Owner update',
+            'status' => CorrectionRequest::STATUS_APPROVED,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        CorrectionRequest::create([
+            'user_id' => User::factory()->create()->id,
+            'heritage_shop_id' => $shop->id,
+            'field_name' => 'founder_information',
+            'current_value' => 'Old founder',
+            'suggested_value' => json_encode(['founder_name' => 'New founder'], JSON_THROW_ON_ERROR),
+            'reason' => 'Founder update',
+            'status' => CorrectionRequest::STATUS_REJECTED,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.community-contributions.correction-requests'))
+            ->assertOk()
+            ->assertSee('Pending')
+            ->assertSee('Under Review')
+            ->assertSee('Needs Information')
+            ->assertDontSee('Approved')
+            ->assertDontSee('Rejected');
+    }
+
+    public function test_admin_history_combines_shop_submissions_and_corrections_with_record_type_distinction(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $user = User::factory()->create();
+        $shop = HeritageShop::create([
+            'shop_name' => 'Hameediyah Restaurant',
+            'publish_status' => HeritageShop::STATUS_PUBLISHED,
+        ]);
+
+        HeritageShopContribution::create([
+            ...$this->modelContributionData(),
+            'user_id' => $user->id,
+            'shop_name' => 'Kedai Lama',
+            'status' => HeritageShopContribution::STATUS_APPROVED,
+            'submitted_at' => now()->subDay(),
+            'approved_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        CorrectionRequest::create([
+            'user_id' => $user->id,
+            'heritage_shop_id' => $shop->id,
+            'field_name' => 'contact_number',
+            'current_value' => '012-3456789',
+            'suggested_value' => '012-9876543',
+            'reason' => 'Updated number',
+            'status' => CorrectionRequest::STATUS_APPROVED,
+            'reviewed_at' => now(),
+            'created_at' => now()->subDay(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.community-contributions.history'))
+            ->assertOk()
+            ->assertSee('APPROVED · SHOP SUBMISSION')
+            ->assertSee('APPROVED · CORRECTION')
+            ->assertSee('Hameediyah Restaurant');
+
+        $this->actingAs($admin)
+            ->get(route('admin.community-contributions.history', ['record_type' => 'correction_request']))
+            ->assertOk()
+            ->assertSee('APPROVED · CORRECTION')
+            ->assertDontSee('APPROVED · SHOP SUBMISSION');
+    }
+
+    public function test_processed_correction_audit_page_is_read_only(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $user = User::factory()->create();
+        $shop = HeritageShop::create([
+            'shop_name' => 'Hameediyah Restaurant',
+            'publish_status' => HeritageShop::STATUS_PUBLISHED,
+        ]);
+
+        $correctionRequest = CorrectionRequest::create([
+            'user_id' => $user->id,
+            'heritage_shop_id' => $shop->id,
+            'field_name' => 'contact_number',
+            'current_value' => '012-3456789',
+            'suggested_value' => '012-9876543',
+            'reason' => 'Updated number',
+            'status' => CorrectionRequest::STATUS_APPROVED,
+            'admin_comment' => 'Verified against the shop profile.',
+            'reviewed_by_user_id' => $admin->id,
+            'reviewed_at' => now(),
+            'created_at' => now()->subDay(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.community-contributions.correction-requests.show', $correctionRequest))
+            ->assertOk()
+            ->assertSee('This correction request has been processed.')
+            ->assertDontSee('Start review')
+            ->assertDontSee('value="approve"')
+            ->assertDontSee('value="reject"');
+    }
+
+    public function test_correction_request_timestamps_render_in_asia_kuala_lumpur_time(): void
+    {
+        $user = User::factory()->create();
+        $shop = HeritageShop::create([
+            'shop_name' => 'Hameediyah Restaurant',
+            'address' => '164A Lebuh Campbell',
+            'city' => 'George Town',
+            'state' => 'Penang',
+            'publish_status' => HeritageShop::STATUS_PUBLISHED,
+        ]);
+
+        $correctionRequest = CorrectionRequest::create([
+            'user_id' => $user->id,
+            'heritage_shop_id' => $shop->id,
+            'field_name' => 'address_location',
+            'current_value' => "Street address:\n164A Lebuh Campbell",
+            'suggested_value' => json_encode(['address' => '164A Lebuh Campbell, George Town'], JSON_THROW_ON_ERROR),
+            'reason' => 'The address should reflect the updated shop premises.',
+            'status' => CorrectionRequest::STATUS_PENDING,
+            'created_at' => Carbon::parse('2026-08-31 06:15:00', 'UTC'),
+            'updated_at' => Carbon::parse('2026-08-31 06:15:00', 'UTC'),
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('community-contribution.correction-requests.show', $correctionRequest))
+            ->assertOk()
+            ->assertSee('31 Aug 2026, 2:15 PM');
+    }
+
+    public function test_correction_form_uses_user_facing_options_and_missing_value_fallbacks(): void
+    {
+        $user = User::factory()->create();
+        $shop = HeritageShop::create([
+            'shop_name' => 'Capital Cafe',
+            'primary_food_category' => 'Hainanese cuisine',
+            'founder_name' => 'Tan Ah Kow',
+            'founder_background' => null,
+            'operating_hours' => [
+                ['day' => 'Monday', 'open' => '10:00', 'close' => '22:00', 'closed' => false],
+                ['day' => 'Tuesday', 'open' => null, 'close' => null, 'closed' => true],
+            ],
+            'food_items' => [['name' => 'Chicken chop']],
+            'publish_status' => HeritageShop::STATUS_PUBLISHED,
+        ]);
+
+        $response = $this->actingAs($user)
+            ->get(route('heritage-shops.correction-requests.create', $shop))
+            ->assertOk()
+            ->assertSee('Primary food category')
+            ->assertSee('Founder information')
+            ->assertSee('Current owner / operator information')
+            ->assertSee('Address')
+            ->assertDontSee('Address / location')
+            ->assertDontSee('Map location')
+            ->assertSee('Hainanese cuisine')
+            ->assertSee('Founder Background')
+            ->assertSee('Owner / Operator Name')
+            ->assertSee('Street Address')
+            ->assertSee('Not provided')
+            ->assertSee('Monday: 10:00')
+            ->assertSee('Tuesday: Closed')
+            ->assertDontSee('value="founder_name"', false)
+            ->assertDontSee('value="founder_background"', false)
+            ->assertDontSee('value="current_owner_name"', false)
+            ->assertDontSee('value="current_owner_details"', false)
+            ->assertDontSee('value="address"', false)
+            ->assertDontSee('value="city"', false)
+            ->assertDontSee('value="state"', false)
+            ->assertDontSee('value="postal_code"', false)
+            ->assertDontSee('value="latitude"', false)
+            ->assertDontSee('value="longitude"', false)
+            ->assertDontSee('value="food_items"', false);
+
+        $this->assertStringNotContainsString('Chicken chop', $response->getContent());
+    }
+
+    public function test_forged_map_location_correction_is_rejected(): void
+    {
+        $user = User::factory()->create();
+        $shop = HeritageShop::create([
+            'shop_name' => 'Capital Cafe',
+            'address' => '3, Jalan Balai Polis',
+            'publish_status' => HeritageShop::STATUS_PUBLISHED,
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('heritage-shops.correction-requests.store', $shop), [
+                'field_name' => 'map_location',
+                'map_location' => [
+                    'search_query' => 'Central Market Kuala Lumpur',
+                    'latitude' => '3.1441000',
+                    'longitude' => '101.6956000',
+                ],
+                'reason' => 'The map marker is on the wrong street.',
+            ])
+            ->assertSessionHasErrors('field_name');
+
+        $this->assertDatabaseCount('correction_requests', 0);
+    }
+
+    public function test_correction_form_waits_for_an_incorrect_field_before_showing_correction_inputs(): void
+    {
+        $user = User::factory()->create();
+        $shop = HeritageShop::create([
+            'shop_name' => 'Capital Cafe',
+            'founder_name' => 'Tan Ah Kow',
+            'founder_background' => 'Founder story.',
+            'current_owner_name' => 'Current Owner',
+            'current_owner_details' => 'Owner details.',
+            'address' => '3, Jalan Balai Polis',
+            'city' => 'Kuala Lumpur',
+            'state' => 'Kuala Lumpur',
+            'postal_code' => '50000',
+            'operating_hours' => [
+                ['day' => 'Monday', 'open' => '10:00', 'close' => '22:00', 'closed' => false],
+            ],
+            'publish_status' => HeritageShop::STATUS_PUBLISHED,
+        ]);
+
+        $content = $this->actingAs($user)
+            ->get(route('heritage-shops.correction-requests.create', $shop))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('[hidden] {', $content);
+        $this->assertMatchesRegularExpression('/<div[^>]*id="generic_correction_component"[^>]*hidden[^>]*>/', $content);
+        $this->assertMatchesRegularExpression('/<div[^>]*data-correction-structured="founder_information"[^>]*hidden[^>]*>/', $content);
+        $this->assertMatchesRegularExpression('/<div[^>]*data-correction-structured="current_owner_information"[^>]*hidden[^>]*>/', $content);
+        $this->assertMatchesRegularExpression('/<div[^>]*data-correction-structured="address_location"[^>]*hidden[^>]*>/', $content);
+        $this->assertMatchesRegularExpression('/<div[^>]*id="operating_hours_component"[^>]*hidden[^>]*>/', $content);
+        $this->assertMatchesRegularExpression('/<div[^>]*id="reason_field"[^>]*hidden[^>]*>/', $content);
+        $this->assertMatchesRegularExpression(
+            '/id="suggested_fields_founder_name"[\s\S]*?name="suggested_fields\[founder_name\]"[\s\S]*?disabled/',
+            $content
+        );
+    }
+
+    public function test_operating_hours_selection_shows_only_operating_hours_correction_section(): void
+    {
+        $user = User::factory()->create();
+        $shop = HeritageShop::create([
+            'shop_name' => 'Capital Cafe',
+            'founder_name' => 'Tan Ah Kow',
+            'current_owner_name' => 'Current Owner',
+            'address' => '3, Jalan Balai Polis',
+            'operating_hours' => [
+                ['day' => 'Monday', 'open' => '10:00', 'close' => '22:00', 'closed' => false],
+            ],
+            'publish_status' => HeritageShop::STATUS_PUBLISHED,
+        ]);
+
+        $content = $this->actingAs($user)
+            ->withSession(['_old_input' => ['field_name' => 'operating_hours']])
+            ->get(route('heritage-shops.correction-requests.create', $shop))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('<option value="operating_hours" selected>Operating hours</option>', $content);
+        $this->assertMatchesRegularExpression('/<div[^>]*id="generic_correction_component"[^>]*hidden[^>]*>/', $content);
+        $this->assertMatchesRegularExpression('/<div[^>]*id="operating_hours_component"[^>]*>/', $content);
+        $this->assertDoesNotMatchRegularExpression('/<div[^>]*id="operating_hours_component"[^>]*hidden[^>]*>/', $content);
+        $this->assertMatchesRegularExpression('/<div[^>]*id="reason_field"[^>]*>/', $content);
+        $this->assertDoesNotMatchRegularExpression('/<div[^>]*id="reason_field"[^>]*hidden[^>]*>/', $content);
+        $this->assertMatchesRegularExpression('/<div[^>]*data-correction-structured="founder_information"[^>]*hidden[^>]*>/', $content);
+        $this->assertMatchesRegularExpression('/<div[^>]*data-correction-structured="current_owner_information"[^>]*hidden[^>]*>/', $content);
+        $this->assertMatchesRegularExpression('/<div[^>]*data-correction-structured="address_location"[^>]*hidden[^>]*>/', $content);
+    }
+
+    public function test_single_period_published_operating_hours_prefill_without_fake_second_period(): void
+    {
+        $user = User::factory()->create();
+        $shop = HeritageShop::create([
+            'shop_name' => 'Hameediyah Restaurant',
+            'address' => '164A Lebuh Campbell',
+            'city' => 'George Town',
+            'state' => 'Penang',
+            'postal_code' => '10100',
+            'contact_number' => '+60 4-261 1095',
+            'operating_hours' => collect(CorrectionRequest::OPERATING_HOUR_DAYS)
+                ->map(fn (string $day): array => ['day' => $day, 'open' => '10:00', 'close' => '22:00', 'closed' => false])
+                ->all(),
+            'publish_status' => HeritageShop::STATUS_PUBLISHED,
+        ]);
+
+        $editorValue = CorrectionRequest::operatingHoursEditorValue($shop->fresh());
+        foreach (CorrectionRequest::OPERATING_HOUR_DAYS as $day) {
+            $this->assertSame([['open' => '10:00', 'close' => '22:00']], $editorValue[$day]['periods']);
+        }
+
+        $content = $this->actingAs($user)
+            ->withSession(['_old_input' => ['field_name' => 'operating_hours']])
+            ->get(route('heritage-shops.correction-requests.create', $shop))
+            ->assertOk()
+            ->assertSee('Monday: 10:00 AM - 10:00 PM')
+            ->assertDontSee('value="02:00"', false)
+            ->getContent();
+
+        $this->assertSame(2, substr_count($content, 'operating_hours_correction[Monday][periods]'));
+        $this->assertStringContainsString('name="operating_hours_correction[Monday][periods][0][open]" type="time" value="10:00"', $content);
+        $this->assertStringContainsString('name="operating_hours_correction[Monday][periods][0][close]" type="time" value="22:00"', $content);
+        $mondayBlock = Str::between($content, 'data-hours-day="Monday"', 'data-hours-day="Tuesday"');
+        $this->assertStringNotContainsString('remove-hours-period', $mondayBlock);
+    }
+
+    public function test_split_period_published_operating_hours_prefill_exact_period_count(): void
+    {
+        $user = User::factory()->create();
+        $shop = HeritageShop::create([
+            'shop_name' => 'Capital Cafe',
+            'operating_hours' => [
+                ['day' => 'Thursday', 'open' => '11:30', 'close' => '14:30', 'closed' => false],
+                ['day' => 'Thursday', 'open' => '17:30', 'close' => '22:30', 'closed' => false],
+            ],
+            'publish_status' => HeritageShop::STATUS_PUBLISHED,
+        ]);
+
+        $editorValue = CorrectionRequest::operatingHoursEditorValue($shop->fresh());
+
+        $this->assertSame([
+            ['open' => '11:30', 'close' => '14:30'],
+            ['open' => '17:30', 'close' => '22:30'],
+        ], $editorValue['Thursday']['periods']);
+
+        $content = $this->actingAs($user)
+            ->withSession(['_old_input' => ['field_name' => 'operating_hours']])
+            ->get(route('heritage-shops.correction-requests.create', $shop))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertSame(4, substr_count($content, 'operating_hours_correction[Thursday][periods]'));
+        $this->assertStringContainsString('name="operating_hours_correction[Thursday][periods][0][open]" type="time" value="11:30"', $content);
+        $this->assertStringContainsString('name="operating_hours_correction[Thursday][periods][1][open]" type="time" value="17:30"', $content);
+        $this->assertMatchesRegularExpression(
+            '/class="link-button add-hours-period" type="button"\s*>[+] Add another time period<\/button>/',
+            $content
+        );
+    }
+
+    public function test_operating_hours_old_input_survives_validation_without_adding_extra_periods(): void
+    {
+        $user = User::factory()->create();
+        $shop = HeritageShop::create([
+            'shop_name' => 'Capital Cafe',
+            'operating_hours' => [
+                ['day' => 'Monday', 'open' => '10:00', 'close' => '22:00', 'closed' => false],
+            ],
+            'publish_status' => HeritageShop::STATUS_PUBLISHED,
+        ]);
+
+        $url = route('heritage-shops.correction-requests.create', $shop);
+        $content = $this->actingAs($user)
+            ->followingRedirects()
+            ->from($url)
+            ->post(route('heritage-shops.correction-requests.store', $shop), [
+                'field_name' => 'operating_hours',
+                'operating_hours_correction' => [
+                    'Monday' => [
+                        'closed' => '0',
+                        'periods' => [
+                            ['open' => '09:00', 'close' => '18:00'],
+                        ],
+                    ],
+                ],
+            ])
+            ->assertOk()
+            ->assertSee('The reason field is required.')
+            ->getContent();
+
+        $this->assertSame(2, substr_count($content, 'operating_hours_correction[Monday][periods]'));
+        $this->assertStringContainsString('name="operating_hours_correction[Monday][periods][0][open]" type="time" value="09:00"', $content);
+        $this->assertStringContainsString('name="operating_hours_correction[Monday][periods][0][close]" type="time" value="18:00"', $content);
+        $this->assertStringNotContainsString('value="02:00"', $content);
+    }
+
+    public function test_grouped_founder_correction_does_not_store_missing_value_fallback(): void
+    {
+        Notification::fake();
+
+        $user = User::factory()->create();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $shop = HeritageShop::create([
+            'shop_name' => 'Capital Cafe',
+            'founder_name' => 'Tan Ah Kow',
+            'founder_background' => null,
+            'publish_status' => HeritageShop::STATUS_PUBLISHED,
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('heritage-shops.correction-requests.store', $shop), [
+                'field_name' => 'founder_information',
+                'suggested_fields' => [
+                    'founder_name' => 'Tan Ah Kau',
+                    'founder_background' => '',
+                ],
+                'reason' => 'The founder name spelling is shown on the shop sign.',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $correctionRequest = CorrectionRequest::firstOrFail();
+        $this->assertStringContainsString('Founder background:', $correctionRequest->current_value);
+        $this->assertStringContainsString('Not provided', $correctionRequest->current_value);
+        $this->assertStringNotContainsString('Not provided', $correctionRequest->suggested_value);
+
+        $this->actingAs($admin)
+            ->post(route('admin.community-contributions.correction-requests.start-review', $correctionRequest))
+            ->assertSessionHasNoErrors();
+
+        $this->actingAs($admin)
+            ->post(route('admin.community-contributions.correction-requests.moderate', $correctionRequest->fresh()), [
+                'moderation_action' => 'approve',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $shop->refresh();
+
+        $this->assertSame('Tan Ah Kau', $shop->founder_name);
+        $this->assertNull($shop->founder_background);
+        $this->assertDatabaseMissing('heritage_shops', [
+            'id' => $shop->id,
+            'founder_background' => 'Not provided',
+        ]);
+    }
+
+    public function test_current_owner_operator_correction_supports_partial_details_update(): void
+    {
+        Notification::fake();
+
+        $user = User::factory()->create();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $shop = HeritageShop::create([
+            'shop_name' => 'Capital Cafe',
+            'current_owner_name' => 'Hameediyah family successors',
+            'current_owner_details' => 'The restaurant is still operated by later generations.',
+            'publish_status' => HeritageShop::STATUS_PUBLISHED,
+        ]);
+
+        $content = $this->actingAs($user)
+            ->withSession(['_old_input' => ['field_name' => 'current_owner_information']])
+            ->get(route('heritage-shops.correction-requests.create', $shop))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('Current Owner / Operator Information', $content);
+        $this->assertStringContainsString('Owner / Operator Name', $content);
+        $this->assertStringContainsString('Hameediyah family successors', $content);
+        $this->assertStringNotContainsString('Correct current owner name', $content);
+
+        $this->actingAs($user)
+            ->post(route('heritage-shops.correction-requests.store', $shop), [
+                'field_name' => 'current_owner_information',
+                'suggested_fields' => [
+                    'current_owner_details' => 'The restaurant is still operated by the Hameediyah family successors.',
+                ],
+                'reason' => 'The operator details need a clearer source-backed description.',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $correctionRequest = CorrectionRequest::firstOrFail();
+        $this->assertStringContainsString('Owner / Operator details', $correctionRequest->current_value);
+        $this->assertStringContainsString('Owner / Operator details: The restaurant is still operated by the Hameediyah family successors.', $correctionRequest->suggestedValueDisplay());
+
+        $this->actingAs($admin)
+            ->post(route('admin.community-contributions.correction-requests.start-review', $correctionRequest))
+            ->assertSessionHasNoErrors();
+
+        $this->actingAs($admin)
+            ->post(route('admin.community-contributions.correction-requests.moderate', $correctionRequest->fresh()), [
+                'moderation_action' => 'approve',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $shop->refresh();
+
+        $this->assertSame('Hameediyah family successors', $shop->current_owner_name);
+        $this->assertSame('The restaurant is still operated by the Hameediyah family successors.', $shop->current_owner_details);
+    }
+
+    public function test_missing_founder_and_owner_values_render_as_not_provided(): void
+    {
+        $user = User::factory()->create();
+        $shop = HeritageShop::create([
+            'shop_name' => 'Capital Cafe',
+            'founder_name' => null,
+            'founder_background' => null,
+            'current_owner_name' => null,
+            'current_owner_details' => null,
+            'publish_status' => HeritageShop::STATUS_PUBLISHED,
+        ]);
+
+        $founderContent = $this->actingAs($user)
+            ->withSession(['_old_input' => ['field_name' => 'founder_information']])
+            ->get(route('heritage-shops.correction-requests.create', $shop))
+            ->assertOk()
+            ->getContent();
+
+        $ownerContent = $this->actingAs($user)
+            ->withSession(['_old_input' => ['field_name' => 'current_owner_information']])
+            ->get(route('heritage-shops.correction-requests.create', $shop))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertGreaterThanOrEqual(2, substr_count($founderContent, 'Not provided'));
+        $this->assertGreaterThanOrEqual(2, substr_count($ownerContent, 'Not provided'));
+    }
+
+    public function test_primary_category_correction_accepts_free_text_and_waits_for_moderation(): void
+    {
+        Notification::fake();
+
+        $user = User::factory()->create();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $shop = HeritageShop::create([
+            'shop_name' => 'Capital Cafe',
+            'primary_food_category' => 'Hainanese cuisine',
+            'publish_status' => HeritageShop::STATUS_PUBLISHED,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('heritage-shops.correction-requests.create', $shop))
+            ->assertOk()
+            ->assertSee('Hainanese cuisine')
+            ->assertSee('Correct primary food category');
+
+        $this->actingAs($user)
+            ->post(route('heritage-shops.correction-requests.store', $shop), [
+                'field_name' => 'primary_food_category',
+                'suggested_value' => 'Hakka cuisine',
+                'reason' => 'The shop now describes itself as Hakka cuisine.',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('Hainanese cuisine', $shop->fresh()->primary_food_category);
+
+        $correctionRequest = CorrectionRequest::firstOrFail();
+        $this->actingAs($admin)
+            ->post(route('admin.community-contributions.correction-requests.start-review', $correctionRequest))
+            ->assertSessionHasNoErrors();
+
+        $this->actingAs($admin)
+            ->post(route('admin.community-contributions.correction-requests.moderate', $correctionRequest->fresh()), [
+                'moderation_action' => 'approve',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('Hakka cuisine', $shop->fresh()->primary_food_category);
+    }
+
+    public function test_structured_operating_hours_correction_can_be_submitted_without_unrelated_fields(): void
+    {
+        $user = User::factory()->create();
+        $shop = HeritageShop::create([
+            'shop_name' => 'Capital Cafe',
+            'founder_name' => 'Tan Ah Kow',
+            'operating_hours' => [
+                ['day' => 'Monday', 'open' => '08:00', 'close' => '17:00', 'closed' => false],
+            ],
+            'publish_status' => HeritageShop::STATUS_PUBLISHED,
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('heritage-shops.correction-requests.store', $shop), [
+                'field_name' => 'operating_hours',
+                'operating_hours_correction' => [
+                    'Monday' => [
+                        'closed' => '0',
+                        'periods' => [
+                            ['open' => '08:00', 'close' => '18:00'],
+                        ],
+                    ],
+                ],
+                'reason' => 'The shop now closes one hour later on Monday.',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $correctionRequest = CorrectionRequest::firstOrFail();
+
+        $this->assertSame(CorrectionRequest::STATUS_PENDING, $correctionRequest->status);
+        $this->assertStringContainsString('"day":"Monday"', $correctionRequest->suggested_value);
+        $this->assertStringContainsString('"close":"18:00"', $correctionRequest->suggested_value);
+        $this->assertSame('08:00', $shop->fresh()->operating_hours[0]['open']);
+        $this->assertSame('17:00', $shop->fresh()->operating_hours[0]['close']);
+    }
+
+    public function test_operating_hours_correction_accepts_closed_days(): void
+    {
+        $user = User::factory()->create();
+        $shop = HeritageShop::create([
+            'shop_name' => 'Capital Cafe',
+            'operating_hours' => [
+                ['day' => 'Wednesday', 'open' => '08:00', 'close' => '17:00', 'closed' => false],
+            ],
+            'publish_status' => HeritageShop::STATUS_PUBLISHED,
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('heritage-shops.correction-requests.store', $shop), [
+                'field_name' => 'operating_hours',
+                'operating_hours_correction' => [
+                    'Wednesday' => [
+                        'closed' => '1',
+                        'periods' => [
+                            ['open' => '', 'close' => ''],
+                        ],
+                    ],
+                ],
+                'reason' => 'The shop is now closed on Wednesdays.',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $correctionRequest = CorrectionRequest::firstOrFail();
+
+        $this->assertSame("Wednesday: Closed", $correctionRequest->suggestedValueDisplay());
+        $this->assertSame([
+            ['day' => 'Wednesday', 'open' => null, 'close' => null, 'closed' => true],
+        ], $correctionRequest->heritageShopUpdatePayload()['operating_hours']);
+    }
+
+    public function test_invalid_operating_hours_correction_time_data_is_rejected(): void
+    {
+        $user = User::factory()->create();
+        $shop = HeritageShop::create([
+            'shop_name' => 'Capital Cafe',
+            'publish_status' => HeritageShop::STATUS_PUBLISHED,
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('heritage-shops.correction-requests.store', $shop), [
+                'field_name' => 'operating_hours',
+                'operating_hours_correction' => [
+                    'Monday' => [
+                        'closed' => '0',
+                        'periods' => [
+                            ['open' => 'not-a-time', 'close' => '18:00'],
+                        ],
+                    ],
+                ],
+                'reason' => 'The hours changed.',
+            ])
+            ->assertSessionHasErrors('operating_hours_correction.Monday.periods.0.open');
+
+        $this->actingAs($user)
+            ->post(route('heritage-shops.correction-requests.store', $shop), [
+                'field_name' => 'operating_hours',
+                'operating_hours_correction' => [
+                    'Funday' => [
+                        'closed' => '0',
+                        'periods' => [
+                            ['open' => '08:00', 'close' => '18:00'],
+                        ],
+                    ],
+                ],
+                'reason' => 'The hours changed.',
+            ])
+            ->assertSessionHasErrors('operating_hours_correction.Funday');
+
+        $this->actingAs($user)
+            ->post(route('heritage-shops.correction-requests.store', $shop), [
+                'field_name' => 'operating_hours',
+                'operating_hours_correction' => [
+                    'Monday' => [
+                        'closed' => '0',
+                        'periods' => [
+                            ['open' => '08:00', 'close' => '08:00'],
+                        ],
+                    ],
+                ],
+                'reason' => 'The hours changed.',
+            ])
+            ->assertSessionHasErrors('operating_hours_correction.Monday.periods.0.close');
+
+        $this->assertDatabaseCount('correction_requests', 0);
+    }
+
+    public function test_multi_period_operating_hours_are_prefilled_in_the_correction_editor(): void
+    {
+        $user = User::factory()->create();
+        $shop = HeritageShop::create([
+            'shop_name' => 'Capital Cafe',
+            'operating_hours' => [
+                ['day' => 'Thursday', 'open' => '11:30', 'close' => '14:30', 'closed' => false],
+                ['day' => 'Thursday', 'open' => '17:30', 'close' => '22:30', 'closed' => false],
+                ['day' => 'Friday', 'open' => null, 'close' => null, 'closed' => true],
+            ],
+            'publish_status' => HeritageShop::STATUS_PUBLISHED,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('heritage-shops.correction-requests.create', $shop))
+            ->assertOk()
+            ->assertSee('Current Operating Hours')
+            ->assertSee('Thursday: 11:30 AM - 02:30 PM')
+            ->assertSee('Thursday: 05:30 PM - 10:30 PM')
+            ->assertSee('Friday: Closed')
+            ->assertSee('name="operating_hours_correction[Thursday][periods][0][open]" type="time" value="11:30"', false)
+            ->assertSee('name="operating_hours_correction[Thursday][periods][1][open]" type="time" value="17:30"', false)
+            ->assertSee('name="operating_hours_correction[Thursday][periods][1][close]" type="time" value="22:30"', false);
+    }
+
+    public function test_approved_operating_hours_correction_updates_published_shop_canonical_rows(): void
+    {
+        Notification::fake();
+
+        $user = User::factory()->create();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $shop = HeritageShop::create([
+            'shop_name' => 'Capital Cafe',
+            'operating_hours' => [
+                ['day' => 'Thursday', 'open' => '11:30', 'close' => '14:30', 'closed' => false],
+                ['day' => 'Thursday', 'open' => '17:30', 'close' => '22:30', 'closed' => false],
+            ],
+            'publish_status' => HeritageShop::STATUS_PUBLISHED,
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('heritage-shops.correction-requests.store', $shop), [
+                'field_name' => 'operating_hours',
+                'operating_hours_correction' => [
+                    'Thursday' => [
+                        'closed' => '0',
+                        'periods' => [
+                            ['open' => '11:30', 'close' => '14:30'],
+                            ['open' => '18:00', 'close' => '22:30'],
+                        ],
+                    ],
+                    'Sunday' => [
+                        'closed' => '1',
+                    ],
+                ],
+                'reason' => 'The evening session now starts later, and Sunday is closed.',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('17:30', $shop->fresh()->operating_hours[1]['open']);
+
+        $correctionRequest = CorrectionRequest::firstOrFail();
+        $this->actingAs($admin)
+            ->post(route('admin.community-contributions.correction-requests.start-review', $correctionRequest))
+            ->assertSessionHasNoErrors();
+
+        $this->actingAs($admin)
+            ->post(route('admin.community-contributions.correction-requests.moderate', $correctionRequest->fresh()), [
+                'moderation_action' => 'approve',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame([
+            ['day' => 'Thursday', 'open' => '11:30', 'close' => '14:30', 'closed' => false],
+            ['day' => 'Thursday', 'open' => '18:00', 'close' => '22:30', 'closed' => false],
+            ['day' => 'Sunday', 'open' => null, 'close' => null, 'closed' => true],
+        ], $shop->fresh()->operating_hours);
+    }
+
+    public function test_community_contribution_primary_food_category_accepts_free_text(): void
+    {
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
+
+        $response = $this->actingAs($user)
+            ->get(route('community-contribution.create'))
+            ->assertOk()
+            ->assertSee('name="primary_food_category"', false)
+            ->assertSee('type="text"', false)
+            ->assertSee('Example: Hakka Cuisine');
+
+        $this->assertStringNotContainsString('<select id="primary_food_category"', $response->getContent());
+        $this->assertStringNotContainsString('Enter the primary food category', $response->getContent());
+        $this->assertStringNotContainsString('Example: Hakka Cuisine, Nyonya Cuisine, Traditional Malay Cuisine', $response->getContent());
+        $this->assertStringNotContainsString('<option value="Malay Cuisine">', $response->getContent());
+        $this->assertStringNotContainsString('<option value="Chinese Cuisine">', $response->getContent());
+        $this->assertStringNotContainsString('<option value="Indian Cuisine">', $response->getContent());
+        $this->assertStringNotContainsString('<option value="Traditional Kopitiam">', $response->getContent());
+
+        $this->assertStringNotContainsString('<option value="Main Dishes">', $response->getContent());
+        $this->assertStringNotContainsString('<option value="Desserts">', $response->getContent());
+        $this->assertStringNotContainsString('<option value="Drinks">', $response->getContent());
+
+        $this->actingAs($user)
+            ->post(route('community-contribution.store'), [
+                ...$this->validContributionData(),
+                'primary_food_category' => 'Hakka Cuisine',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $arbitraryCategory = 'Kelantanese Temple Street Breakfast';
+
+        $this->actingAs($otherUser)
+            ->post(route('community-contribution.store'), [
+                ...$this->validContributionData(),
+                'primary_food_category' => $arbitraryCategory,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('heritage_shop_contributions', [
+            'user_id' => $user->id,
+            'primary_food_category' => 'Hakka Cuisine',
+        ]);
+        $this->assertDatabaseHas('heritage_shop_contributions', [
+            'user_id' => $otherUser->id,
+            'primary_food_category' => $arbitraryCategory,
+        ]);
+    }
+
+    public function test_primary_food_category_free_text_is_preserved_when_editing_draft(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('community-contribution.store'), [
+                ...$this->validContributionData(),
+                'submission_action' => 'draft',
+                'primary_food_category' => 'Nyonya Cuisine',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $draft = HeritageShopContribution::firstOrFail();
+
+        $this->actingAs($user)
+            ->get(route('community-contribution.edit', $draft))
+            ->assertOk()
+            ->assertSee('name="primary_food_category"', false)
+            ->assertSee('value="Nyonya Cuisine"', false);
+    }
+
+    public function test_primary_food_category_free_text_survives_approval_synchronization(): void
+    {
+        Notification::fake();
+
+        $user = User::factory()->create();
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($user)
+            ->post(route('community-contribution.store'), [
+                ...$this->validContributionData(),
+                'primary_food_category' => 'Indian Muslim Cuisine',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $contribution = HeritageShopContribution::firstOrFail();
+
+        $this->actingAs($admin)
+            ->post(route('admin.community-contributions.start-review', $contribution))
+            ->assertSessionHasNoErrors();
+
+        $this->actingAs($admin)
+            ->post(route('admin.community-contributions.moderate', $contribution->fresh()), [
+                'moderation_action' => 'approve',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $shop = HeritageShop::where('source_contribution_id', $contribution->id)->firstOrFail();
+
+        $this->assertSame('Indian Muslim Cuisine', $shop->primary_food_category);
+    }
+
+    public function test_grouped_location_correction_maps_only_provided_parts_after_approval(): void
+    {
+        Notification::fake();
+
+        $user = User::factory()->create();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $shop = HeritageShop::create([
+            'shop_name' => 'Capital Cafe',
+            'address' => '3, Jalan Balai Polis',
+            'city' => 'Kuala Lumpur',
+            'state' => 'Kuala Lumpur',
+            'postal_code' => '50000',
+            'publish_status' => HeritageShop::STATUS_PUBLISHED,
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('heritage-shops.correction-requests.store', $shop), [
+                'field_name' => 'address_location',
+                'suggested_fields' => [
+                    'city' => 'Ipoh',
+                ],
+                'reason' => 'The city is listed incorrectly.',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('Kuala Lumpur', $shop->fresh()->city);
+
+        $correctionRequest = CorrectionRequest::firstOrFail();
+        $this->assertStringContainsString('City:', $correctionRequest->current_value);
+        $this->assertStringContainsString('Kuala Lumpur', $correctionRequest->current_value);
+        $this->assertStringContainsString('City: Ipoh', $correctionRequest->suggestedValueDisplay());
+
+        $this->actingAs($admin)
+            ->post(route('admin.community-contributions.correction-requests.start-review', $correctionRequest))
+            ->assertSessionHasNoErrors();
+
+        $this->actingAs($admin)
+            ->post(route('admin.community-contributions.correction-requests.moderate', $correctionRequest->fresh()), [
+                'moderation_action' => 'approve',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $shop->refresh();
+
+        $this->assertSame('3, Jalan Balai Polis', $shop->address);
+        $this->assertSame('Ipoh', $shop->city);
+        $this->assertSame('Kuala Lumpur', $shop->state);
+        $this->assertSame('50000', $shop->postal_code);
+    }
+
+    public function test_map_location_requests_are_rejected_for_new_submissions(): void
+    {
+        $user = User::factory()->create();
+        $shop = HeritageShop::create([
+            'shop_name' => 'Capital Cafe',
+            'address' => '3, Jalan Balai Polis',
+            'city' => 'Kuala Lumpur',
+            'state' => 'Kuala Lumpur',
+            'postal_code' => '50000',
+            'latitude' => 3.1412000,
+            'longitude' => 101.6938000,
+            'publish_status' => HeritageShop::STATUS_PUBLISHED,
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('heritage-shops.correction-requests.store', $shop), [
+                'field_name' => 'map_location',
+                'map_location' => [
+                    'search_query' => 'Central Market Kuala Lumpur',
+                    'latitude' => '3.1441000',
+                    'longitude' => '101.6956000',
+                ],
+                'reason' => 'The map marker is on the wrong street.',
+            ])
+            ->assertSessionHasErrors('field_name');
+
+        $this->assertDatabaseCount('correction_requests', 0);
+    }
+
+    public function test_map_location_text_only_payload_is_rejected_for_new_submissions(): void
+    {
+        $user = User::factory()->create();
+        $shop = HeritageShop::create([
+            'shop_name' => 'Capital Cafe',
+            'address' => '3, Jalan Balai Polis',
+            'city' => 'Kuala Lumpur',
+            'state' => 'Kuala Lumpur',
+            'postal_code' => '50000',
+            'latitude' => 3.1412000,
+            'longitude' => 101.6938000,
+            'publish_status' => HeritageShop::STATUS_PUBLISHED,
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('heritage-shops.correction-requests.store', $shop), [
+                'field_name' => 'map_location',
+                'map_location' => [
+                    'location_note' => 'The marker should be at the corner entrance near the market arch.',
+                ],
+                'reason' => 'The address is right, but the pin is misplaced.',
+            ])
+            ->assertSessionHasErrors('field_name');
+
+        $this->assertDatabaseCount('correction_requests', 0);
+    }
+
+    public function test_coordinate_and_food_item_fields_are_not_generic_user_corrections(): void
+    {
+        Notification::fake();
+
+        $user = User::factory()->create();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $shop = HeritageShop::create([
+            'shop_name' => 'Capital Cafe',
+            'food_items' => [['name' => 'Original chicken chop']],
+            'publish_status' => HeritageShop::STATUS_PUBLISHED,
+        ]);
+        $shop->foodItems()->create([
+            'name' => 'Original chicken chop',
+            'description' => 'Existing normalized item.',
+            'display_order' => 1,
+            'is_active' => true,
+        ]);
+
+        foreach (['latitude', 'longitude', 'food_items'] as $fieldName) {
+            $this->actingAs($user)
+                ->post(route('heritage-shops.correction-requests.store', $shop), [
+                    'field_name' => $fieldName,
+                    'suggested_value' => 'Replacement value',
+                    'reason' => 'Trying a raw field correction.',
+                ])
+                ->assertSessionHasErrors('field_name');
+        }
+
+        $this->assertDatabaseCount('correction_requests', 0);
+
+        $legacyFoodCorrection = CorrectionRequest::create([
+            'user_id' => $user->id,
+            'heritage_shop_id' => $shop->id,
+            'field_name' => 'food_items',
+            'current_value' => 'Original chicken chop',
+            'suggested_value' => 'New unsynced item',
+            'reason' => 'Legacy request from before the field list was tightened.',
+            'status' => CorrectionRequest::STATUS_UNDER_REVIEW,
+            'reviewed_by_user_id' => $admin->id,
+            'review_started_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.community-contributions.correction-requests.moderate', $legacyFoodCorrection), [
+                'moderation_action' => 'approve',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame([['name' => 'Original chicken chop']], $shop->fresh()->food_items);
+        $this->assertDatabaseHas('heritage_food_items', [
+            'heritage_shop_id' => $shop->id,
+            'name' => 'Original chicken chop',
+            'description' => 'Existing normalized item.',
+        ]);
+        $this->assertDatabaseMissing('heritage_food_items', [
+            'heritage_shop_id' => $shop->id,
+            'name' => 'New unsynced item',
         ]);
     }
 
@@ -2139,7 +3409,7 @@ class CommunityContributionTest extends TestCase
             'submission_action' => 'submit',
             'contribution_title' => 'Capital Café heritage contribution',
             'shop_name' => 'Capital Café',
-            'primary_food_category' => 'Hainanese cuisine',
+            'primary_food_category' => 'Malay Cuisine',
             'establishment_year' => 1956,
             'founder_name' => 'Founder Name',
             'founder_background' => 'The founder established the café after learning family recipes.',

@@ -213,8 +213,7 @@
                 </a>
                 @if ($communityContributionActive)
                     <div class="subnav" aria-label="Community Contribution functions">
-                        <a class="nav-item {{ request()->routeIs('admin.community-contributions.submissions') ? 'active' : '' }}" href="{{ route('admin.community-contributions.submissions') }}">Review Queue</a>
-                        <a class="nav-item {{ request()->routeIs('admin.community-contributions.show') ? 'active' : '' }}" href="{{ route('admin.community-contributions.submissions') }}">Review Submission</a>
+                        <a class="nav-item {{ request()->routeIs('admin.community-contributions.submissions') || request()->routeIs('admin.community-contributions.show') ? 'active' : '' }}" href="{{ route('admin.community-contributions.submissions') }}">Review Queue</a>
                         <a class="nav-item {{ request()->routeIs('admin.community-contributions.correction-requests*') ? 'active' : '' }}" href="{{ route('admin.community-contributions.correction-requests') }}">Correction Requests</a>
                         <a class="nav-item {{ request()->routeIs('admin.community-contributions.history') ? 'active' : '' }}" href="{{ route('admin.community-contributions.history') }}">Admin History</a>
                     </div>

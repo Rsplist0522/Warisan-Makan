@@ -98,7 +98,8 @@ class AdminPortalTest extends TestCase
             ->assertOk()
             ->assertSee('Community Contribution')
             ->assertSee('Review Queue')
-            ->assertSee('Review Submission')
+            ->assertDontSee('Review Submission')
+            ->assertSee('Correction Requests')
             ->assertSee('Admin History')
             ->assertSee('Heritage Registry')
             ->assertSee('soon');

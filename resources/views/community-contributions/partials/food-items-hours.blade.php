@@ -61,6 +61,18 @@
         line-height: 1.5;
     }
 
+    .cc-food-price {
+        display: inline-flex;
+        width: fit-content;
+        margin-top: 6px;
+        padding: 4px 8px;
+        border-radius: 999px;
+        color: #3f2a0d;
+        background: rgba(200, 148, 50, .2);
+        font-size: .78rem;
+        font-weight: 850;
+    }
+
     .cc-hours-list {
         display: grid;
         gap: 6px;
@@ -135,6 +147,9 @@
                         @endif
                         <div>
                             <strong>{{ $item['name'] ?: 'Unnamed item' }}</strong>
+                            @if (filled($item['price'] ?? null))
+                                <span class="cc-food-price">{{ $item['price'] }}</span>
+                            @endif
                             @if (filled($item['desc'] ?? null))
                                 <p>{{ $item['desc'] }}</p>
                             @endif

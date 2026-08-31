@@ -326,6 +326,8 @@ class HeritageShopContribution extends Model
             'publish_status' => HeritageShop::STATUS_PUBLISHED,
         ]);
 
+        $this->syncApprovedFoodItems($shop);
+
         $existingKeys = $shop->media()->pluck('r2_object_key')->all();
         $this->media()->get()->each(function (Media $media) use ($shop, $existingKeys): void {
             if (in_array($media->r2_object_key, $existingKeys, true)) {
@@ -346,5 +348,88 @@ class HeritageShopContribution extends Model
         });
 
         return $shop;
+    }
+
+    public static function normalizeFoodItemPrice(mixed $price): ?string
+    {
+        if ($price === null || $price === '') {
+            return null;
+        }
+
+        $price = trim((string) $price);
+
+        if ($price === '') {
+            return null;
+        }
+
+        if (preg_match('/\ARM\s*(\d+(?:\.\d+)?)\z/i', $price, $matches) === 1) {
+            $price = $matches[1];
+        }
+
+        if (! is_numeric($price) || (float) $price < 0) {
+            return null;
+        }
+
+        return 'RM '.number_format((float) $price, 2, '.', '');
+    }
+
+    public static function foodItemPriceInputValue(mixed $price): string
+    {
+        if ($price === null || $price === '') {
+            return '';
+        }
+
+        $price = trim((string) $price);
+
+        if (preg_match('/\ARM\s*(\d+(?:\.\d+)?)\z/i', $price, $matches) === 1) {
+            return number_format((float) $matches[1], 2, '.', '');
+        }
+
+        if (is_numeric($price)) {
+            return number_format((float) $price, 2, '.', '');
+        }
+
+        return $price;
+    }
+
+    private function syncApprovedFoodItems(HeritageShop $shop): void
+    {
+        $items = collect($this->food_items ?? [])
+            ->filter(fn ($item): bool => is_array($item) && filled($item['name'] ?? null))
+            ->values();
+        $existingItems = $shop->foodItems()->get()->values();
+
+        foreach ($items as $order => $item) {
+            $payload = [
+                'name' => trim((string) $item['name']),
+                'description' => filled($item['description'] ?? null)
+                    ? trim((string) $item['description'])
+                    : (filled($item['desc'] ?? null) ? trim((string) $item['desc']) : null),
+                'category' => null,
+                'heritage_significance' => null,
+                'availability' => null,
+                'price' => filled($item['price'] ?? null) ? trim((string) $item['price']) : null,
+                'image_path' => $this->publishedFoodItemImagePath($item['image_path'] ?? null),
+                'display_order' => $order + 1,
+                'is_active' => true,
+            ];
+
+            $existingItem = $existingItems->get($order);
+
+            if ($existingItem) {
+                $existingItem->update($payload);
+            } else {
+                $shop->foodItems()->create($payload);
+            }
+        }
+
+        $existingItems->slice($items->count())->each->delete();
+    }
+
+    private function publishedFoodItemImagePath(mixed $path): ?string
+    {
+        return $this->isValidFoodItemImagePath(is_string($path) ? $path : null)
+            ? trim((string) $path)
+            : null;
     }
 }

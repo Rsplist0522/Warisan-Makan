@@ -10,6 +10,7 @@ use App\Policies\HeritageShopContributionPolicy;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\URL;
 use RuntimeException;
 
 class AppServiceProvider extends ServiceProvider
@@ -27,6 +28,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        if ($this->app->environment('production')) {
+            URL::forceScheme('https');
+            }
+
         $this->guardTestingDatabase();
 
         Gate::policy(HeritageShopContribution::class, HeritageShopContributionPolicy::class);
@@ -37,8 +42,10 @@ class AppServiceProvider extends ServiceProvider
             'heritage_shop_contribution' => HeritageShopContribution::class,
             'user' => User::class,
         ]);
+
     }
 
+    
     private function guardTestingDatabase(): void
     {
         if (! $this->app->environment('testing')) {

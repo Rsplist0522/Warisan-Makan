@@ -1,6 +1,6 @@
 @extends('community-contributions.layout')
 
-@section('title', 'Report Incorrect Information')
+@section('title', __('Report Incorrect Information'))
 
 @php($structuredFields = \App\Models\CorrectionRequest::structuredFieldTargets())
 @php($selectedCorrectionField = old('field_name', ''))
@@ -13,45 +13,45 @@
 @php($displayCurrent = fn ($value): string => filled($value) ? (string) $value : __('Not provided'))
 @php($structuredCurrentValues = [
     'founder_information' => [
-        'Founder Name' => $heritageShop->founder_name,
-        'Founder Background' => $heritageShop->founder_background,
+        __('Founder Name') => $heritageShop->founder_name,
+        __('Founder Background') => $heritageShop->founder_background,
     ],
     'current_owner_information' => [
-        'Owner / Operator Name' => $heritageShop->current_owner_name,
-        'Owner / Operator Details' => $heritageShop->current_owner_details,
+        __('Owner / Operator Name') => $heritageShop->current_owner_name,
+        __('Owner / Operator Details') => $heritageShop->current_owner_details,
     ],
     'address_location' => [
-        'Street Address' => $heritageShop->address,
-        'City' => $heritageShop->city,
-        'State' => $heritageShop->state,
-        'Postal Code' => $heritageShop->postal_code,
+        __('Street Address') => $heritageShop->address,
+        __('City') => $heritageShop->city,
+        __('State') => $heritageShop->state,
+        __('Postal Code') => $heritageShop->postal_code,
     ],
 ])
 @php($structuredMeta = [
     'founder_information' => [
-        'current' => 'Current Founder Information',
-        'proposed' => 'Proposed Founder Correction',
-        'help' => 'Provide only the founder details you know should be corrected.',
+        'current' => __('Current Founder Information'),
+        'proposed' => __('Proposed Founder Correction'),
+        'help' => __('Provide only the founder details you know should be corrected.'),
     ],
     'current_owner_information' => [
-        'current' => 'Current Owner / Operator Information',
-        'proposed' => 'Proposed Owner / Operator Correction',
-        'help' => 'Provide only the owner/operator details you know should be corrected.',
+        'current' => __('Current Owner / Operator Information'),
+        'proposed' => __('Proposed Owner / Operator Correction'),
+        'help' => __('Provide only the owner/operator details you know should be corrected.'),
     ],
     'address_location' => [
-        'current' => 'Current Address Details',
-        'proposed' => 'Proposed Address Correction',
-        'help' => 'Provide only the address details you know should be corrected.',
+        'current' => __('Current Address Details'),
+        'proposed' => __('Proposed Address Correction'),
+        'help' => __('Provide only the address details you know should be corrected.'),
     ],
 ])
 @section('content')
-    <a class="button secondary small page-back" href="{{ route('heritage-shops.show', $heritageShop) }}">Back to shop profile</a>
+    <a class="button secondary small page-back" href="{{ route('heritage-shops.show', $heritageShop) }}">{{ __('Back to shop profile') }}</a>
 
     <header class="page-header">
         <div>
-            <p class="eyebrow">Correction request</p>
-            <h1>Report Incorrect Information</h1>
-            <p>{{ $heritageShop->shop_name }} will remain published while an administrator reviews your correction.</p>
+            <p class="eyebrow">{{ __('Correction request') }}</p>
+            <h1>{{ __('Report Incorrect Information') }}</h1>
+            <p>{{ __(':shop will remain published while an administrator reviews your correction.', ['shop' => $heritageShop->shop_name]) }}</p>
         </div>
     </header>
 
@@ -59,20 +59,20 @@
         @csrf
 
         <section class="form-section">
-            <h2 class="section-title">Shop being reported</h2>
+            <h2 class="section-title">{{ __('Shop being reported') }}</h2>
             <dl class="definition-grid">
-                <div><dt>Shop</dt><dd>{{ $heritageShop->shop_name }}</dd></div>
-                <div><dt>Address reference</dt><dd>{{ $heritageShop->location ?: 'Not provided' }}</dd></div>
+                <div><dt>{{ __('Shop') }}</dt><dd>{{ $heritageShop->shop_name }}</dd></div>
+                <div><dt>{{ __('Address reference') }}</dt><dd>{{ $heritageShop->location ?: __('Not provided') }}</dd></div>
             </dl>
         </section>
 
         <section class="form-section">
-            <h2 class="section-title">Correction details</h2>
+            <h2 class="section-title">{{ __('Correction details') }}</h2>
             <div class="field-grid">
                 <div class="field full">
-                    <label class="required" for="field_name">Incorrect field/information</label>
+                    <label class="required" for="field_name">{{ __('Incorrect field/information') }}</label>
                     <select id="field_name" name="field_name" required>
-                        <option value="">Choose a published shop field</option>
+                        <option value="">{{ __('Choose a published shop field') }}</option>
                         @foreach ($allowedFields as $field => $label)
                             <option value="{{ $field }}" @selected(old('field_name') === $field)>{{ $label }}</option>
                         @endforeach
@@ -81,16 +81,16 @@
                 <div class="field full correction-generic-fields" id="generic_correction_component" @if (! $isGenericCorrection) hidden @endif>
                     <div class="correction-comparison">
                         <section class="correction-panel">
-                            <h3 id="current_value_label">Current Information</h3>
+                            <h3 id="current_value_label">{{ __('Current Information') }}</h3>
                             <div class="current-display" id="current_value_display">{{ $isGenericCorrection ? ($currentValues[$selectedCorrectionField] ?? __('Not provided')) : '' }}</div>
-                            <p class="help-text">This is filled from the published Heritage Shop profile.</p>
+                            <p class="help-text">{{ __('This is filled from the published Heritage Shop profile.') }}</p>
                         </section>
                         <section class="correction-panel">
                             <div class="field">
-                                <label class="required" for="suggested_value_input" id="suggested_value_label">Suggested corrected information</label>
-                                <input id="suggested_value_input" name="suggested_value" value="{{ old('suggested_value') }}" @if (! $isGenericCorrection) disabled @endif placeholder="Choose a field first, then enter the corrected value">
-                                <textarea id="suggested_value_textarea" name="suggested_value" @if (! $isGenericCorrection) disabled @endif placeholder="Choose a field first, then enter the corrected value">{{ old('suggested_value') }}</textarea>
-                                <p class="help-text" id="suggested_value_help">Use the same kind of information shown in the current field.</p>
+                                <label class="required" for="suggested_value_input" id="suggested_value_label">{{ __('Suggested corrected information') }}</label>
+                                <input id="suggested_value_input" name="suggested_value" value="{{ old('suggested_value') }}" @if (! $isGenericCorrection) disabled @endif placeholder="{{ __('Choose a field first, then enter the corrected value') }}">
+                                <textarea id="suggested_value_textarea" name="suggested_value" @if (! $isGenericCorrection) disabled @endif placeholder="{{ __('Choose a field first, then enter the corrected value') }}">{{ old('suggested_value') }}</textarea>
+                                <p class="help-text" id="suggested_value_help">{{ __('Use the same kind of information shown in the current field.') }}</p>
                                 @error('suggested_value') <p class="field-error">{{ $message }}</p> @enderror
                             </div>
                         </section>
@@ -122,7 +122,7 @@
                                                     id="suggested_fields_{{ $target }}"
                                                     name="suggested_fields[{{ $target }}]"
                                                     @if (! $structuredGroupActive) disabled @endif
-                                                    placeholder="Leave blank if this part is already correct or unknown"
+                                                    placeholder="{{ __('Leave blank if this part is already correct or unknown') }}"
                                                 >{{ old("suggested_fields.{$target}") }}</textarea>
                                             @else
                                                 <input
@@ -130,7 +130,7 @@
                                                     name="suggested_fields[{{ $target }}]"
                                                     value="{{ old("suggested_fields.{$target}") }}"
                                                     @if (! $structuredGroupActive) disabled @endif
-                                                    placeholder="Leave blank if this part is already correct or unknown"
+                                                    placeholder="{{ __('Leave blank if this part is already correct or unknown') }}"
                                                 >
                                             @endif
                                             @error("suggested_fields.{$target}") <p class="field-error">{{ $message }}</p> @enderror
@@ -147,11 +147,11 @@
                 <div class="field full correction-operating-hours" id="operating_hours_component" @if (! $isOperatingHoursCorrection) hidden @endif>
                     <div class="correction-comparison">
                         <section class="correction-panel">
-                            <h3>Current Operating Hours</h3>
+                            <h3>{{ __('Current Operating Hours') }}</h3>
                             <div class="current-display">{{ $currentValues['operating_hours'] ?? __('Not provided') }}</div>
                         </section>
                         <section class="correction-panel">
-                            <h3>Correct Operating Hours</h3>
+                            <h3>{{ __('Correct Operating Hours') }}</h3>
                             <div class="hours-editor" data-hours-editor>
                                 @foreach (\App\Models\CorrectionRequest::OPERATING_HOUR_DAYS as $day)
                                     @php($schedule = is_array($operatingHourEditor[$day] ?? null) ? $operatingHourEditor[$day] : ['closed' => false, 'periods' => []])
@@ -159,11 +159,11 @@
                                     @php($periods = collect($schedule['periods'] ?? [])->filter(fn ($period) => is_array($period))->values()->all())
                                     <section class="hours-day-row" data-hours-day="{{ $day }}">
                                         <div class="hours-day-cell">
-                                            <strong>{{ $day }}</strong>
+                                            <strong>{{ __($day) }}</strong>
                                             <label class="hours-closed-toggle">
                                                 <input type="hidden" name="operating_hours_correction[{{ $day }}][closed]" value="0" @if (! $isOperatingHoursCorrection) disabled @endif>
                                                 <input class="checkbox-input operating-correction-closed" name="operating_hours_correction[{{ $day }}][closed]" value="1" type="checkbox" @checked($closed) @if (! $isOperatingHoursCorrection) disabled @endif>
-                                                Closed
+                                                {{ __('Closed') }}
                                             </label>
                                         </div>
                                         <div class="hours-period-cell">
@@ -171,20 +171,20 @@
                                                 @foreach ($periods as $index => $period)
                                                     <div class="hours-period-row" data-hours-period>
                                                         <label>
-                                                            <span>Open</span>
+                                                            <span>{{ __('Open') }}</span>
                                                             <input name="operating_hours_correction[{{ $day }}][periods][{{ $index }}][open]" type="time" value="{{ $period['open'] ?? '' }}" @if (! $isOperatingHoursCorrection || $closed) disabled @endif>
                                                         </label>
                                                         <label>
-                                                            <span>Close</span>
+                                                            <span>{{ __('Close') }}</span>
                                                             <input name="operating_hours_correction[{{ $day }}][periods][{{ $index }}][close]" type="time" value="{{ $period['close'] ?? '' }}" @if (! $isOperatingHoursCorrection || $closed) disabled @endif>
                                                         </label>
                                                         @if ($index > 0)
-                                                            <button class="mini-button remove-hours-period" type="button" @if (! $isOperatingHoursCorrection || $closed) disabled @endif>Remove</button>
+                                                            <button class="mini-button remove-hours-period" type="button" @if (! $isOperatingHoursCorrection || $closed) disabled @endif>{{ __('Remove') }}</button>
                                                         @endif
                                                     </div>
                                                 @endforeach
                                             </div>
-                                            <button class="link-button add-hours-period" type="button" @if (! $isOperatingHoursCorrection || $closed) disabled @endif>+ Add another time period</button>
+                                            <button class="link-button add-hours-period" type="button" @if (! $isOperatingHoursCorrection || $closed) disabled @endif>+ {{ __('Add another time period') }}</button>
                                         </div>
                                     </section>
                                 @endforeach
@@ -194,24 +194,24 @@
                     </div>
                 </div>
                 <div class="field full" id="reason_field" @if (! $hasSelectedCorrectionField) hidden @endif>
-                    <label class="required" for="reason" id="reason_label">Reason for correction</label>
-                    <textarea id="reason" name="reason" @if ($hasSelectedCorrectionField) required @else disabled @endif placeholder="Explain how you know this information should be corrected">{{ old('reason') }}</textarea>
+                    <label class="required" for="reason" id="reason_label">{{ __('Reason for correction') }}</label>
+                    <textarea id="reason" name="reason" @if ($hasSelectedCorrectionField) required @else disabled @endif placeholder="{{ __('Explain how you know this information should be corrected') }}">{{ old('reason') }}</textarea>
                 </div>
             </div>
         </section>
 
         <section class="form-section">
-            <h2 class="section-title">Supporting evidence</h2>
+            <h2 class="section-title">{{ __('Supporting evidence') }}</h2>
             <div class="field">
-                <label for="evidence">Evidence files</label>
+                <label for="evidence">{{ __('Evidence files') }}</label>
                 <input id="evidence" type="file" name="evidence[]" multiple accept=".jpg,.jpeg,.png,.webp,.mp4,.mov,.avi">
-                <p class="help-text">Upload up to 6 image or document files. Each file may be up to 10 MB.</p>
+                <p class="help-text">{{ __('Upload up to 6 image or document files. Each file may be up to 10 MB.') }}</p>
             </div>
         </section>
 
         <div class="actions">
-            <button class="button primary" type="submit">Submit correction request</button>
-            <a class="button secondary" href="{{ route('community-contribution.correction-requests') }}">My correction requests</a>
+            <button class="button primary" type="submit">{{ __('Submit correction request') }}</button>
+            <a class="button secondary" href="{{ route('community-contribution.correction-requests') }}">{{ __('My correction requests') }}</a>
         </div>
     </form>
 @endsection
@@ -402,28 +402,28 @@
             const currentValues = @json($currentValues);
             const narrativeFields = new Set(['heritage_story']);
             const hints = {
-                shop_name: ['Correct shop name', 'Enter the exact published name of the shop.'],
-                primary_food_category: ['Correct primary food category', 'Example: Hakka cuisine, Nyonya cuisine, traditional noodles.'],
-                establishment_year: ['Correct establishment year', 'Use a 4-digit year, for example 1956.'],
-                founder_information: ['Correct founder information', 'Provide only the founder details you know should be corrected.'],
-                current_owner_information: ['Correct owner / operator information', 'Provide only the owner/operator details you know should be corrected.'],
-                heritage_story: ['Correct heritage story', 'Provide the corrected story text.'],
-                operating_hours: ['Correct operating hours', 'Enter the corrected opening days and times.'],
-                contact_number: ['Correct contact number', 'Enter the updated phone number.'],
-                address_location: ['Correct address details', 'Provide only the address details you know should be corrected.'],
+                shop_name: [@json(__('Correct shop name')), @json(__('Enter the exact published name of the shop.'))],
+                primary_food_category: [@json(__('Correct primary food category')), @json(__('Example: Hakka cuisine, Nyonya cuisine, traditional noodles.'))],
+                establishment_year: [@json(__('Correct establishment year')), @json(__('Use a 4-digit year, for example 1956.'))],
+                founder_information: [@json(__('Correct founder information')), @json(__('Provide only the founder details you know should be corrected.'))],
+                current_owner_information: [@json(__('Correct owner / operator information')), @json(__('Provide only the owner/operator details you know should be corrected.'))],
+                heritage_story: [@json(__('Correct heritage story')), @json(__('Provide the corrected story text.'))],
+                operating_hours: [@json(__('Correct operating hours')), @json(__('Enter the corrected opening days and times.'))],
+                contact_number: [@json(__('Correct contact number')), @json(__('Enter the updated phone number.'))],
+                address_location: [@json(__('Correct address details')), @json(__('Provide only the address details you know should be corrected.'))],
             };
             const currentTitles = {
-                shop_name: 'Current Shop Name',
-                primary_food_category: 'Current Primary Food Category',
-                establishment_year: 'Current Establishment Year',
-                heritage_story: 'Current Information',
-                contact_number: 'Current Contact Number',
+                shop_name: @json(__('Current Shop Name')),
+                primary_food_category: @json(__('Current Primary Food Category')),
+                establishment_year: @json(__('Current Establishment Year')),
+                heritage_story: @json(__('Current Information')),
+                contact_number: @json(__('Current Contact Number')),
             };
             const reasonPlaceholders = {
-                founder_information: 'Explain why the published founder information should be changed.',
-                current_owner_information: 'Explain why the published owner/operator information should be changed.',
-                address_location: 'Explain why the published address details should be changed.',
-                operating_hours: 'Explain why the published operating hours should be changed.',
+                founder_information: @json(__('Explain why the published founder information should be changed.')),
+                current_owner_information: @json(__('Explain why the published owner/operator information should be changed.')),
+                address_location: @json(__('Explain why the published address details should be changed.')),
+                operating_hours: @json(__('Explain why the published operating hours should be changed.')),
             };
 
             const setControlsDisabled = (element, disabled) => {
@@ -445,15 +445,15 @@
             const updateFieldContext = () => {
                 const field = fieldSelect.value;
                 const hasField = field !== '';
-                const label = fields[field] || 'information';
-                const hint = hints[field] || [`Correct ${label.toLowerCase()}`, 'Use the same kind of information shown in the current field.'];
+                const label = fields[field] || @json(__('information'));
+                const hint = hints[field] || [@json(__('Correct :field')).replace(':field', label.toLowerCase()), @json(__('Use the same kind of information shown in the current field.'))];
                 const isStructured = Object.prototype.hasOwnProperty.call(structuredFields, field);
                 const isOperatingHours = field === 'operating_hours';
                 const isGeneric = hasField && ! isStructured && ! isOperatingHours;
 
                 genericComponent.hidden = ! isGeneric;
-                currentValue.textContent = isGeneric ? (currentValues[field] || 'Not provided') : '';
-                currentValueLabel.textContent = currentTitles[field] || 'Current Information';
+                currentValue.textContent = isGeneric ? (currentValues[field] || @json(__('Not provided'))) : '';
+                currentValueLabel.textContent = currentTitles[field] || @json(__('Current Information'));
                 suggestedLabel.textContent = hint[0];
                 suggestedInput.placeholder = hint[1];
                 suggestedTextarea.placeholder = hint[1];
@@ -471,8 +471,8 @@
                 reason.required = hasField;
                 reason.disabled = ! hasField;
                 reason.placeholder = reasonPlaceholders[field] || (field
-                    ? `Explain why the published ${label.toLowerCase()} should be changed.`
-                    : 'Explain how you know this information should be corrected');
+                    ? @json(__('Explain why the published :field should be changed.')).replace(':field', label.toLowerCase())
+                    : @json(__('Explain how you know this information should be corrected')));
             };
 
             const reindexDay = (card) => {
@@ -494,7 +494,7 @@
                     const button = document.createElement('button');
                     button.className = 'mini-button remove-hours-period';
                     button.type = 'button';
-                    button.textContent = 'Remove';
+                    button.textContent = @json(__('Remove'));
                     row.appendChild(button);
                 });
             };
@@ -524,11 +524,11 @@
                 row.dataset.hoursPeriod = '';
                 row.innerHTML = `
                     <label>
-                        <span>Open</span>
+                        <span>${@json(__('Open'))}</span>
                         <input type="time" value="">
                     </label>
                     <label>
-                        <span>Close</span>
+                        <span>${@json(__('Close'))}</span>
                         <input type="time" value="">
                     </label>
                 `;

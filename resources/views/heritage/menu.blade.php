@@ -39,7 +39,6 @@
         main { width:min(1180px,100%); margin:0 auto; padding:32px clamp(16px,4vw,34px) 56px; }
         .back-link { display:inline-flex; margin-bottom:16px; color:var(--accent); font-size:.84rem; font-weight:850; text-decoration:none; }
         .hero { position:relative; overflow:hidden; display:grid; grid-template-columns:minmax(0,1.6fr) minmax(230px,.8fr); gap:22px; align-items:end; margin-bottom:20px; padding:30px; border-radius:18px; color:#fffaf4; background:linear-gradient(125deg,#96352c,#54201b); box-shadow:0 20px 50px rgba(91,29,29,.18); }
-        .hero::after { content:'✦'; position:absolute; right:28px; top:6px; color:rgba(255,255,255,.12); font-size:9rem; line-height:1; pointer-events:none; }
         .hero > * { position:relative; z-index:1; }
         .eyebrow { margin:0 0 8px; color:#e7bf74; font-size:.72rem; font-weight:900; letter-spacing:.13em; text-transform:uppercase; }
         .hero h1 { margin:0 0 9px; font-size:clamp(2rem,5vw,3.4rem); line-height:1; }

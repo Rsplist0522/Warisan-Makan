@@ -109,9 +109,9 @@
             margin-bottom: 18px;
             padding: 16px 18px;
             border-radius: 14px;
-            background: rgba(178, 47, 31, .08);
-            color: #8a2417;
-            border: 1px solid rgba(178, 47, 31, .18);
+            background: rgba(22, 163, 74, .10);
+            color: #166534;
+            border: 1px solid rgba(22, 163, 74, .25);
         }
 
         .status-alert strong {
@@ -321,6 +321,54 @@
             .form-fields { grid-template-columns: 1fr; }
             .photo-row { flex-wrap: wrap; }
         }
+
+        /* ---- Profile completion ---- */
+
+.completion-card {
+    margin-bottom: 20px;
+    padding: 20px 22px;
+    border-radius: 20px;
+    background: var(--wm-panel);
+    border: 1px solid var(--wm-border);
+    box-shadow: 0 10px 24px rgba(113, 80, 53, .06);
+}
+
+.completion-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.completion-header h2 {
+    margin: 0;
+    color: #7d4634;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 1.2rem;
+}
+
+.completion-percentage {
+    color: var(--wm-accent);
+    font-size: 1.2rem;
+}
+
+.completion-progress {
+    width: 100%;
+    height: 10px;
+    margin-top: 14px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #eadccd;
+}
+
+.completion-progress span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--wm-gold), var(--wm-accent));
+    transition: width .3s ease;
+}
+
     </style>
 @endpush
 
@@ -347,6 +395,48 @@
                 </ul>
             </div>
         @endif
+
+        @php
+    $completionItems = [
+        $user->name,
+        $user->phone,
+        $user->city,
+        $user->bio,
+        $user->profile_photo,
+    ];
+
+    $completedItems = collect($completionItems)
+        ->filter(fn ($value) => filled($value))
+        ->count();
+
+    $profileCompletion = (int) round(
+        ($completedItems / count($completionItems)) * 100
+    );
+@endphp
+
+<section class="completion-card" aria-labelledby="profile-completion-title">
+    <div class="completion-header">
+        <h2 id="profile-completion-title">
+            {{ __('Profile completion') }}
+        </h2>
+
+        <strong class="completion-percentage">
+            {{ $profileCompletion }}%
+        </strong>
+    </div>
+
+    <div
+        class="completion-progress"
+        role="progressbar"
+        aria-valuenow="{{ $profileCompletion }}"
+        aria-valuemin="0"
+        aria-valuemax="100"
+        aria-label="{{ __('Profile completion percentage') }}"
+    >
+        <span style="width: {{ $profileCompletion }}%"></span>
+    </div>
+</section>
+
 
         <form class="form-card" method="POST" action="{{ route('profile.update') }}" enctype="multipart/form-data">
             @csrf
@@ -383,7 +473,20 @@
 
                 <div class="field">
                     <label for="phone">{{ __('Phone') }}</label>
-                    <input id="phone" name="phone" type="text" value="{{ old('phone', $user->phone) }}">
+                        <input
+                            id="phone"
+                            name="phone"
+                            type="tel"
+                            value="{{ old('phone', $user->phone) }}"
+                            inputmode="numeric"
+                            pattern="[0-9]{1,11}"
+                            maxlength="11"
+                            title="{{ __('Phone number must contain only digits and be no more than 11 digits.') }}"
+                            autocomplete="tel"
+                        >
+                        @error('phone')
+                        <small class="field-error">{{ $message}}</small>
+                        @enderror
                 </div>
 
                 <div class="field">

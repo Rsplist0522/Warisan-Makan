@@ -83,8 +83,9 @@ class AdminPortalTest extends TestCase
         $this->get(route('admin.dashboard'))
             ->assertOk()
             ->assertSee('Community Contribution')
-            ->assertSee('Heritage Registry')
-            ->assertSee('Coming soon')
+            ->assertSee('Food Passport')
+            ->assertSee('Food Trails')
+            ->assertDontSee('Coming soon')
             ->assertDontSee('Review Queue')
             ->assertSee(route('admin.community-contributions.submissions'), false);
     }
@@ -101,20 +102,19 @@ class AdminPortalTest extends TestCase
             ->assertDontSee('Review Submission')
             ->assertSee('Correction Requests')
             ->assertSee('Admin History')
-            ->assertSee('Heritage Registry')
-            ->assertSee('soon');
+            ->assertSee('Food Passport')
+            ->assertDontSee('Coming soon');
     }
 
-    public function test_placeholder_modules_show_a_coming_soon_state(): void
+    public function test_admin_can_open_the_food_passport_badge_manager(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
 
         $this->actingAs($admin)
-            ->get(route('admin.modules.show', 'food-map'))
+            ->get(route('admin.badges.index'))
             ->assertOk()
-            ->assertSee('Food Map')
-            ->assertSee('Coming soon')
-            ->assertSee('planned map and discovery module');
+            ->assertSee('Food Passport')
+            ->assertSee('Achievement badges');
     }
 
     public function test_admin_dashboard_lists_user_management_module(): void

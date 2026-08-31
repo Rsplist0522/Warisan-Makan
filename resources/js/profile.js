@@ -13,6 +13,11 @@ const initProfilePhoto = () => {
     const message = document.getElementById('cameraMessage');
     const capturePhoto = document.getElementById('capturePhoto');
     const closeCamera = document.getElementById('closeCamera');
+    const phoneInput = document.getElementById('phone');
+
+    phoneInput?.addEventListener('input', function () {
+        this.value = this.value.replace(/[^0-9]/g, '').slice(0, 11);
+    });
 
     if (!input || !preview) return;
 

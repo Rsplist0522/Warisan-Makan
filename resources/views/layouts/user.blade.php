@@ -3,11 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    @include('partials.brand-favicon')
     @stack('head')
     <title>@yield('title', __('WarisanMakan')) - Warisan Makan</title>
     @fonts
     @stack('head-scripts')
     <style>
+        html { scrollbar-gutter: stable; }
+
         :root {
             color-scheme: light;
             --wm-bg: #f7f1ea;
@@ -43,7 +46,11 @@
                 linear-gradient(315deg, rgba(61, 111, 85, .07), transparent 38%),
                 var(--wm-bg);
             font-family: 'Instrument Sans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
         }
+
+        body::-webkit-scrollbar { display: none; }
 
         a { color: inherit; }
         button, input, textarea, select { font: inherit; }
@@ -67,7 +74,11 @@
             color: #fff5ec;
             background: linear-gradient(180deg, var(--wm-sidebar), #28100e);
             overflow-y: auto;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
         }
+
+        .user-sidebar::-webkit-scrollbar { display: none; }
 
         .user-brand {
             display: flex;
@@ -89,11 +100,13 @@
             display: grid;
             place-items: center;
             flex: 0 0 auto;
+            overflow: hidden;
+            border: 0;
             border-radius: 12px;
-            color: #3b1b16;
-            background: var(--wm-highlight);
-            font-family: Georgia, 'Times New Roman', serif;
+            background: transparent;
         }
+        .user-brand-mark img { width: 100%; height: 100%; display: block; object-fit: contain; object-position: center; transform: scale(1.28); }
+        .user-brand-placeholder { width: 100%; height: 100%; display: block; border-radius: 12px; background: rgba(200,148,50,.16); }
 
         .user-nav-label {
             margin: 27px 12px 10px;
@@ -108,6 +121,7 @@
         .user-nav-item {
             position: relative;
             display: flex;
+            width: 100%;
             min-width: 0;
             align-items: center;
             gap: 11px;
@@ -118,6 +132,12 @@
             font-weight: 700;
             text-decoration: none;
             white-space: nowrap;
+        }
+
+        .user-nav-text {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .user-nav-icon {
@@ -149,6 +169,10 @@
         .user-nav-parent.is-active { color: #fffaf4; background: rgba(255, 255, 255, .06); }
         .user-nav-parent.is-active .user-nav-icon { border-color: rgba(200, 148, 50, .32); background: rgba(200, 148, 50, .16); color: #e7bf74; }
         .user-nav-chevron {
+            display: grid;
+            width: 1rem;
+            flex: 0 0 1rem;
+            place-items: center;
             margin-left: auto;
             color: rgba(255, 245, 236, .46);
             font-size: .9rem;
@@ -532,7 +556,7 @@
             <header class="user-topbar">
                 <div class="user-topbar-inner">
                     <button class="user-nav-toggle" id="user-nav-toggle" type="button" aria-controls="user-sidebar" aria-expanded="true">
-                        <span aria-hidden="true">&#9776;</span><span id="user-nav-toggle-label">{{ __('Collapse') }}</span>
+                        <span aria-hidden="true">&#9776;</span><span id="user-nav-toggle-label">{{ __('Menu') }}</span>
                     </button>
                     <div>
                         <h2>@yield('user-topbar-title', __('WarisanMakan'))</h2>
@@ -596,7 +620,7 @@
                 shell.classList.toggle('nav-collapsed', collapsed);
                 toggle.setAttribute('aria-expanded', String(!collapsed));
                 toggle.setAttribute('aria-label', collapsed ? @json(__('Expand navigation')) : @json(__('Collapse navigation')));
-                label.textContent = collapsed ? @json(__('Expand')) : @json(__('Collapse'));
+                label.textContent = @json(__('Menu'));
             }
         };
         toggle.addEventListener('click', () => {
@@ -615,8 +639,37 @@
         window.addEventListener('resize', sync, { passive: true });
         sync();
     })();
+
+    (() => {
+        const hashLinks = document.querySelectorAll('.user-nav-item.user-nav-child[data-hash-target]');
+        if (!hashLinks.length) return;
+
+        const updateHashActiveState = () => {
+            const currentHash = window.location.hash.replace('#', '');
+            let matched = false;
+
+            hashLinks.forEach(link => {
+                const target = link.dataset.hashTarget;
+                const isActive = !currentHash && target === 'check-in'
+                    ? true
+                    : target === currentHash;
+
+                link.classList.toggle('active', isActive);
+                if (isActive) matched = true;
+            });
+
+            if (!matched && !currentHash) {
+                const defaultLink = document.querySelector('.user-nav-item.user-nav-child[data-hash-target="check-in"]');
+                defaultLink?.classList.add('active');
+            }
+        };
+
+        updateHashActiveState();
+        window.addEventListener('hashchange', updateHashActiveState, { passive: true });
+    })();
     </script>
 
+    @include('partials.chatbox')
     @stack('scripts')
 </body>
 </html>

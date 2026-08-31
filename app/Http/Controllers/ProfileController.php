@@ -76,7 +76,7 @@ class ProfileController extends Controller
         }
 
         return redirect()
-            ->route('profile.edit')
+            ->route('profile.show')
             ->with('success', __('Profile updated successfully.'));
     }
 }

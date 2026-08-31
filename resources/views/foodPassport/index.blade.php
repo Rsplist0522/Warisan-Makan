@@ -973,7 +973,7 @@
                 <div class="panel">
                     <div class="panel-inner">
                         <div class="section-header">
-                            <h2>{{ __('Available Shops') }}</h2>
+                            <h2>{{ __('Nearby heritage stop') }}</h2>
                             <span class="tag">{{ __('Live') }}</span>
                         </div>
 

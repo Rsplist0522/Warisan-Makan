@@ -38,14 +38,33 @@ return new class extends Migration
         //    rows before we add the unique constraint, keeping the oldest
         //    row (lowest id) in each group. Uses <=> for a NULL-safe
         //    comparison since user_id is nullable.
-        DB::statement('
-            DELETE t1 FROM blind_box_draws t1
-            INNER JOIN blind_box_draws t2
-                ON t1.user_id <=> t2.user_id
-               AND t1.period = t2.period
-               AND t1.period_date <=> t2.period_date
-               AND t1.id > t2.id
-        ');
+        if (DB::getDriverName() === 'sqlite') {
+            // SQLite does not support MySQL's multi-table DELETE syntax or
+            // its NULL-safe equality operator. Keep the oldest matching row
+            // with a correlated subquery instead.
+            DB::statement('
+                DELETE FROM blind_box_draws
+                WHERE EXISTS (
+                    SELECT 1
+                    FROM blind_box_draws AS older_draw
+                    WHERE (older_draw.user_id = blind_box_draws.user_id
+                           OR (older_draw.user_id IS NULL AND blind_box_draws.user_id IS NULL))
+                      AND older_draw.period = blind_box_draws.period
+                      AND (older_draw.period_date = blind_box_draws.period_date
+                           OR (older_draw.period_date IS NULL AND blind_box_draws.period_date IS NULL))
+                      AND older_draw.id < blind_box_draws.id
+                )
+            ');
+        } else {
+            DB::statement('
+                DELETE t1 FROM blind_box_draws t1
+                INNER JOIN blind_box_draws t2
+                    ON t1.user_id <=> t2.user_id
+                   AND t1.period = t2.period
+                   AND t1.period_date <=> t2.period_date
+                   AND t1.id > t2.id
+            ');
+        }
 
         // 5. Now safe to enforce the once-per-period rule at the DB level.
         Schema::table('blind_box_draws', function (Blueprint $table) {

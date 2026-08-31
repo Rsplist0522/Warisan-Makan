@@ -585,7 +585,7 @@
                                                                 data-login-required="true"
                                                             @endguest
                                                 >
-                                                    {{ __('Explore Menu') }}
+                                                    {{ __('Explore menu & stories') }}
                                                 </a>
                                             </div>
                                         </div>

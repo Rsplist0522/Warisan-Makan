@@ -41,6 +41,7 @@ class BlindBoxDraw extends Model
     {
         return [
             'period' => $this->period,
+            'name' => $this->shop_name,
             'shop_name' => $this->shop_name,
             'category' => $this->category,
             'state' => $this->state,

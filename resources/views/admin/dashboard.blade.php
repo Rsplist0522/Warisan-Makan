@@ -42,7 +42,7 @@
             <h3>Heritage Shops</h3>
             <p>Curate verified food businesses, preserve their stories, manage gallery media, and publish the dishes visitors come to discover.</p>
             <div class="module-stats"><span>{{ $heritageShopCount }} shops</span><span>{{ $heritagePublishedCount }} published</span><span>{{ $heritageFoodCount }} active foods</span></div>
-            <strong class="module-status">Open HeritageShop &rarr;</strong>
+            <strong class="module-status">Active HeritageShop records &rarr;</strong>
         </a>
         <a class="module-card" href="{{ route('admin.community-contributions.submissions') }}">
             <span class="module-icon" aria-hidden="true">@include('partials.module-icon', ['icon' => 'community'])</span>

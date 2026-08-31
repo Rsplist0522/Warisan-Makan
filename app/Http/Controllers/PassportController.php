@@ -252,11 +252,22 @@ class PassportController extends Controller
             ? PassportStamp::where('user_id', $user->id)->distinct('shop_id')->count('shop_id')
             : 0;
 
-        if ($records->isEmpty()) {
-            return [];
-        }
-
         $awardedBadgeIds = $user ? UserBadge::where('user_id', $user->id)->pluck('badge_id')->all() : [];
+
+        if ($records->isEmpty()) {
+            $earned = $visitedCount >= 1 || in_array(1, $awardedBadgeIds, true);
+
+            return [[
+                'id' => 1,
+                'name' => 'Heritage Starter',
+                'description' => 'Visit your first heritage food destination.',
+                'icon' => '★',
+                'threshold' => 1,
+                'earned' => $earned,
+                'eligible' => $visitedCount >= 1,
+                'progress' => min($visitedCount, 1) . '/1',
+            ]];
+        }
 
         $badgeList = $records->map(function ($badge) use ($visitedCount, $awardedBadgeIds) {
             $eligible = $visitedCount >= (int) $badge->criteria_value;

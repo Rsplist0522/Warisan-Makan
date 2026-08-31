@@ -32,22 +32,12 @@ class BlindBoxController extends Controller
         $period = $this->currentPeriod();
         $periodInfo = $this->periodInfo($period);
 
-        // Get removed shop IDs (cached)
-        $removedIds = Cache::remember('blind_box_removed_ids', 3600, function () {
-            $allShops = $this->heritageCatalog->all();
-            $removed = [];
-            foreach ($allShops as $shop) {
-                if ($this->blindBoxCatalog->isRemoved($shop)) {
-                    $removed[] = $shop['id'] ?? null;
-                }
-            }
-            return array_filter($removed);
-        });
-
-        // Get all active shops (non-removed)
+        // Get all active shops. Checking the current removal state directly
+        // avoids displaying a shop from a stale one-hour cache after an admin
+        // removes it from the Blind Box pool.
         $allCatalogShops = array_values(array_filter(
             $this->heritageCatalog->all(),
-            fn(array $shop): bool => !in_array($shop['id'] ?? null, $removedIds)
+            fn(array $shop): bool => ! $this->blindBoxCatalog->isRemoved($shop)
         ));
 
         // --- ENRICH IMAGE URLS (OPTIMISED) ---
@@ -73,15 +63,22 @@ class BlindBoxController extends Controller
             return $shop;
         }, $allCatalogShops);
 
-        // Select up to 6 random shops for the mystery preview
+        $activeFilters = [
+            'category' => trim((string) $request->query('category', '')),
+            'state' => trim((string) $request->query('state', '')),
+        ];
+
+        $allCatalogShops = array_values(array_filter(
+            $allCatalogShops,
+            fn (array $shop): bool => ($activeFilters['category'] === '' || ($shop['category'] ?? '') === $activeFilters['category'])
+                && ($activeFilters['state'] === '' || ($shop['state'] ?? '') === $activeFilters['state'])
+        ));
+
+        // The preview follows the same filters as the visible catalogue, so
+        // a filtered-out shop never leaks into the page through its carousel.
         $randomShops = $allCatalogShops;
         shuffle($randomShops);
         $mysteryShops = array_slice($randomShops, 0, 6);
-
-        // Only category filter is used
-        $activeFilters = [
-            'category' => trim((string) $request->query('category', '')),
-        ];
 
         // Paginate the active shops
         $perPage = 4;

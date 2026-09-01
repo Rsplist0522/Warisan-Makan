@@ -97,6 +97,8 @@ Route::middleware(['auth', 'active_user'])->group(function (): void {
         ->name('community-contribution.drafts.destroy');
     Route::post('/community-contributions/{contribution}/submit', [CommunityContributionController::class, 'submitDraft'])
         ->name('community-contribution.drafts.submit');
+    Route::post('/community-contributions/{contribution}/edit-resubmit', [CommunityContributionController::class, 'editResubmit'])
+        ->name('community-contribution.contributions.edit-resubmit');
 
     Route::get('/community-contributions', [CommunityContributionController::class, 'contributions'])
         ->name('community-contribution.contributions');

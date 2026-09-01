@@ -34,6 +34,13 @@
             {{ $contribution->admin_feedback ?: 'No deletion reason was provided.' }}
         </section>
     @else
+        @if ($contribution->status === \App\Models\HeritageShopContribution::STATUS_WITHDRAWN)
+            <section class="status-banner neutral">
+                <strong>Withdrawn by contributor</strong><br>
+                This contribution was withdrawn on {{ $contribution->formatDateTime($contribution->withdrawn_at) }}. You can edit and resubmit it when ready.
+            </section>
+        @endif
+
         @if ($contribution->status === \App\Models\HeritageShopContribution::STATUS_REJECTED && $rejectionFeedback)
             <section class="status-banner error">
                 <strong>Rejection reason</strong><br>
@@ -104,9 +111,14 @@
                 <h2>Available action</h2>
                 <div class="actions" style="margin-top:14px">
                     @if ($contribution->canBeWithdrawnBy(auth()->user()))
-                        <form method="POST" action="{{ route('community-contribution.contributions.withdraw', $contribution) }}" onsubmit="return confirm('Withdraw this contribution? It will remain in your history.')">
+                        <form method="POST" action="{{ route('community-contribution.contributions.withdraw', $contribution) }}" onsubmit="return confirm(@json(__('Withdraw this contribution? It will be removed from the review queue, but you can edit and resubmit it later.')))">
                             @csrf
                             <button class="button danger" type="submit">Withdraw submission</button>
+                        </form>
+                    @elseif ($contribution->status === \App\Models\HeritageShopContribution::STATUS_WITHDRAWN)
+                        <form method="POST" action="{{ route('community-contribution.contributions.edit-resubmit', $contribution) }}">
+                            @csrf
+                            <button class="button info" type="submit">Edit & Resubmit</button>
                         </form>
                     @elseif ($contribution->status === \App\Models\HeritageShopContribution::STATUS_REVISION_REQUIRED)
                         <a class="button info" href="{{ route('community-contribution.edit', $contribution) }}">Revise and resubmit</a>

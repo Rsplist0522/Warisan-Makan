@@ -17,6 +17,11 @@ class HeritageShopContributionPolicy
         return $contribution->canBeEditedBy($user);
     }
 
+    public function editResubmit(User $user, HeritageShopContribution $contribution): bool
+    {
+        return $contribution->canBeReopenedAfterWithdrawalBy($user);
+    }
+
     public function deleteDraft(User $user, HeritageShopContribution $contribution): bool
     {
         return (int) $contribution->user_id === (int) $user->id

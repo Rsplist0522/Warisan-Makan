@@ -434,12 +434,24 @@
 
             const syncGenericInput = (field, active) => {
                 const useTextarea = narrativeFields.has(field);
+                const usePhoneInput = field === 'contact_number';
                 suggestedInput.hidden = useTextarea;
                 suggestedTextarea.hidden = !useTextarea;
                 suggestedInput.disabled = !active || useTextarea;
                 suggestedTextarea.disabled = !active || !useTextarea;
                 suggestedInput.required = active && !useTextarea;
                 suggestedTextarea.required = active && useTextarea;
+                suggestedInput.type = usePhoneInput ? 'tel' : 'text';
+                suggestedInput.inputMode = usePhoneInput ? 'tel' : 'text';
+                if (usePhoneInput) {
+                    suggestedInput.maxLength = 30;
+                    suggestedInput.pattern = String.raw`(?:\+60|0)[0-9\s().-]{8,14}`;
+                    suggestedInput.title = @json(__('Use a Malaysian number starting with +60 or 0.'));
+                } else {
+                    suggestedInput.removeAttribute('maxlength');
+                    suggestedInput.removeAttribute('pattern');
+                    suggestedInput.removeAttribute('title');
+                }
             };
 
             const updateFieldContext = () => {

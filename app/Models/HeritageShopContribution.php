@@ -6,6 +6,7 @@ use DateTimeInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -189,6 +190,7 @@ class HeritageShopContribution extends Model
             return null;
         }
 
+        /** @var FilesystemAdapter $disk */
         $disk = Storage::disk($diskName);
 
         try {
@@ -224,6 +226,12 @@ class HeritageShopContribution extends Model
     {
         return (int) $this->user_id === (int) $user->id
             && in_array($this->status, [self::STATUS_DRAFT, self::STATUS_REVISION_REQUIRED], true);
+    }
+
+    public function canBeReopenedAfterWithdrawalBy(User $user): bool
+    {
+        return (int) $this->user_id === (int) $user->id
+            && $this->status === self::STATUS_WITHDRAWN;
     }
 
     public function canBeWithdrawnBy(User $user): bool

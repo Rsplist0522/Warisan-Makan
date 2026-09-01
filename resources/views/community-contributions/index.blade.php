@@ -171,6 +171,13 @@
                             )
                                 <span>Deleted by admin: {{ $contribution->admin_feedback }}</span>
                             @endif
+
+                            @if (
+                                $contribution->status === \App\Models\HeritageShopContribution::STATUS_WITHDRAWN
+                                && $contribution->withdrawn_at
+                            )
+                                <span>Withdrawn on: {{ $contribution->formatDateTime($contribution->withdrawn_at) }}</span>
+                            @endif
                         </div>
 
                         @if (! empty($contribution->food_items))
@@ -201,6 +208,31 @@
                             >
                                 {{ __('Revise') }}
                             </a>
+                        @endif
+
+                        @if ($contribution->status === \App\Models\HeritageShopContribution::STATUS_WITHDRAWN)
+                            <form
+                                method="POST"
+                                action="{{ route('community-contribution.contributions.edit-resubmit', $contribution) }}"
+                            >
+                                @csrf
+                                <button class="button info small" type="submit">
+                                    {{ __('Edit & Resubmit') }}
+                                </button>
+                            </form>
+                        @endif
+
+                        @if ($contribution->canBeWithdrawnBy(auth()->user()))
+                            <form
+                                method="POST"
+                                action="{{ route('community-contribution.contributions.withdraw', $contribution) }}"
+                                onsubmit="return confirm(@json(__('Withdraw this contribution? It will be removed from the review queue, but you can edit and resubmit it later.')))"
+                            >
+                                @csrf
+                                <button class="button danger small" type="submit">
+                                    {{ __('Withdraw') }}
+                                </button>
+                            </form>
                         @endif
 
                         <a

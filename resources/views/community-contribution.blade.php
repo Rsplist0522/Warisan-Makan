@@ -3,14 +3,23 @@
 @section('title', $contribution ? __('Edit Heritage Shop') : __('Submit Heritage Shop'))
 
 @section('content')
+    @php
+        $isWithdrawnResubmission = $contribution?->status === \App\Models\HeritageShopContribution::STATUS_DRAFT
+            && $contribution?->withdrawn_at !== null;
+    @endphp
+
     <header class="page-header">
         <div>
             <p class="eyebrow">{{ __('Community Contribution') }}</p>
-            <h1>{{ $contribution ? __('Edit Heritage Shop') : __('Submit Heritage Shop') }}</h1>
+            <h1>{{ $isWithdrawnResubmission ? __('Edit & Resubmit Heritage Shop') : ($contribution ? __('Edit Heritage Shop') : __('Submit Heritage Shop')) }}</h1>
             <p>
-                {{ $contribution?->status === \App\Models\HeritageShopContribution::STATUS_REVISION_REQUIRED
-                    ? __('Read the administrator feedback, make the requested changes, and resubmit.')
-                    : __('Document a Malaysian heritage food business for administrator review.') }}
+                @if ($contribution?->status === \App\Models\HeritageShopContribution::STATUS_REVISION_REQUIRED)
+                    {{ __('Read the administrator feedback, make the requested changes, and resubmit.') }}
+                @elseif ($isWithdrawnResubmission)
+                    {{ __('Update the withdrawn contribution, then save it as a draft or resubmit it for review.') }}
+                @else
+                    {{ __('Document a Malaysian heritage food business for administrator review.') }}
+                @endif
             </p>
         </div>
 
@@ -47,6 +56,12 @@
             <strong>{{ __('Administrator feedback') }}</strong>  
 
             {{ $contribution->admin_feedback }}
+        </section>
+    @elseif ($isWithdrawnResubmission)
+        <section class="status-banner neutral">
+            <strong>{{ __('Withdrawn contribution') }}</strong>
+
+            {{ __('This contribution was withdrawn on :date. Its previous withdrawal record will stay in the activity history.', ['date' => $contribution->formatDateTime($contribution->withdrawn_at)]) }}
         </section>
     @endif
 

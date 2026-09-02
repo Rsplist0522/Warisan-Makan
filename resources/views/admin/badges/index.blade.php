@@ -4,13 +4,6 @@
 @section('page-title', 'Achievement badges')
 
 @section('content')
-    @if (session('badge_error'))
-    <div class="status-banner error" role="alert">
-        <strong>Badge action could not be completed:</strong>
-        <p>{{ session('badge_error') }}</p>
-    </div>
-    @endif
-
     <header class="page-header">
         <div><p class="eyebrow">Food Passport</p><h1>Achievement badges</h1><p>Manage badges available for future achievement awards while preserving user history.</p></div>
         <a class="button primary" href="{{ route('admin.badges.create') }}">Create badge</a>

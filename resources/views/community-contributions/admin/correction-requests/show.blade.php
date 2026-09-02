@@ -8,7 +8,7 @@
         <div>
             <p class="eyebrow">Review correction request</p>
             <h1>{{ $correctionRequest->heritageShop?->shop_name ?? 'Deleted heritage shop' }}</h1>
-            <p>Submitted by {{ $correctionRequest->user?->name ?? 'Deleted user' }} on {{ $correctionRequest->created_at->format('d M Y, g:i A') }}</p>
+            <p>Submitted by {{ $correctionRequest->user?->name ?? 'Deleted user' }} on {{ $correctionRequest->formatDateTime($correctionRequest->created_at) }}</p>
         </div>
         <div class="actions">
             <span class="badge badge-{{ $correctionRequest->status }}">{{ $correctionRequest->statusLabel() }}</span>
@@ -25,9 +25,9 @@
                         <div><dt>Contributor</dt><dd>{{ $correctionRequest->user?->name ?? 'Deleted user' }}<br>{{ $correctionRequest->user?->email }}</dd></div>
                         <div><dt>Heritage shop</dt><dd>{{ $correctionRequest->heritageShop?->shop_name ?? 'Deleted heritage shop' }}</dd></div>
                         <div><dt>Incorrect field</dt><dd>{{ $correctionRequest->fieldLabel() }}</dd></div>
-                        <div><dt>Submitted</dt><dd>{{ $correctionRequest->created_at->format('d M Y, g:i A') }}</dd></div>
-                        <div class="full"><dt>Current information</dt><dd>{{ $correctionRequest->current_value }}</dd></div>
-                        <div class="full"><dt>Suggested corrected information</dt><dd>{{ $correctionRequest->suggested_value }}</dd></div>
+                        <div><dt>Submitted</dt><dd>{{ $correctionRequest->formatDateTime($correctionRequest->created_at) }}</dd></div>
+                        <div class="full"><dt>Current information</dt><dd>{!! nl2br(e($correctionRequest->current_value)) !!}</dd></div>
+                        <div class="full"><dt>Suggested corrected information</dt><dd>{!! nl2br(e($correctionRequest->suggestedValueDisplay())) !!}</dd></div>
                         <div class="full"><dt>Reason</dt><dd>{{ $correctionRequest->reason }}</dd></div>
                         @if ($correctionRequest->additional_information)
                             <div class="full"><dt>Additional information from user</dt><dd>{{ $correctionRequest->additional_information }}</dd></div>
@@ -82,6 +82,9 @@
                         @if ($correctionRequest->admin_comment)
                             <div class="status-banner" style="margin:12px 0 0">{{ $correctionRequest->admin_comment }}</div>
                         @endif
+                        <div class="status-banner" style="margin-top:12px; background: rgba(255,255,255,.72)">
+                            This correction is read-only from Admin History and cannot be moderated again.
+                        </div>
                     @endif
                 </section>
 
@@ -91,7 +94,7 @@
                         @forelse ($correctionRequest->moderationActivities as $activity)
                             <div class="timeline-item">
                                 <strong>{{ str($activity->action)->replace('_', ' ')->title() }}</strong>
-                                <p>{{ $activity->created_at->format('d M Y, g:i A') }} by {{ $activity->actor?->name ?? 'Deleted user' }}</p>
+                                <p>{{ $correctionRequest->formatDateTime($activity->created_at) }} by {{ $activity->actor?->name ?? 'Deleted user' }}</p>
                                 @if ($activity->comment)<p>{{ $activity->comment }}</p>@endif
                             </div>
                         @empty

@@ -35,7 +35,11 @@
     @keyframes typing{0%,60%,100%{opacity:0.3;transform:translateY(0)}30%{opacity:1;transform:translateY(-4px)}}
 </style>
 
-<button id="chatFab" class="chat-fab animate__animated animate__fadeIn">💬</button>
+<button id="chatFab" class="chat-fab animate__animated animate__fadeIn" aria-label="Open chat assistant">
+    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+    </svg>
+</button>
 
 <div id="chatPanel" class="chat-panel">
     <div class="chat-header">
@@ -80,7 +84,6 @@
         const b = document.createElement('div');
         b.className = `chat-bubble ${role} animate__animated animate__fadeInUp animate__faster`;
         
-        // --- FIXED LINK CONVERSION ---
         // Converts [Text](/url) into a clickable HTML link
         let html = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
         // Converts **Bold** into HTML

@@ -90,6 +90,20 @@ class BlindBoxLandingPageTest extends TestCase
         $response->assertDontSee('Shop ID');
     }
 
+    public function test_food_passport_sidebar_uses_check_in_and_statistics_labels(): void
+    {
+        $this->createShop(['shop_name' => 'Sidebar Heritage Kitchen']);
+
+        $response = $this->get('/foodPassport');
+
+        $response->assertStatus(200);
+        $response->assertSee('data-hash-target="check-in"', false);
+        $response->assertSee('data-hash-target="passport-progress"', false);
+        $response->assertSee('data-hash-target="leaderboard"', false);
+        $response->assertSee('Passport Statistics', false);
+        $response->assertSee('Leaderboard', false);
+    }
+
     public function test_signed_in_user_receives_passport_stats_and_badge_from_real_shop_check_in(): void
     {
         $shop = $this->createShop();

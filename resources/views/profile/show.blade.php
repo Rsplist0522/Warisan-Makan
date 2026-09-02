@@ -1,11 +1,16 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ __('Profile - Warisan Makan') }}</title>
-    @fonts
-    <style>
+@extends('layouts.user')
+
+@section('title', __('Profile'))
+@section('user-topbar-title', __('Profile'))
+@section('user-topbar-subtitle', __('Manage your WarisanMakan account and identity.'))
+
+@section('user-topbar-actions')
+<a class="user-topbar-link" href="{{ route('profile.edit') }}">{{ __('Edit Profile') }}</a>
+<a class="user-topbar-link" href="{{ route('home') }}">{{ __('Back to Home') }}</a>
+@endsection
+
+@push('styles')
+<style>
         :root {
             color-scheme: light;
             --wm-bg: #fbf2e7;
@@ -217,20 +222,83 @@
             font-style: italic;
         }
 
-        .profile-footer-actions {
-            padding: 0 28px 28px;
-            display: flex;
-            justify-content: flex-end;
-        }
-
         @media (max-width: 640px) {
             .profile-fields { grid-template-columns: 1fr; }
             .profile-identity { flex-wrap: wrap; }
         }
+
+        /* ---- Earned badges (now nested inside the profile card) ---- */
+
+        .badges-section {
+            padding: 4px 28px 28px;
+            border-top: 1px solid var(--wm-border);
+        }
+
+        .badges-section h2 {
+            margin: 22px 0 14px;
+            color: #7d4634;
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: 1.25rem;
+        }
+
+        .badges-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+        }
+
+        .earned-badge {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+            padding: 14px;
+            border: 1px solid rgba(209, 156, 59, .25);
+            border-radius: 16px;
+            background: linear-gradient(135deg, #fff9ed, #fff2d3);
+        }
+
+        .earned-badge-icon {
+            flex: 0 0 auto;
+            width: 44px;
+            height: 44px;
+            display: grid;
+            place-items: center;
+            border-radius: 13px;
+            color: #8a5f19;
+            background: rgba(209, 156, 59, .22);
+            font-size: 1.45rem;
+            font-weight: 800;
+        }
+
+        .earned-badge-content {
+            min-width: 0;
+        }
+
+        .earned-badge-name {
+            margin: 0;
+            color: #6f432a;
+            font-weight: 800;
+            overflow-wrap: anywhere;
+        }
+
+        .earned-badge-description {
+            margin: 4px 0 0;
+            color: var(--wm-muted);
+            font-size: .82rem;
+            line-height: 1.4;
+        }
+
+        .earned-badge-date {
+            margin: 6px 0 0;
+            color: #9b8171;
+            font-size: .72rem;
+        }
     </style>
-</head>
-<body>
-    <div class="page">
+@endpush
+
+@section('content')
+<div class="page">
         <header class="topbar">
             <div>
                 <h1 class="section-heading">{{ __('Profile') }}</h1>
@@ -288,7 +356,42 @@
                     <span class="{{ $user->bio ? '' : 'empty' }}">{{ $user->bio ?: __('Share a little about your food heritage interests.') }}</span>
                 </div>
             </div>
+
+            @if ($badges->isNotEmpty())
+                <div class="badges-section" aria-labelledby="earned-badges-title">
+                    <h2 id="earned-badges-title">{{ __('Earned badges') }}</h2>
+
+                    <div class="badges-grid">
+                        @foreach ($badges as $userBadge)
+                            @if ($userBadge->badge)
+                                <article class="earned-badge">
+                                    <div class="earned-badge-icon" aria-hidden="true">
+                                        {{ $userBadge->badge->icon ?: '★' }}
+                                    </div>
+
+                                    <div class="earned-badge-content">
+                                        <h3 class="earned-badge-name">
+                                            {{ $userBadge->badge->badge_name }}
+                                        </h3>
+
+                                        @if ($userBadge->badge->description)
+                                            <p class="earned-badge-description">
+                                                {{ $userBadge->badge->description }}
+                                            </p>
+                                        @endif
+
+                                        @if ($userBadge->earned_at)
+                                            <p class="earned-badge-date">
+                                                {{ __('Earned :date', ['date' => $userBadge->earned_at->format('F j, Y')]) }}
+                                            </p>
+                                        @endif
+                                    </div>
+                                </article>
+                            @endif
+                        @endforeach
+                    </div>
+                </div>
+            @endif
         </section>
     </div>
-</body>
-</html>
+@endsection

@@ -1,11 +1,43 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ __('User Dashboard') }} - Warisan Makan</title>
-    @fonts
-    <style>
+@extends('layouts.user')
+
+@section('title', __('User Dashboard'))
+@section('user-topbar-title', __('User Dashboard'))
+@section('user-topbar-subtitle', __('WarisanMakan heritage food portal'))
+
+@section('user-topbar-actions')
+@auth
+    <div class="topbar-account-group">
+        <form class="language-form" method="POST" action="{{ route('profile.update') }}">
+            @csrf
+            <input type="hidden" name="language_only" value="1">
+            <input type="hidden" name="name" value="{{ auth()->user()->name }}">
+            <input type="hidden" name="email" value="{{ auth()->user()->email }}">
+            <input type="hidden" name="phone" value="{{ auth()->user()->phone }}">
+            <input type="hidden" name="city" value="{{ auth()->user()->city }}">
+            <input type="hidden" name="bio" value="{{ auth()->user()->bio }}">
+            <label class="sr-only" for="dashboard-language">{{ __('Language') }}</label>
+            <select id="dashboard-language" name="language" onchange="this.form.submit()">
+                <option value="en" @selected((auth()->user()->language ?? 'en') === 'en')>{{ __('English') }}</option>
+                <option value="ms" @selected((auth()->user()->language ?? 'en') === 'ms')>{{ __('Bahasa Melayu') }}</option>
+                <option value="zh" @selected((auth()->user()->language ?? 'en') === 'zh')>{{ __('Chinese') }}</option>
+            </select>
+        </form>
+        <a class="dashboard-profile-link" href="{{ route('profile.show') }}">
+            @if (auth()->user()->profile_photo)
+                <img class="dashboard-profile-image" src="{{ auth()->user()->profilePhotoUrl() }}" alt="Profile photo">
+            @else
+                <span class="dashboard-profile-avatar">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</span>
+            @endif
+            <span class="dashboard-profile-name">{{ auth()->user()->name }}</span>
+        </a>
+    </div>
+@else
+    <button class="guest-trigger" type="button" data-login-trigger aria-label="Guest Mode">Guest Mode</button>
+@endauth
+@endsection
+
+@push('styles')
+<style>
         :root {
             color-scheme: light;
             --wm-sidebar: #3b1b18;
@@ -201,17 +233,23 @@
         }
 
         .page-header {
+            position: relative;
+            overflow: hidden;
             display: flex;
             justify-content: space-between;
             align-items: end;
             gap: 20px;
             margin-bottom: 24px;
             padding: 30px;
-            border-radius: 14px;
+            border-radius: 18px;
             color: #fffaf4;
             background: linear-gradient(125deg, #96352c, #54201b);
             box-shadow: 0 20px 50px rgba(91, 29, 29, .18);
         }
+
+        .page-header::after { content: ''; position: absolute; top: -100px; right: -68px; width: 240px; height: 240px; border: 1px solid rgba(255,255,255,.16); border-radius: 50%; box-shadow: 0 0 0 22px rgba(255,255,255,.04), 0 0 0 46px rgba(255,255,255,.025); pointer-events: none; }
+        .page-header > * { position: relative; z-index: 1; }
+        .page-header > div { min-width: 0; }
 
         .eyebrow {
             margin: 0 0 8px;
@@ -238,15 +276,20 @@
 
         .header-pill {
             display: inline-flex;
+            flex: 0 0 auto;
+            max-width: 100%;
+            align-self: flex-end;
             align-items: center;
+            justify-content: center;
             min-height: 38px;
-            padding: 0 14px;
+            padding: 7px 14px;
             border: 1px solid rgba(255, 255, 255, .18);
             border-radius: 999px;
             color: #fff5ec;
             background: rgba(255, 255, 255, .08);
             font-size: .8rem;
             font-weight: 800;
+            text-align: center;
             white-space: nowrap;
         }
 
@@ -360,6 +403,12 @@
         .language-form { display: inline-flex; align-items: center; }
         .language-form select { min-height: 44px; padding: 0 34px 0 13px; border: 1px solid rgba(46, 36, 32, .14); border-radius: 999px; color: var(--wm-accent); background: #fff; font: inherit; font-weight: 800; cursor: pointer; }
         .topbar-account-group { display: inline-flex; align-items: center; justify-content: flex-end; gap: 8px; margin-left: auto; }
+        .dashboard-profile-link { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 7px 13px; border: 1px solid var(--wm-border); border-radius: 999px; color: var(--wm-text); background: #fff; font-size: .92rem; font-weight: 700; text-decoration: none; }
+        .dashboard-profile-link:hover { border-color: rgba(163, 58, 45, .35); background: #fffaf4; }
+        .dashboard-profile-image, .dashboard-profile-avatar { width: 30px; height: 30px; flex: 0 0 auto; border-radius: 50%; }
+        .dashboard-profile-image { object-fit: cover; }
+        .dashboard-profile-avatar { display: inline-grid; place-items: center; color: var(--wm-accent); background: #f2e7dd; font-weight: 800; }
+        .dashboard-profile-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         @media (max-width: 980px) {
             .shell { grid-template-columns: 1fr; }
             .sidebar {
@@ -371,6 +420,7 @@
             .module-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
             .topbar,
             .content { padding-inline: 22px; }
+            .dashboard-profile-name { display: none; }
         }
 
         @media (max-width: 620px) {
@@ -382,12 +432,13 @@
             .nav,
             .module-grid { grid-template-columns: 1fr; }
             .page-header { padding: 24px; }
-            .header-pill { justify-self: start; }
+            .header-pill { justify-self: center; }
         }
     </style>
-</head>
-<body>
-    @php
+@endpush
+
+@section('content')
+@php
         $userName = auth()->user()->name ?? 'Food Explorer';
         $isGuest = ! auth()->check();
         $modules = [
@@ -433,74 +484,7 @@
         ];
     @endphp
 
-    <div class="shell">
-        <aside class="sidebar">
-            <div class="brand"><span class="brand-mark">W</span> WarisanMakan</div>
-
-            <p class="nav-label">{{ __('Home') }}</p>
-            <nav class="nav" aria-label="User home navigation">
-                <a class="nav-item active" href="{{ route('home') }}">{{ __('Dashboard') }}</a>
-                @auth<a class="nav-item" href="{{ route('profile.show') }}">{{ __('Profile') }}</a>@endauth
-            </nav>
-
-            <p class="nav-label">{{ __('Modules') }}</p>
-            <nav class="nav" aria-label="WarisanMakan modules">
-                @foreach ($modules as $module)
-                    <a class="nav-item" href="{{ $isGuest && ($module['guestRestricted'] ?? false) ? '#' : (isset($module['route']) ? route($module['route']) : $module['url']) }}" @if($isGuest && ($module['guestRestricted'] ?? false)) data-login-required="true" @endif>
-                        <span>{{ __($module['name']) }}</span>
-                    </a>
-                @endforeach
-            </nav>
-
-            @auth<div class="sidebar-footer">
-                <p class="user-name">{{ $userName }}</p>
-                <p class="user-role">{{ __('WarisanMakan member') }}</p>
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <button class="logout" type="submit">{{ __('Log out') }}</button>
-                </form>
-            </div>@endauth
-        </aside>
-
-        <section class="main">
-            <header class="topbar">
-                <div>
-                    <h2>{{ __('User Dashboard') }}</h2>
-                    <p>{{ __('WarisanMakan heritage food portal') }}</p>
-                </div>
-                @auth
-                    <div class="topbar-account-group">
-                        <form class="language-form" method="POST" action="{{ route('profile.update') }}">
-                            @csrf
-                            <input type="hidden" name="language_only" value="1">
-                            <input type="hidden" name="name" value="{{ auth()->user()->name }}">
-                            <input type="hidden" name="email" value="{{ auth()->user()->email }}">
-                            <input type="hidden" name="phone" value="{{ auth()->user()->phone }}">
-                            <input type="hidden" name="city" value="{{ auth()->user()->city }}">
-                            <input type="hidden" name="bio" value="{{ auth()->user()->bio }}">
-                            <label class="sr-only" for="dashboard-language">{{ __('Language') }}</label>
-                            <select id="dashboard-language" name="language" onchange="this.form.submit()">
-                                <option value="en" @selected((auth()->user()->language ?? 'en') === 'en')>{{ __('English') }}</option>
-                                <option value="ms" @selected((auth()->user()->language ?? 'en') === 'ms')>{{ __('Bahasa Melayu') }}</option>
-                                <option value="zh" @selected((auth()->user()->language ?? 'en') === 'zh')>{{ __('中文 (Chinese)') }}</option>
-                            </select>
-                        </form>
-                        <a href="{{ route('profile.show') }}" style="display:inline-flex;align-items:center;gap:10px;padding:10px 14px;border-radius:999px;border:1px solid rgba(46, 36, 32, .14);background:#fff;">
-                            @if (auth()->user()->profile_photo)
-                                <img src="{{ auth()->user()->profilePhotoUrl() }}" alt="Profile photo" style="width:38px;height:38px;border-radius:999px;object-fit:cover;">
-                            @else
-                                <span style="display:inline-flex;width:38px;height:38px;align-items:center;justify-content:center;border-radius:999px;background:#f2e7dd;color:var(--wm-accent);font-weight:800;">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</span>
-                            @endif
-                            <span style="font-size:.92rem;font-weight:700">{{ $userName }}</span>
-                        </a>
-                    </div>
-                @else
-                    <button class="guest-trigger" type="button" data-login-trigger aria-label="Guest Mode">Guest Mode</button>
-                @endauth
-            </header>
-
-            <main class="content">
-                <header class="page-header">
+<header class="page-header">
                     <div>
                         <p class="eyebrow">{{ __('User home') }}</p>
                                 <h1>{{ __('Welcome back, :name', ['name' => $userName]) }}</h1>
@@ -532,12 +516,8 @@
                         @endif
                     @endforeach
                 </section>
-            </main>
-        </section>
-    </div>
 
-    @guest
-        @include('partials.login-required-modal')
-    @endguest
-</body>
-</html>
+@guest
+    @include('partials.login-required-modal')
+@endguest
+@endsection

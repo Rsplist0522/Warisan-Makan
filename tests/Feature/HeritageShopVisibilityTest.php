@@ -34,7 +34,8 @@ class HeritageShopVisibilityTest extends TestCase
             ->assertDontSee($archived->shop_name);
 
         $this->get(route('heritage-shops.show', ['id' => $published->id]))
-            ->assertForbidden();
+            ->assertOk()
+            ->assertSee($published->shop_name);
 
         $this->actingAs(User::factory()->create())
             ->get(route('heritage-shops.show', ['id' => $published->id]))
@@ -64,5 +65,42 @@ class HeritageShopVisibilityTest extends TestCase
             'heritageShop' => $draft->id,
             'image' => $image->id,
         ]))->assertNotFound();
+    }
+
+    public function test_public_listing_formats_mixed_operating_hours_shapes(): void
+    {
+        HeritageShop::create([
+            'shop_name' => 'Structured Hours Cafe',
+            'publish_status' => HeritageShop::STATUS_PUBLISHED,
+            'operating_hours' => [
+                ['day' => 'Monday', 'open' => '10:00', 'close' => '22:00', 'closed' => false],
+                ['day' => 'Tuesday', 'open' => null, 'close' => null, 'closed' => true],
+            ],
+        ]);
+        HeritageShop::create([
+            'shop_name' => 'Flat Hours Cafe',
+            'publish_status' => HeritageShop::STATUS_PUBLISHED,
+            'operating_hours' => ['Daily 9:30am - 7:30pm'],
+        ]);
+        HeritageShop::create([
+            'shop_name' => 'Legacy Raw Hours Cafe',
+            'publish_status' => HeritageShop::STATUS_PUBLISHED,
+            'operating_hours' => ['raw' => json_encode(['raw' => 'Sunday 11:30-14:30; Monday Closed'])],
+        ]);
+        HeritageShop::create([
+            'shop_name' => 'No Hours Cafe',
+            'publish_status' => HeritageShop::STATUS_PUBLISHED,
+            'operating_hours' => null,
+        ]);
+
+        $this->get(route('heritage-shops.index'))
+            ->assertOk()
+            ->assertSee('Structured Hours Cafe')
+            ->assertSee('Monday: 10:00')
+            ->assertSee('Tuesday: Closed')
+            ->assertSee('Daily 9:30am - 7:30pm')
+            ->assertSee('Sunday: 11:30-14:30')
+            ->assertSee('No Hours Cafe')
+            ->assertDontSee('>Array<', false);
     }
 }

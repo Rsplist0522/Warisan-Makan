@@ -6,8 +6,11 @@ use DateTimeInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Throwable;
 
 class HeritageShopContribution extends Model
 {
@@ -118,15 +121,117 @@ class HeritageShopContribution extends Model
         return $this->hasMany(ModerationActivity::class)->latest();
     }
 
+    public function latestRevisionRequestActivity(): ?ModerationActivity
+    {
+        if ($this->relationLoaded('moderationActivities')) {
+            return $this->moderationActivities
+                ->where('action', 'request_revision')
+                ->sort(function (ModerationActivity $first, ModerationActivity $second): int {
+                    $dateComparison = ($second->created_at?->getTimestamp() ?? 0)
+                        <=> ($first->created_at?->getTimestamp() ?? 0);
+
+                    return $dateComparison !== 0
+                        ? $dateComparison
+                        : ((int) $second->id <=> (int) $first->id);
+                })
+                ->first();
+        }
+
+        return $this->moderationActivities()
+            ->where('action', 'request_revision')
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->first();
+    }
+
+    public function currentRevisionFeedback(): ?string
+    {
+        if ($this->status !== self::STATUS_REVISION_REQUIRED) {
+            return null;
+        }
+
+        $activityFeedback = $this->latestRevisionRequestActivity()?->comment;
+
+        return filled($activityFeedback) ? $activityFeedback : $this->admin_feedback;
+    }
+
+    public function previousRevisionFeedback(): ?string
+    {
+        if ($this->status === self::STATUS_REVISION_REQUIRED) {
+            return null;
+        }
+
+        return $this->latestRevisionRequestActivity()?->comment;
+    }
+
+    public function latestSubmissionOccurredAt(): ?DateTimeInterface
+    {
+        return $this->resubmitted_at ?: $this->submitted_at;
+    }
+
+    public function wasResubmitted(): bool
+    {
+        return $this->resubmitted_at !== null;
+    }
+
     public function media()
     {
         return $this->morphMany(Media::class, 'attachable')->orderBy('display_order');
+    }
+
+    public function foodItemImageUrl(?string $path): ?string
+    {
+        if (! $this->isValidFoodItemImagePath($path)) {
+            return null;
+        }
+
+        $diskName = config('filesystems.media_disk');
+        if (! is_string($diskName) || $diskName === '') {
+            return null;
+        }
+
+        /** @var FilesystemAdapter $disk */
+        $disk = Storage::disk($diskName);
+
+        try {
+            if (! $disk->exists($path)) {
+                return null;
+            }
+        } catch (Throwable) {
+            return null;
+        }
+
+        if ($diskName === 'r2') {
+            try {
+                return $disk->temporaryUrl($path, now()->addMinutes(15));
+            } catch (Throwable) {
+            }
+        }
+
+        return $disk->url($path);
+    }
+
+    private function isValidFoodItemImagePath(?string $path): bool
+    {
+        return is_string($path)
+            && $path !== ''
+            && str_starts_with($path, 'contributions/')
+            && ! str_starts_with($path, '/')
+            && ! str_starts_with($path, '\\')
+            && ! str_contains($path, '..')
+            && ! str_contains($path, '\\');
     }
 
     public function canBeEditedBy(User $user): bool
     {
         return (int) $this->user_id === (int) $user->id
             && in_array($this->status, [self::STATUS_DRAFT, self::STATUS_REVISION_REQUIRED], true);
+    }
+
+    public function canBeReopenedAfterWithdrawalBy(User $user): bool
+    {
+        return (int) $this->user_id === (int) $user->id
+            && $this->status === self::STATUS_WITHDRAWN;
     }
 
     public function canBeWithdrawnBy(User $user): bool
@@ -229,6 +334,8 @@ class HeritageShopContribution extends Model
             'publish_status' => HeritageShop::STATUS_PUBLISHED,
         ]);
 
+        $this->syncApprovedFoodItems($shop);
+
         $existingKeys = $shop->media()->pluck('r2_object_key')->all();
         $this->media()->get()->each(function (Media $media) use ($shop, $existingKeys): void {
             if (in_array($media->r2_object_key, $existingKeys, true)) {
@@ -249,5 +356,88 @@ class HeritageShopContribution extends Model
         });
 
         return $shop;
+    }
+
+    public static function normalizeFoodItemPrice(mixed $price): ?string
+    {
+        if ($price === null || $price === '') {
+            return null;
+        }
+
+        $price = trim((string) $price);
+
+        if ($price === '') {
+            return null;
+        }
+
+        if (preg_match('/\ARM\s*(\d+(?:\.\d+)?)\z/i', $price, $matches) === 1) {
+            $price = $matches[1];
+        }
+
+        if (! is_numeric($price) || (float) $price < 0) {
+            return null;
+        }
+
+        return 'RM '.number_format((float) $price, 2, '.', '');
+    }
+
+    public static function foodItemPriceInputValue(mixed $price): string
+    {
+        if ($price === null || $price === '') {
+            return '';
+        }
+
+        $price = trim((string) $price);
+
+        if (preg_match('/\ARM\s*(\d+(?:\.\d+)?)\z/i', $price, $matches) === 1) {
+            return number_format((float) $matches[1], 2, '.', '');
+        }
+
+        if (is_numeric($price)) {
+            return number_format((float) $price, 2, '.', '');
+        }
+
+        return $price;
+    }
+
+    private function syncApprovedFoodItems(HeritageShop $shop): void
+    {
+        $items = collect($this->food_items ?? [])
+            ->filter(fn ($item): bool => is_array($item) && filled($item['name'] ?? null))
+            ->values();
+        $existingItems = $shop->foodItems()->get()->values();
+
+        foreach ($items as $order => $item) {
+            $payload = [
+                'name' => trim((string) $item['name']),
+                'description' => filled($item['description'] ?? null)
+                    ? trim((string) $item['description'])
+                    : (filled($item['desc'] ?? null) ? trim((string) $item['desc']) : null),
+                'category' => null,
+                'heritage_significance' => null,
+                'availability' => null,
+                'price' => filled($item['price'] ?? null) ? trim((string) $item['price']) : null,
+                'image_path' => $this->publishedFoodItemImagePath($item['image_path'] ?? null),
+                'display_order' => $order + 1,
+                'is_active' => true,
+            ];
+
+            $existingItem = $existingItems->get($order);
+
+            if ($existingItem) {
+                $existingItem->update($payload);
+            } else {
+                $shop->foodItems()->create($payload);
+            }
+        }
+
+        $existingItems->slice($items->count())->each->delete();
+    }
+
+    private function publishedFoodItemImagePath(mixed $path): ?string
+    {
+        return $this->isValidFoodItemImagePath(is_string($path) ? $path : null)
+            ? trim((string) $path)
+            : null;
     }
 }

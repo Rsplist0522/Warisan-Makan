@@ -1,13 +1,22 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="csrf-token" content="{{ csrf_token() }}">
-  <title>{{ $shop->name }} — Check In</title>
-  <style>
+@extends('layouts.user')
+
+@section('title', $shop->name.' - Check In')
+@section('user-topbar-title', __('Food Passport'))
+@section('user-topbar-subtitle', __('Check in to a heritage shop and unlock passport progress.'))
+
+@section('user-topbar-actions')
+<a class="user-topbar-link" href="{{ route('passport.index') }}">{{ __('Food Passport') }}</a>
+<a class="user-topbar-link" href="{{ route('heritage-shops.index') }}">{{ __('Heritage Shops') }}</a>
+@endsection
+
+@push('head')
+<meta name="csrf-token" content="{{ csrf_token() }}">
+@endpush
+
+@push('styles')
+<style>
     :root{--primary:#8C1F1F;--bg:#FBF6EE;--ink:#32241F;--muted:#7A6A63;--accent:#D4A017}
-    body{margin:0;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial;background:var(--bg);color:var(--ink);padding:20px}
+    body{margin:0;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial;background:var(--bg);color:var(--ink)}
     .card{background:white;padding:16px;border-radius:12px;max-width:720px;margin:0 auto}
     .shop-image{width:100%;height:320px;border-radius:10px;background-size:cover;background-position:center;display:block}
     .shop-title{font-family: Georgia, serif;font-size:1.4rem;color:var(--primary);margin-top:12px}
@@ -40,11 +49,12 @@
     .share-status{min-height:24px;margin-top:12px!important;font-size:.82rem}
     .share-note{margin-top:12px!important;color:var(--muted);font-size:.76rem}
     .badge-modal-continue{width:100%;margin-top:16px;background:var(--primary);color:#fff;border:0;padding:11px 14px;border-radius:8px;font-weight:700;cursor:pointer}
-    @media(min-width:800px){body{padding:40px}.card{padding:28px}}
+    @media(min-width:800px){.card{padding:28px}}
   </style>
-</head>
-<body>
-  <div class="card">
+@endpush
+
+@section('content')
+<div class="card">
     <div class="check-overlay">
       <div id="shopImage" class="shop-image" style="background-image:url('{{ $shop->image }}')"></div>
       <button id="imgCheckBtn" class="check-btn">Check In</button>
@@ -57,8 +67,6 @@
 
       <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap">
         <button id="nameCheckBtn" class="check-btn" style="position:static">Check In</button>
-        <button id="demoCheckBtn" class="check-btn" style="position:static;background:#F2E5D0">Use Demo Location</button>
-        <button id="resetDemoBtn" class="check-btn" style="position:static;background:#f1ddd0">Reset Demo</button>
       </div>
 
       <div id="result" class="result">No check-in attempted.</div>
@@ -114,8 +122,6 @@
   const resultEl = document.getElementById('result');
   const imgBtn = document.getElementById('imgCheckBtn');
   const nameBtn = document.getElementById('nameCheckBtn');
-  const demoBtn = document.getElementById('demoCheckBtn');
-  const resetBtn = document.getElementById('resetDemoBtn');
   const badgeModal = document.getElementById('badgeModal');
   const badgeModalIcon = document.getElementById('badgeModalIcon');
   const badgeModalBadgeName = document.getElementById('badgeModalBadgeName');
@@ -399,11 +405,6 @@
       const json = await parseApiResponse(res);
       setResult(json);
 
-      if (res.status === 409) {
-        window.setTimeout(() => window.location.reload(), 900);
-        return;
-      }
-
       if (res.ok && json && json.success) {
         const newlyUnlockedBadges = Array.isArray(json.newly_unlocked_badges) ? json.newly_unlocked_badges : [];
         if(newlyUnlockedBadges.length > 0){
@@ -431,50 +432,9 @@
     }, err=>{ setResult('Unable to get your device location. Please allow location access and try again.'); }, { enableHighAccuracy:true, timeout:10000 });
   }
 
-  function doDemoCheckIn(){
-    if(!shop.participating || !shop.published){ setResult('Shop is not active for check-in.'); return; }
-    if(shop.latitude === null || shop.longitude === null){ setResult('This shop does not have a demo location yet.'); return; }
-
-    setResult('Using the demo location near this shop...');
-    sendCheckIn({
-      shop_id: shop.id,
-      user_latitude: Number((Number(shop.latitude) + 0.0002).toFixed(6)),
-      user_longitude: Number((Number(shop.longitude) + 0.0002).toFixed(6)),
-      demo_mode: true
-    });
-  }
-
-  async function resetDemo(){
-    if(!window.confirm('Reset the demo passport and start again?')) return;
-
-    setResult('Resetting the demo passport...');
-
-    try{
-      const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-      const res = await fetch('/passport/reset-demo', {
-        method: 'POST',
-        headers: {
-          'X-CSRF-TOKEN': token,
-          'Accept': 'application/json'
-        }
-      });
-      const json = await res.json();
-      setResult(json);
-
-      if(res.ok && json.success){
-        window.setTimeout(() => window.location.reload(), 700);
-      }
-    }catch(err){
-      setResult('We could not reset the demo right now. Please try again.');
-    }
-  }
-
   imgBtn.addEventListener('click', doCheckIn);
   nameBtn.addEventListener('click', doCheckIn);
-  demoBtn.addEventListener('click', doDemoCheckIn);
-  resetBtn.addEventListener('click', resetDemo);
   document.getElementById('shopName').addEventListener('click', doCheckIn);
 })();
 </script>
-</body>
-</html>
+@endsection

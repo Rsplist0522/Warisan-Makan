@@ -429,9 +429,9 @@ const foodTrailApp = (() => {
                 <p class="text-sm leading-6 text-[#6B5B4E]">${state.selectedRestaurant.description}</p>
                 <div class="flex flex-wrap gap-2 text-sm text-[#6B5B4E]">${formatTags(state.selectedRestaurant.tags)}</div>
                 <div class="flex flex-wrap gap-3">
-                    <button id="addRouteButton" class="rounded-full ${isAdded ? 'bg-[#A2A296] hover:bg-[#8e8c7c]' : 'bg-[#B8874A] hover:bg-[#9c6f33]'} px-5 py-3 text-sm font-semibold text-white">${isAdded ? 'Remove from trail' : '+ Add to trail'}</button>
-                    <button id="markVisitedButton" class="rounded-full ${visited ? 'bg-[#7DA34D] hover:bg-[#6d8a42]' : 'bg-[#D8B58F] hover:bg-[#c3a76e]'} px-5 py-3 text-sm font-semibold text-[#1F1B19]">${visited ? 'Visited' : 'Mark visited'}</button>
-                    <button id="loveRestaurantButton" class="rounded-full ${isLiked ? 'bg-[#F8D4D0] hover:bg-[#efc2ba]' : 'bg-[#F8E0D4] hover:bg-[#f2d2ba]'} px-5 py-3 text-sm font-semibold text-[#B4542A]">${isLiked ? '♥ Liked' : '♡ Love'}</button>
+                    <button id="addRouteButton" class="rounded-full ${isAdded ? 'bg-[#A2A296] hover:bg-[#8e8c7c]' : 'bg-[#B8874A] hover:bg-[#9c6f33]'} px-5 py-3 text-sm font-semibold text-white">${isAdded ? translate('removeFromTrail', 'Remove from trail') : translate('addToTrail', '+ Add to trail')}</button>
+                    <button id="markVisitedButton" class="rounded-full ${visited ? 'bg-[#7DA34D] hover:bg-[#6d8a42]' : 'bg-[#D8B58F] hover:bg-[#c3a76e]'} px-5 py-3 text-sm font-semibold text-[#1F1B19]">${visited ? translate('visited', 'Visited') : translate('markVisited', 'Mark visited')}</button>
+                    <button id="loveRestaurantButton" class="rounded-full ${isLiked ? 'bg-[#F8D4D0] hover:bg-[#efc2ba]' : 'bg-[#F8E0D4] hover:bg-[#f2d2ba]'} px-5 py-3 text-sm font-semibold text-[#B4542A]">${isLiked ? translate('liked', '♥ Liked') : translate('love', '♡ Love')}</button>
                 </div>
             </div>
         `;
@@ -550,9 +550,16 @@ const foodTrailApp = (() => {
                         <p class="text-sm font-semibold text-[#1F1B19]">${index + 1}. ${item.name}</p>
                         <p class="mt-1 text-xs text-[#6B5B4E]">${item.location} · ${item.distance} km · ${item.price}</p>
                     </div>
-                    <span class="rounded-full ${item.visited ? 'bg-[#D3E9C4] text-[#4A6B31]' : 'bg-[#F7E4C1] text-[#8A5A24]'} px-3 py-1 text-xs font-semibold">${item.visited ? 'Visited' : 'Pending'}</span>
+                    <span class="rounded-full ${item.visited ? 'bg-[#D3E9C4] text-[#4A6B31]' : 'bg-[#F7E4C1] text-[#8A5A24]'} px-3 py-1 text-xs font-semibold">
+                        ${item.visited
+                            ? translate('visited', 'Visited')
+                            : translate('pending', 'Pending')}
+                    </span>
                 </div>
-                <p class="mt-3 text-sm text-[#6B5B4E]">Next travel time: ${Math.max(8, Math.round(item.distance * 7))} min</p>
+                <p class="mt-3 text-sm text-[#6B5B4E]">
+                    ${translate('nextTravelTime', 'Next travel time: :value min')
+                        .replace(':value', Math.max(8, Math.round(item.distance * 7)))}
+                </p>
             `;
             container.appendChild(routeItem);
         });
@@ -591,9 +598,15 @@ const foodTrailApp = (() => {
         updateResultsCount();
         const resultDescription = keywordValue ? ` matching "${keywordValue}"` : '';
         getElement(selectors.selectedTrailSummary).innerText = keywordFiltered.length
-            ? `Showing ${keywordFiltered.length} restaurants${resultDescription}. Use filters to refine the list.`
-            : 'No restaurants match your criteria. Adjust the filters to see more results.';
-    };
+            ? translate(
+                'showingRestaurants',
+                'Showing :count restaurants. Use filters to refine the list.'
+            ).replace(':count', keywordFiltered.length)
+            : translate(
+                'noCriteriaRestaurants',
+                'No restaurants match your criteria. Adjust the filters to see more results.'
+            );
+        };
     const handleResetFilters = () => {
         getElement(selectors.categoryFilter).value = 'all';
         getElement(selectors.distanceFilter).value = 'all';

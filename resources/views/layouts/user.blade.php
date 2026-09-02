@@ -574,12 +574,10 @@
             </header>
 
             <main class="page-shell">
-                @if (session('status'))
-                    <div class="status-banner success" role="status">{{ session('status') }}</div>
-                @endif
-
                 @if (session('success'))
-                    <div class="status-banner success" role="status">{{ session('success') }}</div>
+                    <div class="status-banner success" role="status">
+                        {{ session('success') }}
+                    </div>
                 @endif
 
                 @if ($errors->any())

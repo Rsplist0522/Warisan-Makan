@@ -671,6 +671,9 @@
         __(':count new file(s) selected. Files are uploaded only when you save or submit the form.')
     );
 
+    const mediaFilesSelectedMessage = @json(__(':count of :total files selected.'));
+const canAddMoreFilesMessage = @json(__('You can add up to :count more :files.'));
+
     (() => {
         const shell = document.getElementById('food-items-shell');
         const addButton = document.getElementById('add-food-item');
@@ -826,13 +829,17 @@
             const remaining = remainingSupportingMediaSlots();
 
             if (mediaSlotSummary) {
-                mediaSlotSummary.textContent = `${used} of ${maxSupportingMedia} ${pluralizeFile(maxSupportingMedia)} selected.`;
+                mediaSlotSummary.textContent = mediaFilesSelectedMessage
+                    .replace(':count', used)
+                    .replace(':total', maxSupportingMedia);
             }
 
             if (mediaSlotDetail) {
                 mediaSlotDetail.textContent = remaining === 0
                     ? @json(__('Maximum of 6 supporting media files reached.'))
-                    : `You can add up to ${remaining} more ${pluralizeFile(remaining)}.`;
+                    : canAddMoreFilesMessage
+                        .replace(':count', remaining)
+                        .replace(':files', pluralizeFile(remaining));
             }
 
             input?.toggleAttribute('data-maximum-reached', remaining === 0);
@@ -995,17 +1002,17 @@
                 const newPeriod = document.createElement('div');
                 newPeriod.className = 'hours-period-row';
                 newPeriod.dataset.hoursPeriod = '';
-                newPeriod.innerHTML = `
-                    <label>
-                        <span>Open</span>
-                        <input name="operating_hours[${day}][periods][${rowIndex}][open]" type="time" value="">
-                    </label>
-                    <label>
-                        <span>Close</span>
-                        <input name="operating_hours[${day}][periods][${rowIndex}][close]" type="time" value="">
-                    </label>
-                    <button class="mini-button remove-hours-period" type="button">Remove</button>
-                `;
+                newPeriod.innerHTML = ` 
+                    <label> 
+                        <span>${@json(__('Open'))}</span> 
+                        <input name="operating_hours[${day}][periods][${rowIndex}][open]" type="time" value=""> 
+                    </label> 
+                    <label> 
+                        <span>${@json(__('Close'))}</span> 
+                        <input name="operating_hours[${day}][periods][${rowIndex}][close]" type="time" value=""> 
+                    </label> 
+                    <button class="mini-button remove-hours-period" type="button">${@json(__('Remove'))}</button> 
+             `;
                 periods.appendChild(newPeriod);
                 const removeButton = newPeriod.querySelector('.remove-hours-period');
                 removeButton?.addEventListener('click', () => {

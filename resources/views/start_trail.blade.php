@@ -12,6 +12,48 @@
 
 @push('head-scripts')
 <script>
+        window.foodTrailTranslations = {
+        complete: @json(__('complete')),
+        estimatedTime: @json(__('Estimated time')),
+        pending: @json(__('Pending')),
+        visited: @json(__('Visited')),
+        remove: @json(__('Remove')),
+        maps: @json(__('Maps')),
+        showingAllDestinations: @json(__('Showing all destinations in your food trail.')),
+        directionsUnavailable: @json(__('Directions are unavailable right now. The map still shows your destination markers.')),
+        routeOrderStarts: @json(__('Route order starts from your current location when GPS is available.')),
+        directionsGenerated: @json(__('Directions generated')),
+        publicTransportGuidance: @json(__('Public transport guidance')),
+        noTransit: @json(__('No bus or train segment was returned for this route. Try Public Transport mode to check available scheduled transit options.')),
+        transitTimes: @json(__('Transit times are scheduled values returned by Google Maps Directions at request time unless real-time data is available from Google.')),
+        tipReorder: @json(__('Tip: You can reorder your stops by dragging and dropping.')),
+        nextStop: @json(__('Next stop')),
+        walking: @json(__('walk')),
+        travel: @json(__('travel')),
+        stop: @json(__('Stop')),
+        to: @json(__('To')),
+        leg: @json(__('Leg')),
+        board: @json(__('Board')),
+        getOff: @json(__('Get off')),
+        transitService: @json(__('Transit service')),
+        stopUnavailable: @json(__('Stop unavailable')),
+        distanceUnavailable: @json(__('Distance unavailable')),
+        durationUnavailable: @json(__('Duration unavailable')),
+        shortDistance: @json(__('Short distance')),
+        continue: @json(__('Continue')),
+        usePublicTransport: @json(__('Use public transport')),
+        noRouteSelected: @json(__('No route selected yet. Add a trail from Food Trails.')),
+        currentLocationUnavailable: @json(__('Current location is unavailable. The route will start from the first stop.')),
+        locationPermissionUnavailable: @json(__('Location permission is unavailable, so the trail starts from the first restaurant.')),
+        travelModeSet: @json(__('Travel mode set to :mode.')),
+        showingAllFromCurrentLocation: @json(__('Showing all destinations from your current location.')),
+        showingNextStops: @json(__('Showing the next :count stop(s) from your current location.')),
+        stopStatusUpdated: @json(__('Stop status updated.')),
+        routeOrdered: @json(__('Trail route ordered from your current location.')),
+        removedStop: @json(__('Removed stop from route.')),
+        routeOrderUpdated: @json(__('Route order updated.')),
+    };
+
         window.googleMapsApiKey = @json(config('services.google.maps_api_key'));
         window.googleMapsLoaded = false;
         window._onGoogleMapsLoaded = function () {
@@ -434,8 +476,8 @@
                         </svg>
                     </a>
                     <div>
-                        <h1 class="text-3xl font-semibold text-[#1F1B19]">Start Trail</h1>
-                        <p class="mt-2 text-sm text-[#6B5B4B]">Plan your perfect food adventure</p>
+                        <h1 class="text-3xl font-semibold text-[#1F1B19]">{{ __('Start Trail') }}</h1>
+                        <p class="mt-2 text-sm text-[#6B5B4B]">{{ __('Plan your perfect food adventure') }}</p>
                     </div>
                 </div>
                 <div
@@ -449,7 +491,7 @@
                         </svg>
                     </div>
                     <div>
-                        <p class="text-[11px] uppercase tracking-[0.22em] text-[#B08B59]">Food Trail</p>
+                        <p class="text-[11px] uppercase tracking-[0.22em] text-[#B08B59]">{{ __('Food Trail') }}</p>
                         <p class="mt-1 font-semibold text-[#1F1B19]">Kuala Lumpur</p>
                     </div>
                     <div class="ml-auto text-[#B8874A]">
@@ -469,13 +511,13 @@
                         <div
                             class="flex items-center gap-3 text-sm font-semibold uppercase tracking-[0.22em] text-[#B8874A]">
                             <span class="inline-flex h-3.5 w-3.5 rounded-full bg-[#D98F4F]"></span>
-                            LIVE MAP
+                            {{ __('LIVE MAP') }}
                         </div>
                         <span id="trailProgressBadge"
                             class="rounded-full bg-[#FFF0D9] px-3 py-1 text-xs font-semibold text-[#B8874A]">0%
-                            complete</span>
+                            {{ __('complete') }}</span>
                     </div>
-                    <h2 class="mt-4 text-2xl font-semibold text-[#1F1B19]">Your current route</h2>
+                    <h2 class="mt-4 text-2xl font-semibold text-[#1F1B19]">{{ __('Your current route') }}</h2>
                     <div id="startMapContainer"
                         class="mt-5 h-[500px] overflow-hidden rounded-[28px] border border-[#E8D4BE] bg-[#FBF6F1] shadow-inner relative">
                         <div
@@ -497,7 +539,7 @@
                                     <path d="M12 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" fill="#D98F4F" />
                                 </svg>
                             </div>
-                            <p class="mt-4 text-[11px] uppercase tracking-[0.24em] text-[#B08B59]">Total stops</p>
+                            <p class="mt-4 text-[11px] uppercase tracking-[0.24em] text-[#B08B59]">{{ __('Total stops') }}</p>
                             <p class="mt-2 text-2xl font-semibold text-[#1F1B19]" data-summary="total-stops">0</p>
                         </div>
                         <div class="rounded-[24px] border border-[#D7E8D0] bg-[#F5FCF5] p-4">
@@ -509,7 +551,7 @@
                                         stroke-linejoin="round" />
                                 </svg>
                             </div>
-                            <p class="mt-4 text-[11px] uppercase tracking-[0.24em] text-[#B08B59]">Visited</p>
+                            <p class="mt-4 text-[11px] uppercase tracking-[0.24em] text-[#B08B59]">{{ __('Visited') }}</p>
                             <p class="mt-2 text-2xl font-semibold text-[#1F1B19]" data-summary="visited">0</p>
                         </div>
                         <div class="rounded-[24px] border border-[#E6D4F1] bg-[#FBF2FF] p-4">
@@ -522,8 +564,8 @@
                                     <path d="M12 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" fill="#8C56D9" />
                                 </svg>
                             </div>
-                            <p class="mt-4 text-[11px] uppercase tracking-[0.24em] text-[#B08B59]">Next stop</p>
-                            <p class="mt-2 text-2xl font-semibold text-[#1F1B19]" data-summary="next-stop">None yet</p>
+                            <p class="mt-4 text-[11px] uppercase tracking-[0.24em] text-[#B08B59]">{{ __('Next stop') }}</p>
+                            <p class="mt-2 text-2xl font-semibold text-[#1F1B19]" data-summary="next-stop">{{ __('None yet') }}</p>
                         </div>
                     </div>
                 </section>
@@ -531,8 +573,8 @@
                 <section class="trail-route-card rounded-[32px] bg-white p-6 shadow-[0_18px_40px_rgba(62,44,23,0.08)]">
                     <div class="flex items-center justify-between gap-4">
                         <div>
-                            <p class="text-xs uppercase tracking-[0.24em] text-[#D98F4F]">Route detail</p>
-                            <h2 class="mt-3 text-xl font-semibold text-[#1F1B19]">Selected restaurants</h2>
+                            <p class="text-xs uppercase tracking-[0.24em] text-[#D98F4F]">{{ __('Route detail') }}</p>
+                            <h2 class="mt-3 text-xl font-semibold text-[#1F1B19]">{{ __('Selected restaurants') }}</h2>
                         </div>
                         <div
                             class="inline-flex items-center gap-2 rounded-full bg-[#FFF4E7] px-3 py-2 text-sm font-semibold text-[#B8874A]">
@@ -542,7 +584,7 @@
                                     stroke-linejoin="round" />
                                 <circle cx="12" cy="12" r="8" stroke="#B8874A" stroke-width="2" />
                             </svg>
-                            <span id="estimateTimeText">Estimated time: 0 min</span>
+                            <span id="estimateTimeText">{{ __('Estimated time') }}: 0 min</span>
                         </div>
                     </div>
                     <div id="selectedTrailList" class="mt-6 space-y-4"></div>
@@ -558,11 +600,10 @@
                                         stroke-linejoin="round" />
                                 </svg>
                             </span>
-                            <span class="font-semibold text-[#1F1B19]">Drag and drop to reorder your stops</span>
+                            <span class="font-semibold text-[#1F1B19]">{{ __('Drag and drop to reorder your stops') }}</span>
                         </div>
                         <button id="clearTrailButton"
-                            class="inline-flex h-12 items-center justify-center rounded-full border border-[#E9D7BF] bg-white px-5 text-sm font-semibold text-[#6B553F] shadow-sm transition hover:bg-[#FBF2E4]">Clear
-                            Trail</button>
+                            class="inline-flex h-12 items-center justify-center rounded-full border border-[#E9D7BF] bg-white px-5 text-sm font-semibold text-[#6B553F] shadow-sm transition hover:bg-[#FBF2E4]">{{ __('Clear Trail') }}</button>
                     </div>
                 </section>
             </div>
@@ -572,35 +613,34 @@
                     class="trail-actions-card rounded-[32px] bg-white p-6 shadow-[0_18px_40px_rgba(62,44,23,0.08)]">
                     <div class="flex items-start justify-between gap-4">
                         <div>
-                            <p class="text-xs uppercase tracking-[0.24em] text-[#B08B59]">Trail actions</p>
-                            <h2 class="mt-3 text-xl font-semibold text-[#1F1B19]">Complete your route</h2>
+                            <p class="text-xs uppercase tracking-[0.24em] text-[#B08B59]">{{ __('Trail actions') }}</p>
+                            <h2 class="mt-3 text-xl font-semibold text-[#1F1B19]">{{ __('Complete your route') }}</h2>
                         </div>
                         <span id="favoriteStatus"
-                            class="rounded-full bg-[#FFF0D9] px-3 py-1 text-sm font-semibold text-[#B8874A]">Not
-                            saved</span>
+                            class="rounded-full bg-[#FFF0D9] px-3 py-1 text-sm font-semibold text-[#B8874A]">{{ __('Not saved') }}</span>
                     </div>
                     <div class="mt-5 space-y-3">
                         <div class="rounded-[20px] border border-[#F0D6C4] bg-[#FEFBF8] p-4">
-                            <p class="text-[11px] uppercase tracking-[0.22em] text-[#B08B59]">Total stops</p>
+                            <p class="text-[11px] uppercase tracking-[0.22em] text-[#B08B59]">{{ __('Total stops') }}</p>
                             <p id="routeTotalStops" class="mt-2 text-2xl font-semibold text-[#1F1B19]">0</p>
                         </div>
                         <div class="rounded-[20px] border border-[#F0D6C4] bg-[#FEFBF8] p-4">
-                            <p class="text-[11px] uppercase tracking-[0.22em] text-[#B08B59]">Visited</p>
+                            <p class="text-[11px] uppercase tracking-[0.22em] text-[#B08B59]">{{ __('Visited') }}</p>
                             <p id="routeVisitedStops" class="mt-2 text-2xl font-semibold text-[#1F1B19]">0</p>
                         </div>
                         <div class="rounded-[20px] border border-[#F0D6C4] bg-[#FEFBF8] p-4">
-                            <p class="text-[11px] uppercase tracking-[0.22em] text-[#B08B59]">Next stop</p>
-                            <p id="routeNextStop" class="mt-2 text-2xl font-semibold text-[#1F1B19]">None yet</p>
+                            <p class="text-[11px] uppercase tracking-[0.22em] text-[#B08B59]">{{ __('Next stop') }}</p>
+                            <p id="routeNextStop" class="mt-2 text-2xl font-semibold text-[#1F1B19]">{{ __('None yet') }}</p>
                         </div>
                     </div>
                     <div class="mt-4 rounded-[20px] border border-[#E9D7BF] bg-white px-4 py-4">
                         <label for="travelModeSelect"
-                            class="block text-[11px] uppercase tracking-[0.22em] text-[#B08B59]">Travel by</label>
+                            class="block text-[11px] uppercase tracking-[0.22em] text-[#B08B59]">{{ __('Travel by') }}</label>
                         <select id="travelModeSelect" class="mt-2 w-full bg-transparent text-sm outline-none">
-                            <option value="WALKING">Walking</option>
-                            <option value="DRIVING" selected>Driving</option>
-                            <option value="TRANSIT">Public Transport</option>
-                            <option value="BICYCLING">Cycling</option>
+                            <option value="WALKING">{{ __('Walking') }}</option>
+                            <option value="DRIVING" selected>{{ __('Driving') }}</option>
+                            <option value="TRANSIT">{{ __('Public Transport') }}</option>
+                            <option value="BICYCLING">{{ __('Cycling') }}</option>
                         </select>
                     </div>
                     <button id="showCurrentRouteButton"
@@ -610,7 +650,7 @@
                             <path d="M14 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                 stroke-linejoin="round" />
                         </svg>
-                        Navigate to Next Stop
+                        {{ __('Navigate to Next Stop') }}
                     </button>
                     <div class="trail-preview-controls">
                         <button id="showPreviousRouteButton" class="trail-preview-btn previous">
@@ -620,15 +660,15 @@
                                 <path d="M10 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                     stroke-linejoin="round" />
                             </svg>
-                            <span class="truncate">Previous</span>
+                            <span class="truncate">{{ __('Previous') }}</span>
                         </button>
 
                         <button id="showAllStopsButton" class="trail-preview-btn all">
-                            <span class="truncate">All Stops</span>
+                            <span class="truncate">{{ __('All Stops') }}</span>
                         </button>
 
                         <button id="showCurrentRouteShortcutButton" class="trail-preview-btn next">
-                            <span class="truncate">Next</span>
+                            <span class="truncate">{{ __('Next') }}</span>
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
                                 xmlns="http://www.w3.org/2000/svg">
                                 <path d="M4 12h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
@@ -642,14 +682,14 @@
                             <path d="m5 12 4 4L19 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"
                                 stroke-linejoin="round" />
                         </svg>
-                        Mark Stop Complete
+                        {{ __('Mark Stop Complete') }}
                     </button>
                     <button id="closeTrailButton"
                         class="mt-3 hidden h-12 w-full items-center justify-center gap-2 rounded-full bg-[#B8874A] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#9c6f33]">
-                        Complete Food Trail
+                        {{ __('Complete Food Trail') }}
                     </button>
                     <div class="mt-5">
-                        <p class="text-[11px] uppercase tracking-[0.22em] text-[#B08B59]">Share trail</p>
+                        <p class="text-[11px] uppercase tracking-[0.22em] text-[#B08B59]">{{ __('Share trail') }}</p>
 
                         <div class="trail-share-grid">
                             <button id="whatsappShareButton" type="button" class="trail-share-btn whatsapp">
@@ -674,7 +714,7 @@
                                             stroke="currentColor" stroke-width="2" stroke-linecap="round" />
                                     </svg>
                                 </span>
-                                <span>Copy Link</span>
+                                <span>{{ __('Copy Link') }}</span>
                             </button>
 
                             <button id="openMapsButton" type="button" class="trail-share-btn maps">
@@ -687,14 +727,14 @@
                                         <circle cx="12" cy="9.5" r="2.2" fill="white" />
                                     </svg>
                                 </span>
-                                <span>Maps</span>
+                                <span>{{ __('Maps') }}</span>
                             </button>
                         </div>
                     </div>
 
                     <button id="addFavoriteButton" type="button" class="trail-favourite-btn">
                         <span class="text-xl">★</span>
-                        <span>Add to Favourite</span>
+                        <span>{{ __('Add to Favourite') }}</span>
                     </button>
 
                     <button id="exitTrailButton" type="button" class="trail-exit-btn">
@@ -705,12 +745,12 @@
                                 stroke-linejoin="round" />
                             <path d="M8 12H18" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
                         </svg>
-                        <span>Exit Trail</span>
+                        <span>{{ __('Exit Trail') }}</span>
                     </button>
 
                     <div id="trailDirectionsPanel"
                         class="mt-4 rounded-[18px] border border-[#F0DDC8] bg-[#FFF9F1] px-4 py-3 text-sm text-[#6B5B4B]">
-                        <p class="font-semibold text-[#1F1B19]">Showing all destinations in your food trail.</p>
+                        <p class="font-semibold text-[#1F1B19]">Showing all destinations in your food trail.'</p>
                         <p class="mt-1">Directions will appear after the route is loaded.</p>
                     </div>
                 </section>
@@ -725,12 +765,12 @@
                         <path d="M12 5v14M5 12h14" stroke="#D98F4F" stroke-width="2" stroke-linecap="round" />
                     </svg>
                 </span>
-                <p class="font-semibold text-[#1F1B19]">Tip: You can reorder your stops by dragging and dropping.</p>
+                <p class="font-semibold text-[#1F1B19]">{{ __('Tip: You can reorder your stops by dragging and dropping.') }}</p>
             </div>
             <a href="#"
                 class="mt-3 inline-flex items-center gap-2 font-semibold text-[#B8874A] hover:text-[#9c6f33] sm:mt-0">
-                <span>Need help?</span>
-                <span class="text-[#B8874A]">View guide</span>
+                <span>{{ __('Need help?') }}</span>
+                <span class="text-[#B8874A]">{{ __('View guide') }}</span>
             </a>
         </div>
     </main>
@@ -742,17 +782,14 @@
     <div id="trailCompleteModal" class="trail-complete-modal is-hidden" role="dialog" aria-modal="true"
         aria-labelledby="trailCompleteTitle">
         <div class="w-full max-w-md rounded-[28px] bg-white p-6 shadow-[0_24px_60px_rgba(31,27,25,0.22)]">
-            <p class="text-xs font-semibold uppercase tracking-[0.24em] text-[#B08B59]">Trail complete</p>
-            <h2 id="trailCompleteTitle" class="mt-3 text-2xl font-semibold text-[#1F1B19]">Would you like to save this
-                food trail as a favourite?</h2>
-            <p class="mt-3 text-sm leading-6 text-[#6B5B4B]">You finished all selected destinations. Save this route so
-                you can open it again from Food Trails.</p>
+            <p class="text-xs font-semibold uppercase tracking-[0.24em] text-[#B08B59]">{{ __('Trail complete') }}</p>
+            <h2 id="trailCompleteTitle" class="mt-3 text-2xl font-semibold text-[#1F1B19]">{{ __('Would you like to save this food trail as a favourite?') }}</h2>
+            <p class="mt-3 text-sm leading-6 text-[#6B5B4B]">{{ __('You finished all selected destinations. Save this route so you can open it again from Food Trails.') }}</p>
             <div class="mt-6 grid gap-3 sm:grid-cols-2">
                 <button id="saveCompletedTrailButton"
-                    class="h-12 rounded-full bg-[#B8874A] px-4 text-sm font-semibold text-white hover:bg-[#9c6f33]">Save
-                    as Favourite</button>
+                    class="h-12 rounded-full bg-[#B8874A] px-4 text-sm font-semibold text-white hover:bg-[#9c6f33]">{{ __('Save as Favourite') }}</button>
                 <button id="discardCompletedTrailButton"
-                    class="h-12 rounded-full border border-[#E9D7BF] bg-white px-4 text-sm font-semibold text-[#6B553F] hover:bg-[#FBF2E4]">Not
+                    class="h-12 rounded-full border border-[#E9D7BF] bg-white px-4 text-sm font-semibold text-[#6B553F] hover:bg-[#FBF2E4]">{{ __('Not Now') }}
                     Now</button>
             </div>
         </div>
@@ -1061,8 +1098,8 @@
             const route = result?.routes?.[0];
             if (!route?.legs?.length) {
                 panel.innerHTML = `
-                    <p class="font-semibold text-[#1F1B19]">Showing all destinations in your food trail.</p>
-                    <p class="mt-1">Directions are unavailable right now. The map still shows your destination markers.</p>
+                    <p class="font-semibold text-[#1F1B19]">${window.foodTrailTranslations.showingAllDestinations}</p>
+                    <p class="mt-1">${window.foodTrailTranslations.directionsUnavailable}</p>
                 `;
                 return;
             }
@@ -1109,23 +1146,53 @@
             }).join('');
 
             const transitSummary = transitSteps.length
-                ? transitSteps.map((transit) => `
-                    <div class="trail-direction-step">
-                        <p class="font-semibold text-[#1F1B19]">${transit.line?.short_name || transit.line?.name || 'Transit service'}</p>
-                        <p class="mt-1 text-xs text-[#6B5B4B]">Board: ${transit.departure_stop?.name || 'Stop unavailable'}${transit.departure_time?.text ? ` at ${transit.departure_time.text}` : ''}</p>
-                        <p class="mt-1 text-xs text-[#6B5B4B]">Get off: ${transit.arrival_stop?.name || 'Stop unavailable'}${transit.arrival_time?.text ? ` at ${transit.arrival_time.text}` : ''}</p>
-                    </div>
-                `).join('')
-                : '<p class="mt-2 text-xs text-[#6B5B4B]">No bus or train segment was returned for this route. Try Public Transport mode to check available scheduled transit options.</p>';
+                    ? transitSteps.map((transit) => `
+                        <div class="trail-direction-step">
+                            <p class="font-semibold text-[#1F1B19]">
+                                ${transit.line?.short_name || transit.line?.name || window.foodTrailTranslations.transitService}
+                            </p>
+
+                            <p class="mt-1 text-xs text-[#6B5B4B]">
+                                ${window.foodTrailTranslations.board}: 
+                                ${transit.departure_stop?.name || window.foodTrailTranslations.stopUnavailable}
+                                ${transit.departure_time?.text ? ` at ${transit.departure_time.text}` : ''}
+                            </p>
+
+                            <p class="mt-1 text-xs text-[#6B5B4B]">
+                                ${window.foodTrailTranslations.getOff}: 
+                                ${transit.arrival_stop?.name || window.foodTrailTranslations.stopUnavailable}
+                                ${transit.arrival_time?.text ? ` at ${transit.arrival_time.text}` : ''}
+                            </p>
+                        </div>
+                    `).join('')
+                    : `<p class="mt-2 text-xs text-[#6B5B4B]">
+                        ${window.foodTrailTranslations.noTransit}
+                    </p>`;
 
             panel.innerHTML = `
-                <p class="font-semibold text-[#1F1B19]">Showing all destinations in your food trail.</p>
-                <p class="mt-1 text-xs text-[#6B5B4B]">Route order starts from your current location when GPS is available. Directions generated ${departureStamp}.</p>
-                <div class="mt-3 grid gap-3">${legHtml}</div>
+                <p class="font-semibold text-[#1F1B19]">
+                    ${window.foodTrailTranslations.showingAllDestinations}
+                </p>
+
+                <p class="mt-1 text-xs text-[#6B5B4B]">
+                    ${window.foodTrailTranslations.routeOrderStarts}
+                    ${window.foodTrailTranslations.directionsGenerated} ${departureStamp}.
+                </p>
+
+                <div class="mt-3 grid gap-3">
+                    ${legHtml}
+                </div>
+
                 <div class="mt-3 rounded-[20px] border border-[#D7E8D0] bg-[#F5FCF5] p-3">
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-[#4A6B31]">Public transport guidance</p>
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-[#4A6B31]">
+                        ${window.foodTrailTranslations.publicTransportGuidance}
+                    </p>
+
                     ${transitSummary}
-                    <p class="mt-2 text-xs text-[#6B5B4B]">Transit times are scheduled values returned by Google Maps Directions at request time unless real-time data is available from Google.</p>
+
+                    <p class="mt-2 text-xs text-[#6B5B4B]">
+                        ${window.foodTrailTranslations.transitTimes}
+                    </p>
                 </div>
             `;
         };
@@ -1402,10 +1469,21 @@
         };
 
         const updateHeaderStatus = () => {
-            if (trailProgressBadge) trailProgressBadge.innerText = `${routeData.length ? Math.round((visitedCount / routeData.length) * 100) : 0}% complete`;
-            if (estimateTimeText) estimateTimeText.innerText = `Estimated time: ${estimatedTime} min`;
+            if (trailProgressBadge) {
+                trailProgressBadge.innerText =
+                    `${routeData.length ? Math.round((visitedCount / routeData.length) * 100) : 0}% ${window.foodTrailTranslations.complete}`;
+            }
+
+            if (estimateTimeText) {
+                estimateTimeText.innerText =
+                `${window.foodTrailTranslations.estimatedTime}: ${estimatedTime} min`;
+                }
+
             updateRouteStats();
-            if (routeData.length) showTrailMessage('');
+
+            if (routeData.length) {
+                showTrailMessage('');
+            }
         };
 
         const renderRouteItems = () => {
@@ -1439,10 +1517,12 @@
                     </div>
                     <div class="trail-stop-actions">
                         <button data-visit-id="${item.id}" class="trail-visit-button ${item.visited ? 'is-visited' : ''}">
-                            ${item.visited ? '✓ Visited' : 'Pending'}
+                            ${item.visited
+                                ? `✓ ${window.foodTrailTranslations.visited}`
+                                : window.foodTrailTranslations.pending}
                         </button>
                         <button data-remove-id="${item.id}" class="trail-remove-button" aria-label="Remove ${item.name}">
-                            × Remove
+                            × ${window.foodTrailTranslations.remove}
                         </button>
                     </div>
                 `;

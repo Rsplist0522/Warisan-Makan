@@ -85,7 +85,7 @@
                     <div>
                         <select id="categorySelect"
                             class="relative z-10 w-full cursor-pointer rounded-3xl border border-[#E6D8C4] bg-[#FFFBF6] px-4 py-4 text-sm text-[#1F1B19] shadow-sm outline-none">
-                            <option value="all">All food categories</option>
+                            <option value="all">{{ __('All food categories') }}</option>
                             @foreach ($categories as $category)
                                 <option value="{{ $category }}">{{ $category }}</option>
                             @endforeach

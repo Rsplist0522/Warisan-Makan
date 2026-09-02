@@ -205,6 +205,10 @@
             line-height: 1;
         }
 
+        .choose-file-button {
+            text-transform: none !important;
+        }
+
         .camera-button:hover,
         .camera-button:focus-visible {
             border-color: var(--wm-accent);
@@ -454,8 +458,8 @@
                     <label for="profile_photo">{{ __('Profile photo') }}</label>
                     <div class="photo-actions">
                         <input id="profile_photo" name="profile_photo" type="file" accept="image/*" hidden>
-                        <label class="camera-button" for="profile_photo" tabindex="0">{{ __('Choose File') }}</label>
-                        <button class="camera-button" id="openCamera" type="button">{{ __('Use camera') }}</button>
+                        <label class="camera-button choose-file-button" for="profile_photo" tabindex="0">{{ __('Choose File') }}</label>
+                        <button class="camera-button" id="openCamera" type="button">{{ __('Use Camera') }}</button>
                     </div>
                 </div>
             </div>

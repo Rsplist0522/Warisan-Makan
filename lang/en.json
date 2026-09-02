@@ -393,7 +393,11 @@
     "Top 10": "Top 10",
     "Last check-in: :date": "Last check-in: :date",
     ":count badges": ":count badges",
-    ":count check-ins": ":count check-ins"
-
+    ":count check-ins": ":count check-ins",
+    "removeFromTrail": "Remove from trail",
+    "markVisited": "Mark visited",
+    "love": "♡ Love",
+    "visited": "Visited",
+    "liked": "♥ Liked"
 
 }

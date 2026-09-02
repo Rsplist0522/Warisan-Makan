@@ -302,6 +302,11 @@ const foodTrailApp = (() => {
     const getRestaurantsForLocation = (location) => {
         return appData.restaurants?.[normalizeLocation(location)] || [];
     };
+    const normalizeSearchText = (value) => String(value || '')
+        .toLowerCase()
+        .replace(/\bkl\b/g, 'kuala lumpur')
+        .replace(/[^\p{L}\p{N}]+/gu, ' ')
+        .trim();
     const updateResultsCount = () => {
         const countBadge = getElement(selectors.resultsCount);
         if (!countBadge) return;
@@ -552,29 +557,26 @@ const foodTrailApp = (() => {
         });
     };
     const handleGenerateTrail = () => {
-        const locationValue = getElement(selectors.locationInput)?.value?.trim();
         const categoryValue = getElement(selectors.categorySelect)?.value || 'all';
-        const keywordValue = getElement(selectors.searchKeyword)?.value.trim().toLowerCase();
-        const locationRestaurants = locationValue ? getRestaurantsForLocation(locationValue) : [];
-        const allRestaurants = locationRestaurants.length ? locationRestaurants : Object.values(appData.restaurants || {}).flat();
+        const keywordValue = getElement(selectors.searchKeyword)?.value.trim() || '';
+        const allRestaurants = Object.values(appData.restaurants || {}).flat();
         if (!allRestaurants.length) {
-            getElement(selectors.selectedTrailSummary).innerText = translate('noLocationRestaurants', 'No restaurants found for this location. Try another city.');
+            getElement(selectors.selectedTrailSummary).innerText = translate('noLocationRestaurants', 'No restaurants are available right now. Try again later.');
             return;
         }
         const filteredByCategory = categoryValue === 'all'
             ? allRestaurants
             : allRestaurants.filter((restaurant) => restaurant.category === categoryValue);
-        const searchValue = keywordValue || (!locationRestaurants.length ? locationValue.toLowerCase() : '');
-        const keywordFiltered = searchValue
+        const searchTerms = normalizeSearchText(keywordValue).split(/\s+/).filter(Boolean);
+        const keywordFiltered = searchTerms.length
             ? filteredByCategory.filter((restaurant) => {
-                const value = `${restaurant.name} ${restaurant.description} ${restaurant.location} ${restaurant.category} ${(restaurant.tags || []).join(' ')}`.toLowerCase();
-                return value.includes(searchValue);
+                const value = normalizeSearchText(`${restaurant.name} ${restaurant.description} ${restaurant.location} ${restaurant.category} ${(restaurant.tags || []).join(' ')}`);
+                return searchTerms.every((term) => value.includes(term));
             })
             : filteredByCategory;
         state.activeRestaurants = keywordFiltered;
         state.filteredRestaurants = keywordFiltered;
-        state.routeRestaurants = [];
-        state.selectedRestaurant = keywordFiltered[0] || null;
+        state.selectedRestaurant = keywordFiltered[0] || state.routeRestaurants[0] || null;
         if (window.google?.maps) {
             initGoogleMapHelpers();
         }
@@ -586,8 +588,9 @@ const foodTrailApp = (() => {
         renderRouteSummary();
         updateRouteCompletion();
         updateResultsCount();
+        const resultDescription = keywordValue ? ` matching "${keywordValue}"` : '';
         getElement(selectors.selectedTrailSummary).innerText = keywordFiltered.length
-            ? `Showing ${keywordFiltered.length} restaurants in ${locationValue}. Use filters to refine the list.`
+            ? `Showing ${keywordFiltered.length} restaurants${resultDescription}. Use filters to refine the list.`
             : 'No restaurants match your criteria. Adjust the filters to see more results.';
     };
     const handleResetFilters = () => {
@@ -595,10 +598,9 @@ const foodTrailApp = (() => {
         getElement(selectors.distanceFilter).value = 'all';
         getElement(selectors.priceFilter).value = 'all';
         getElement(selectors.reviewFilter).value = 'all';
-        getElement(selectors.searchKeyword).value = '';
         applyFilters();
     };
-    const clearTrailSearch = () => { ['locationInput','searchKeyword'].forEach((id) => { const input = getElement(id); if (input) input.value = ''; }); const category = getElement(selectors.categorySelect); if (category) category.value = 'all'; state.activeRestaurants = []; state.filteredRestaurants = []; state.selectedRestaurant = null; setPanelVisibility(false); renderRestaurantList(); renderSelectedRestaurantDetails(); getElement(selectors.selectedTrailSummary).innerText = 'Search by restaurant name or location to begin.'; };
+    const clearTrailSearch = () => { const input = getElement(selectors.searchKeyword); if (input) input.value = ''; const category = getElement(selectors.categorySelect); if (category) category.value = 'all'; state.activeRestaurants = []; state.filteredRestaurants = []; state.selectedRestaurant = null; setPanelVisibility(false); renderRestaurantList(); renderSelectedRestaurantDetails(); getElement(selectors.selectedTrailSummary).innerText = 'Search by restaurant name or location to begin.'; };
     const handleStartNow = () => {
         localStorage.setItem(currentRouteKey, JSON.stringify(state.routeRestaurants));
         window.location.href = '/start_trail';
@@ -615,6 +617,9 @@ const foodTrailApp = (() => {
         getElement(selectors.reviewFilter)?.addEventListener('change', applyFilters);
         getElement(selectors.resetFiltersButton)?.addEventListener('click', handleResetFilters);
         getElement(selectors.searchKeyword)?.addEventListener('input', applyFilters);
+        getElement(selectors.searchKeyword)?.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') handleGenerateTrail();
+        });
         getElement(selectors.clearFavoritesButton)?.addEventListener('click', () => {
             if (!confirm(translate('clearSavedTrails', 'Clear all saved favourite trails?'))) return;
             state.favorites = [];

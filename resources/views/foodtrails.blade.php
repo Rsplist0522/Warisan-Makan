@@ -122,10 +122,10 @@
                         <p class="text-sm uppercase tracking-[0.35em] text-[#B8874A]">{{ __('Search your food trail') }}
                         </p>
                         <h2 class="mt-3 text-3xl font-semibold text-[#1F1B19]">
-                            {{ __('Start by searching your location') }}
+                            {{ __('Find restaurants and locations') }}
                         </h2>
                         <p class="mt-3 max-w-2xl text-sm leading-7 text-[#6B5B4B]">
-                            {{ __('Enter a city or heritage district, choose a category, and generate a curated food trail with restaurant recommendations.') }}
+                            {{ __('Search by restaurant name, location, or both, then choose a category to generate your food trail.') }}
                         </p>
                     </div>
                     <div class="flex gap-3"><button id="clearTrailSearchButton"
@@ -137,32 +137,29 @@
 
                 <div class="mt-6 grid gap-4 lg:grid-cols-[1.8fr_1fr]">
                     <div>
-                        <input id="locationInput" list="locations"
+                        <input id="searchKeyword" type="search" list="locations"
                             class="w-full rounded-3xl border border-[#E6D8C4] bg-[#FFFBF6] px-4 py-4 text-sm text-[#1F1B19] shadow-sm outline-none"
-                            placeholder="{{ __('Search location') }}" />
+                            placeholder="{{ __('Search restaurant or location') }}" />
                         <datalist id="locations">
                             @foreach ($locations as $location)
                                 <option value="{{ $location }}"></option>
                             @endforeach
                         </datalist>
                     </div>
-                    <div class="grid gap-4 sm:grid-cols-2">
+                    <div>
                         <select id="categorySelect"
-                            class="rounded-3xl border border-[#E6D8C4] bg-[#FFFBF6] px-4 py-4 text-sm text-[#1F1B19] shadow-sm outline-none">
+                            class="w-full rounded-3xl border border-[#E6D8C4] bg-[#FFFBF6] px-4 py-4 text-sm text-[#1F1B19] shadow-sm outline-none">
                             <option value="all">All food categories</option>
                             @foreach ($categories as $category)
                                 <option value="{{ $category }}">{{ $category }}</option>
                             @endforeach
                         </select>
-                        <input id="searchKeyword" type="search"
-                            class="rounded-3xl border border-[#E6D8C4] bg-[#FFFBF6] px-4 py-4 text-sm text-[#1F1B19] shadow-sm outline-none"
-                            placeholder="{{ __('Search restaurant') }}" />
                     </div>
                 </div>
 
                 <div class="mt-4 rounded-3xl border border-[#E6D8C4] bg-[#FBF6F1] p-4 text-sm text-[#6B5B4B]">
                     <p id="selectedTrailSummary">
-                        {{ __('Type a location and press Generate Trail to begin your food adventure.') }}
+                        {{ __('Search by restaurant name or location, then press Generate Trail to begin your food adventure.') }}
                     </p>
                 </div>
             </div>

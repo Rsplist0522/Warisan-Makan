@@ -20,7 +20,13 @@ class BlindBoxCatalogManager
         return collect($this->catalog->all())
             ->values()
             ->map(fn (array $shop, int $index): array => array_merge($shop, [
+                // This ID identifies an item within the selectable source
+                // catalogue. It must exist even for sample records, which
+                // are not backed by a HeritageShop database row.
                 'source_id' => $index + 1,
+                // Preserve the actual HeritageShop key separately for a
+                // Blind Box draw's public detail link.
+                'heritage_shop_id' => $shop['source_id'] ?? null,
                 'stable_key' => strtolower((string) ($shop['name'] ?? '')),
             ]))
             ->all();

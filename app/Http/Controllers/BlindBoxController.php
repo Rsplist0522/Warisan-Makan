@@ -96,6 +96,25 @@ class BlindBoxController extends Controller
         $alreadyDrew = $existingDraw !== null;
         $currentDraw = $existingDraw?->toDrawArray();
 
+        // Historical draws may contain the old catalogue-position ID instead
+        // of the HeritageShop ID. Confirm that both ID and name refer to the
+        // same public shop; otherwise recover the correct ID by shop name.
+        // If no public source exists, the view safely links to the listing.
+        if ($currentDraw !== null) {
+            $detailShop = HeritageShop::query()
+                ->published()
+                ->when(isset($currentDraw['id']), fn ($query) => $query->whereKey($currentDraw['id']))
+                ->where('shop_name', $currentDraw['name'])
+                ->first();
+
+            $detailShop ??= HeritageShop::query()
+                ->published()
+                ->where('shop_name', $currentDraw['name'])
+                ->first();
+
+            $currentDraw['id'] = $detailShop?->id;
+        }
+
         return view('blind-box.index', [
             'shops' => $paginatedShops,
             'totalInCatalog' => count($allCatalogShops),
@@ -178,7 +197,7 @@ class BlindBoxController extends Controller
                 'description' => $selectedShop['description'] ?? null,
                 'image' => $imageUrl,
                 'address' => $selectedShop['address'] ?? null,
-                'shop_source_id' => $selectedShop['source_id'] ?? null,
+                'shop_source_id' => $selectedShop['heritage_shop_id'] ?? null,
                 'drawn_at' => $this->nowInMalaysia(),
             ]);
         } catch (\Illuminate\Database\QueryException $e) {

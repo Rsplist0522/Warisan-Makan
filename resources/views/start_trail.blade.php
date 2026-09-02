@@ -12,6 +12,21 @@
 
 @push('head-scripts')
 <script>
+        // A current trail lives in localStorage, so this client-side guard must
+        // run before the page body is rendered. It prevents direct visits to
+        // /start_trail when there are no stops to display.
+        (() => {
+            try {
+                const savedRoute = JSON.parse(localStorage.getItem('foodtrail-current-route') || '[]');
+                if (!Array.isArray(savedRoute) || !savedRoute.length) {
+                    window.location.replace('/foodtrails?trail=empty#trailSearchForm');
+                }
+            } catch (error) {
+                localStorage.removeItem('foodtrail-current-route');
+                window.location.replace('/foodtrails?trail=empty#trailSearchForm');
+            }
+        })();
+
         window.googleMapsApiKey = @json(config('services.google.maps_api_key'));
         window.googleMapsLoaded = false;
         window._onGoogleMapsLoaded = function () {
@@ -863,9 +878,16 @@
             const visitedEl = getElement('routeVisitedStops');
             const nextStopEl = getElement('routeNextStop');
             const closeTrailButton = getElement('closeTrailButton');
+            const navigateButton = getElement('showCurrentRouteButton');
+            const hasNextStop = routeData.some((item) => !item.visited);
             if (stopsEl) stopsEl.innerText = `${routeData.length}`;
             if (visitedEl) visitedEl.innerText = `${visitedCount}`;
             if (nextStopEl) nextStopEl.innerText = getNextStopLabel();
+            if (navigateButton) {
+                navigateButton.disabled = !hasNextStop;
+                navigateButton.classList.toggle('cursor-not-allowed', !hasNextStop);
+                navigateButton.classList.toggle('opacity-50', !hasNextStop);
+            }
             if (closeTrailButton) {
                 const canClose = routeData.length > 0 && visitedCount === routeData.length;
                 closeTrailButton.classList.toggle('hidden', !canClose);
@@ -1394,7 +1416,13 @@
         const favoriteStatus = getElement('favoriteStatus');
 
         const updateRouteData = () => {
-            routeData = JSON.parse(localStorage.getItem(currentRouteKey) || '[]');
+            try {
+                const savedRoute = JSON.parse(localStorage.getItem(currentRouteKey) || '[]');
+                routeData = Array.isArray(savedRoute) ? savedRoute : [];
+            } catch (error) {
+                routeData = [];
+                localStorage.removeItem(currentRouteKey);
+            }
             visitedCount = routeData.filter((item) => item.visited).length;
             estimatedTime = routeData.reduce((total, item) => total + Math.max(8, Math.round(item.distance * 7)), 0);
             previewStopCount = Math.max(1, Math.min(previewStopCount, routeData.length || 1));
@@ -1541,6 +1569,22 @@
             return mapsUrl;
         };
 
+        const navigateToNextStop = () => {
+            const nextStop = routeData.find((item) => !item.visited);
+            if (!nextStop) {
+                showToast('All stops in this trail are complete.');
+                return;
+            }
+
+            // Keep the in-page map aligned with the selected next stop, then
+            // hand off turn-by-turn navigation to Google Maps from the user's
+            // current location.
+            setPreviewStopCount(routeData.indexOf(nextStop) + 1);
+            const destination = encodeURIComponent(getStopLabel(nextStop));
+            const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=${travelMode.toLowerCase()}`;
+            window.open(mapsUrl, '_blank', 'noopener');
+        };
+
         const shareWhatsapp = async () => {
             if (!routeData.length) {
                 showToast('Add restaurants to your trail first.');
@@ -1589,6 +1633,7 @@
                 location: routeData[0]?.location || 'Selected trail',
                 description: `Saved trail with ${routeData.length} stops and ${estimatedTime} min estimated time.`,
                 stops: routeData.length,
+                restaurants: routeData.map((restaurant) => ({ ...restaurant, visited: false })),
             };
             existingFavorites.push(favorite);
             localStorage.setItem(favoritesKey, JSON.stringify(existingFavorites));
@@ -1671,6 +1716,10 @@
 
         document.addEventListener('DOMContentLoaded', async () => {
             updateRouteData();
+            if (!routeData.length) {
+                window.location.replace('/foodtrails?trail=empty#trailSearchForm');
+                return;
+            }
             if (window.google?.maps) {
                 initStartTrailMapHelpers();
             }
@@ -1693,7 +1742,7 @@
             getElement('clearTrailButton')?.addEventListener('click', clearTrail);
             getElement('exitTrailButton')?.addEventListener('click', exitTrail);
             getElement('showAllStopsButton')?.addEventListener('click', () => setPreviewStopCount(routeData.length));
-            getElement('showCurrentRouteButton')?.addEventListener('click', () => setPreviewStopCount(previewStopCount));
+            getElement('showCurrentRouteButton')?.addEventListener('click', navigateToNextStop);
             getElement('showCurrentRouteShortcutButton')?.addEventListener('click', () => setPreviewStopCount(previewStopCount + 1));
             getElement('showPreviousRouteButton')?.addEventListener('click', () => setPreviewStopCount(previewStopCount - 1));
             getElement('travelModeSelect')?.addEventListener('change', (event) => setTravelMode(event.target.value));
@@ -1701,5 +1750,3 @@
         });
     </script>
 @endsection
-
-

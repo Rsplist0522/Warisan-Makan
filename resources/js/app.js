@@ -9,6 +9,7 @@ const foodTrailApp = (() => {
         locationInput: 'locationInput',
         categorySelect: 'categorySelect',
         searchKeyword: 'searchKeyword',
+        trailSearchForm: 'trailSearchForm',
         generateButton: 'generateTrailButton',
         clearTrailSearchButton: 'clearTrailSearchButton',
         resultsPanel: 'resultsPanel',
@@ -610,6 +611,10 @@ const foodTrailApp = (() => {
     };
     const wireEvents = () => {
         getElement(selectors.generateButton)?.addEventListener('click', handleGenerateTrail);
+        getElement(selectors.trailSearchForm)?.addEventListener('submit', (event) => {
+            event.preventDefault();
+            handleGenerateTrail();
+        });
         getElement(selectors.clearTrailSearchButton)?.addEventListener('click', clearTrailSearch);
         getElement(selectors.categoryFilter)?.addEventListener('change', applyFilters);
         getElement(selectors.distanceFilter)?.addEventListener('change', applyFilters);
@@ -617,9 +622,6 @@ const foodTrailApp = (() => {
         getElement(selectors.reviewFilter)?.addEventListener('change', applyFilters);
         getElement(selectors.resetFiltersButton)?.addEventListener('click', handleResetFilters);
         getElement(selectors.searchKeyword)?.addEventListener('input', applyFilters);
-        getElement(selectors.searchKeyword)?.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter') handleGenerateTrail();
-        });
         getElement(selectors.clearFavoritesButton)?.addEventListener('click', () => {
             if (!confirm(translate('clearSavedTrails', 'Clear all saved favourite trails?'))) return;
             state.favorites = [];

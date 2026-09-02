@@ -135,10 +135,10 @@
                     </div>
                 </div>
 
-                <div class="mt-6 grid gap-4 lg:grid-cols-[1.8fr_1fr]">
+                <form id="trailSearchForm" class="relative z-10 mt-6 grid gap-4 lg:grid-cols-[1.8fr_1fr]">
                     <div>
                         <input id="searchKeyword" type="search" list="locations"
-                            class="w-full rounded-3xl border border-[#E6D8C4] bg-[#FFFBF6] px-4 py-4 text-sm text-[#1F1B19] shadow-sm outline-none"
+                            class="relative z-10 w-full cursor-text rounded-3xl border border-[#E6D8C4] bg-[#FFFBF6] px-4 py-4 text-sm text-[#1F1B19] shadow-sm outline-none"
                             placeholder="{{ __('Search restaurant or location') }}" />
                         <datalist id="locations">
                             @foreach ($locations as $location)
@@ -148,14 +148,14 @@
                     </div>
                     <div>
                         <select id="categorySelect"
-                            class="w-full rounded-3xl border border-[#E6D8C4] bg-[#FFFBF6] px-4 py-4 text-sm text-[#1F1B19] shadow-sm outline-none">
+                            class="relative z-10 w-full cursor-pointer rounded-3xl border border-[#E6D8C4] bg-[#FFFBF6] px-4 py-4 text-sm text-[#1F1B19] shadow-sm outline-none">
                             <option value="all">All food categories</option>
                             @foreach ($categories as $category)
                                 <option value="{{ $category }}">{{ $category }}</option>
                             @endforeach
                         </select>
                     </div>
-                </div>
+                </form>
 
                 <div class="mt-4 rounded-3xl border border-[#E6D8C4] bg-[#FBF6F1] p-4 text-sm text-[#6B5B4B]">
                     <p id="selectedTrailSummary">

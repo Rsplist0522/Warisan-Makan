@@ -1,11 +1,16 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+@extends('layouts.user')
 
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{{ __('Food Trails') }} | {{ config('app.name', 'Warisan Makan') }}</title>
-    <script>
+@section('title', __('Food Trails'))
+@section('user-topbar-title', __('Food Trail'))
+@section('user-topbar-subtitle', __('Generate and save curated routes to heritage food spots.'))
+@section('body-class', 'bg-[#f8f3ed] text-[#1f1b19] min-h-screen')
+
+@section('user-topbar-actions')
+<a class="user-topbar-link" href="{{ url('/start_trail') }}">{{ __('Current Trail') }}</a>
+<a class="user-topbar-link" href="{{ route('passport.index') }}">{{ __('Food Passport') }}</a>
+@endsection
+@push('head-scripts')
+<script>
         const googleMapsErrorMessage = @json(__('Google Maps rejected this API key. Check that Maps JavaScript API is enabled, billing is active, and your key restrictions allow this site.'));
 
         window.googleMapsApiKey = @json(config('services.google.maps_api_key'));
@@ -24,79 +29,10 @@
         <script async defer
             src="https://maps.googleapis.com/maps/api/js?key={{ urlencode(config('services.google.maps_api_key')) }}&callback=_onGoogleMapsLoaded"></script>
     @endif
-    <style>
-        .wm-foodtrail-nav {
-            position: sticky;
-            top: 0;
-            z-index: 30;
-            display: flex;
-            min-height: 68px;
-            align-items: center;
-            justify-content: space-between;
-            gap: 20px;
-            border-bottom: 1px solid #E9D7BF;
-            background: rgba(255, 255, 255, 0.88);
-            padding: 12px clamp(16px, 4vw, 32px);
-            backdrop-filter: blur(12px);
-        }
+@endpush
 
-        .wm-foodtrail-brand,
-        .wm-foodtrail-links,
-        .wm-foodtrail-links form {
-            display: flex;
-            align-items: center;
-        }
-
-        .wm-foodtrail-brand {
-            gap: 12px;
-            color: #B8874A;
-            font-size: 18px;
-            font-weight: 800;
-            text-decoration: none;
-        }
-
-        .wm-foodtrail-brand-mark {
-            display: inline-flex;
-            width: 42px;
-            height: 42px;
-            align-items: center;
-            justify-content: center;
-            border-radius: 14px;
-            background: #FDE7CA;
-            color: #B8874A;
-        }
-
-        .wm-foodtrail-links {
-            flex-wrap: wrap;
-            justify-content: flex-end;
-            gap: 8px;
-        }
-
-        .wm-foodtrail-links a,
-        .wm-foodtrail-links button {
-            border: 1px solid #E9D7BF;
-            border-radius: 999px;
-            background: #FFFFFF;
-            color: #6B553F;
-            padding: 9px 14px;
-            font-size: 13px;
-            font-weight: 700;
-            text-decoration: none;
-            transition: background-color 160ms ease, color 160ms ease;
-        }
-
-        .wm-foodtrail-links a.active,
-        .wm-foodtrail-links a:hover,
-        .wm-foodtrail-links button:hover {
-            background: #B8874A;
-            color: #FFFFFF;
-        }
-    </style>
-</head>
-
-<body class="bg-[#f8f3ed] text-[#1f1b19] min-h-screen">
-    @include('partials.foodtrail-nav')
-    <div class="max-w-6xl mx-auto px-4 py-6 lg:px-8">
+@section('content')
+<div class="max-w-6xl mx-auto px-4 py-6 lg:px-8">
         <header class="mb-8 rounded-[32px] bg-white p-6 shadow-[0_18px_40px_rgba(62,44,23,0.08)]">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
@@ -129,7 +65,7 @@
                         </p>
                     </div>
                     <div class="flex gap-3"><button id="clearTrailSearchButton"
-                            class="rounded-full border border-[#D8B58F] bg-white px-5 py-3 text-sm font-semibold text-[#6B553F] hover:bg-[#F8F0E6]">Clear</button><button
+                            class="rounded-full border border-[#D8B58F] bg-white px-5 py-3 text-sm font-semibold text-[#6B553F] hover:bg-[#F8F0E6]">{{ __('Clear') }}</button><button
                             id="generateTrailButton"
                             class="rounded-full bg-[#B8874A] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#9c6f33]">{{ __('Generate Trail') }}</button>
                     </div>
@@ -275,12 +211,11 @@
                     <div class="rounded-[32px] bg-white p-6 shadow-[0_12px_30px_rgba(46,32,16,0.08)]">
                         <div class="flex items-center justify-between gap-4">
                             <div>
-                                <p class="text-sm uppercase tracking-[0.2em] text-[#B08B59]">Map</p>
-                                <h2 class="mt-2 text-xl font-semibold text-[#1F1B19]">Restaurant route</h2>
+                                <p class="text-sm uppercase tracking-[0.2em] text-[#B08B59]">{{ __('Map') }}</p>
+                                <h2 class="mt-2 text-xl font-semibold text-[#1F1B19]">{{ __('Restaurant route') }}</h2>
                             </div>
                             <span id="mapMarkerCount"
-                                class="rounded-full bg-[#F7E4C1] px-3 py-1 text-sm font-semibold text-[#8A5A24]">0
-                                markers</span>
+                                class="rounded-full bg-[#F7E4C1] px-3 py-1 text-sm font-semibold text-[#8A5A24]">0 {{ __('markers') }}</span>
                         </div>
                         <div id="mapContainer"
                             class="relative mt-6 aspect-[4/3] overflow-hidden rounded-[28px] border border-[#E8D4BE] bg-[#FBF6F1] shadow-inner">
@@ -293,7 +228,7 @@
                             </div>
                             <div
                                 class="absolute bottom-4 left-4 rounded-3xl bg-black/10 px-4 py-2 text-xs text-white backdrop-blur-sm">
-                                Click a restaurant card to view route details.</div>
+                                {{ __('Click a restaurant card to view route details.') }}</div>
                         </div>
                     </div>
 
@@ -303,11 +238,11 @@
                             class="rounded-[32px] bg-white p-6 shadow-[0_12px_30px_rgba(46,32,16,0.08)]">
                             <div class="flex items-center justify-between gap-4">
                                 <div>
-                                    <p class="text-sm uppercase tracking-[0.2em] text-[#B08B59]">Restaurant details</p>
-                                    <h2 class="mt-2 text-xl font-semibold text-[#1F1B19]">Selected restaurant</h2>
+                                    <p class="text-sm uppercase tracking-[0.2em] text-[#B08B59]">{{ __('Restaurant details') }}</p>
+                                    <h2 class="mt-2 text-xl font-semibold text-[#1F1B19]">{{ __('Selected restaurant') }}</h2>
                                 </div>
                                 <button id="closeRestaurantDrawer"
-                                    class="inline-flex items-center rounded-full border border-[#D8B58F] bg-white px-4 py-2 text-sm font-semibold text-[#6B553F] transition hover:bg-[#f8efe5]">Close</button>
+                                    class="inline-flex items-center rounded-full border border-[#D8B58F] bg-white px-4 py-2 text-sm font-semibold text-[#6B553F] transition hover:bg-[#f8efe5]">{{ __('Close') }}</button>
                             </div>
                             <div id="restaurantDetailsContent" class="mt-6 text-sm text-[#6B5B4B]"></div>
                         </div>
@@ -333,6 +268,8 @@
     'pickRestaurant' => __('Pick a restaurant'),
     'pickRestaurantHelp' => __('Select a restaurant from the list to see details, add to your trail, or mark it as visited.'),
     'removeFromTrail' => __('Remove from trail'),
+    'removedFromTrail' => __('Removed from trail'),
+    'markedVisited' => __('Marked visited'),
     'addToTrail' => __('+ Add to trail'),
     'visited' => __('Visited'),
     'markVisited' => __('Mark visited'),
@@ -360,8 +297,22 @@
             ],
             categories: ['all', 'Street Food', 'Dessert', 'Seafood', 'Snacks'],
             defaultFavorites: [
-                { id: 'fav-1', title: 'KL Heritage Walk', location: 'Kuala Lumpur', description: 'A classic route for local favorites and street food.', tags: ['Street Food', 'Local'], stops: 3 },
-                { id: 'fav-2', title: 'Penang Sweet Tour', location: 'Penang', description: 'A dessert-focused trail for local heritage sweets.', tags: ['Dessert', 'Heritage'], stops: 3 },
+                {
+                    id: 'fav-1',
+                    title: @json(__('KL Heritage Walk')),
+                    location: @json(__('Kuala Lumpur')),
+                    description: @json(__('A classic route for local favorites and street food.')),
+                    tags: [@json(__('Street Food')), @json(__('Local'))],
+                    stops: 3,
+                },
+                {
+                    id: 'fav-2',
+                    title: @json(__('Penang Sweet Tour')),
+                    location: @json(__('Penang')),
+                    description: @json(__('A dessert-focused trail for local heritage sweets.')),
+                    tags: [@json(__('Dessert')), @json(__('Heritage'))],
+                    stops: 3,
+                },
             ],
             curated: @json($curatedSuggestions),
             restaurants: @json($restaurants),
@@ -369,6 +320,4 @@
             likedRestaurantsKey: 'foodtrail-liked-restaurants',
         };
     </script>
-</body>
-
-</html>
+@endsection

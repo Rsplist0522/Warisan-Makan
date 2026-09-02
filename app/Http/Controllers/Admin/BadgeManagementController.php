@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\PassportController;
 use App\Models\Badge;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 
 class BadgeManagementController extends Controller
@@ -25,6 +27,7 @@ class BadgeManagementController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $badge = Badge::create($this->validatedPayload($request));
+        Cache::forget(PassportController::LEADERBOARD_CACHE_KEY);
 
         return redirect()->route('admin.badges.edit', $badge)->with('status', 'Badge created successfully.');
     }
@@ -47,6 +50,7 @@ class BadgeManagementController extends Controller
         }
 
         $badge->update($payload);
+        Cache::forget(PassportController::LEADERBOARD_CACHE_KEY);
 
         return redirect()->route('admin.badges.edit', $badge)->with('status', 'Badge updated successfully.');
     }
@@ -55,10 +59,13 @@ class BadgeManagementController extends Controller
     {
         if ($badge->is_active && $badge->userBadges()->exists()) {
             return redirect()->route('admin.badges.index')
-                ->with('badge_error', 'This badge cannot be deactivated because it has already been earned by one or more users.');
+                ->withErrors([
+                    'badge' => 'Deactivation failed. Badge has already been awarded to users',
+                ]);
         }
 
         $badge->update(['is_active' => ! $badge->is_active]);
+        Cache::forget(PassportController::LEADERBOARD_CACHE_KEY);
 
         return redirect()->route('admin.badges.index')
             ->with('status', $badge->is_active ? 'Badge activated successfully.' : 'Badge deactivated successfully.');

@@ -3,52 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    @include('partials.brand-favicon')
     <title>@yield('title', 'Admin Dashboard') - Warisan Makan</title>
     @fonts
     <style>
         :root {
             color-scheme: light;
-            --sidebar: #371919;
-            --sidebar-soft: #4a2222;
-            --accent: #a33636;
-            --gold: #c4933c;
+            --sidebar: #3b1b18;
+            --sidebar-soft: #51251f;
+            --accent: #a33a2d;
+            --gold: #c89432;
             --ink: #2e2420;
-            --muted: #77665c;
+            --muted: #7b6a60;
             --canvas: #f7f1ea;
             --panel: #fffdf9;
             --line: rgba(66, 43, 32, .12);
         }
+        html { scrollbar-gutter: stable; }
         * { box-sizing: border-box; }
-        body { margin: 0; min-height: 100vh; min-width: 0; overflow-x: hidden; color: var(--ink); background: var(--canvas); font-family: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif; }
+        body { margin: 0; min-height: 100vh; min-width: 0; overflow-x: hidden; color: var(--ink); background: var(--canvas); font-family: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif; -ms-overflow-style: none; scrollbar-width: none; }
+        body::-webkit-scrollbar { display: none; }
         a { color: inherit; }
         button { font: inherit; }
-        .shell { min-height: 100vh; display: grid; grid-template-columns: 270px 1fr; }
+        .shell { min-height: 100vh; display: grid; grid-template-columns: 268px minmax(0, 1fr); }
         .shell.nav-collapsed { grid-template-columns: 82px 1fr; }
-        .sidebar { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; overflow-y: auto; padding: 28px 20px; color: #fff5ec; background: linear-gradient(180deg, var(--sidebar), #281010); }
+        .sidebar { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; overflow-y: auto; padding: 28px 20px; color: #fff5ec; background: linear-gradient(180deg, var(--sidebar), #281010); -ms-overflow-style: none; scrollbar-width: none; }
+        .sidebar::-webkit-scrollbar { display: none; }
         .brand { display: flex; align-items: center; gap: 12px; padding: 2px 10px 28px; border-bottom: 1px solid rgba(255,255,255,.1); font-family: Georgia, serif; font-size: 1.2rem; font-weight: 800; }
-        .brand-mark { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.2); border-radius: 12px; color: #3b1b16; background: var(--gold); font-family: Georgia, serif; }
+        .brand-mark { width: 38px; height: 38px; display: grid; place-items: center; flex: 0 0 auto; overflow: hidden; border: 0; border-radius: 12px; background: transparent; }
+        .brand-mark img { width: 100%; height: 100%; display: block; object-fit: contain; object-position: center; transform: scale(1.28); }
+        .brand-logo-placeholder { width: 100%; height: 100%; display: block; border-radius: 12px; background: rgba(200,148,50,.16); }
         .nav-label { margin: 27px 12px 10px; color: rgba(255,245,236,.48); font-size: .68rem; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
         .nav { display: grid; gap: 5px; }
-        .nav-item { position: relative; display: flex; min-width: 0; align-items: center; gap: 11px; padding: 11px 12px; border-radius: 10px; color: rgba(255,245,236,.7); font-size: .88rem; text-decoration: none; white-space: nowrap; }
-        .nav-item::before { content: ''; width: 7px; height: 7px; flex: 0 0 auto; border: 1px solid currentColor; border-radius: 50%; }
-        .shell[data-heritage-nav] .nav-item::before { content: attr(data-icon); width: 25px; height: 25px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.15); border-radius: 8px; font-size: .75rem; line-height: 1; }
-        .shell[data-heritage-nav] .nav-item.active::before { border-color: rgba(196,147,60,.42); }
+        .nav-item { position: relative; display: flex; width: 100%; min-width: 0; align-items: center; gap: 11px; padding: 11px 12px; border-radius: 10px; color: rgba(255,245,236,.7); font-size: .88rem; text-decoration: none; white-space: nowrap; }
+        .admin-nav-icon { width: 25px; height: 25px; display: grid; place-items: center; flex: 0 0 auto; border: 1px solid rgba(255,255,255,.15); border-radius: 8px; }
+        .admin-nav-icon svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+        .nav-item.active .admin-nav-icon { border-color: rgba(200,148,50,.42); background: rgba(200,148,50,.16); color: #e7bf74; }
         .nav-item.active, .nav-item:hover { color: #fff; background: var(--sidebar-soft); }
-        .nav-item.active::before { border-color: var(--gold); background: var(--gold); }
-        .nav-item.placeholder { color: rgba(255,245,236,.42); }
-        .nav-item.placeholder:hover { color: rgba(255,245,236,.78); background: rgba(255,255,255,.06); }
-        .nav-item span { min-width: 0; }
+        .nav-item > span:not(.admin-nav-icon) { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
         .nav-item small { margin-left: auto; color: rgba(255,245,236,.42); font-size: .62rem; font-weight: 800; text-transform: uppercase; }
         .subnav { margin: 6px 0 8px 18px; padding-left: 13px; border-left: 1px solid rgba(255,255,255,.13); }
         .subnav .nav-item { padding: 9px 10px; font-size: .8rem; }
-        .subnav .nav-item::before { width: 5px; height: 5px; }
+        .subnav .nav-item::before { content: ''; width: 5px; height: 5px; flex: 0 0 auto; border: 1px solid currentColor; border-radius: 50%; }
         .sidebar-footer { margin-top: auto; padding-top: 22px; border-top: 1px solid rgba(255,255,255,.1); }
         .shell.nav-collapsed .brand { justify-content: center; padding-inline: 0; }
-        .shell.nav-collapsed .brand-word, .shell.nav-collapsed .nav-label, .shell.nav-collapsed .nav-item span, .shell.nav-collapsed .nav-item small, .shell.nav-collapsed .admin-name, .shell.nav-collapsed .admin-role { display: none; }
+        .shell.nav-collapsed .brand-word, .shell.nav-collapsed .nav-label, .shell.nav-collapsed .nav-item > span:not(.admin-nav-icon), .shell.nav-collapsed .nav-item small, .shell.nav-collapsed .admin-name, .shell.nav-collapsed .admin-role { display: none; }
         .shell.nav-collapsed .nav-item { width: 44px; min-height: 44px; justify-content: center; margin-inline: auto; padding-inline: 8px; overflow: hidden; }
-        .shell.nav-collapsed .nav-item::before { width: 28px; height: 28px; border-color: transparent; background: rgba(255,255,255,.04); }
-        .shell[data-heritage-nav].nav-collapsed .nav-item:hover::after, .shell[data-heritage-nav].nav-collapsed .nav-item:focus-visible::after { content: attr(data-label); position: absolute; z-index: 60; left: calc(100% + 10px); top: 50%; display: block; min-width: max-content; transform: translateY(-50%); padding: 8px 10px; border: 1px solid rgba(255,255,255,.12); border-radius: 8px; color: #fffaf4; background: #3b1b18; box-shadow: 0 10px 22px rgba(0,0,0,.18); font-size: .75rem; font-weight: 800; }
-        .shell[data-heritage-nav].nav-collapsed .nav-item:hover { overflow: visible; }
+        .shell.nav-collapsed .admin-nav-icon { width: 28px; height: 28px; border-color: transparent; background: rgba(255,255,255,.04); }
+        .shell[data-admin-nav].nav-collapsed .nav-item:hover::after, .shell[data-admin-nav].nav-collapsed .nav-item:focus-visible::after { content: attr(data-label); position: absolute; z-index: 60; left: calc(100% + 10px); top: 50%; display: block; min-width: max-content; transform: translateY(-50%); padding: 8px 10px; border: 1px solid rgba(255,255,255,.12); border-radius: 8px; color: #fffaf4; background: #3b1b18; box-shadow: 0 10px 22px rgba(0,0,0,.18); font-size: .75rem; font-weight: 800; }
+        .shell[data-admin-nav].nav-collapsed .nav-item:hover { overflow: visible; }
         .shell.nav-collapsed .subnav { display: none; }
         .nav-toggle { display:inline-flex; align-items:center; gap:8px; min-height:38px; border:1px solid var(--line); border-radius:10px; padding:0 12px; color:var(--ink); background:#fff; cursor:pointer; font-size:.8rem; font-weight:800; }
         .nav-toggle:hover { border-color:rgba(163,54,54,.35); background:#fffaf4; }
@@ -57,15 +60,18 @@
         .admin-role { margin: 0 0 14px; color: rgba(255,245,236,.52); font-size: .76rem; }
         .logout { width: 100%; padding: 9px 12px; border: 1px solid rgba(255,255,255,.16); border-radius: 9px; color: #fff5ec; background: transparent; cursor: pointer; text-align: left; }
         .logout:hover { background: rgba(255,255,255,.08); }
-        .main { min-width: 0; }
+        .main { min-width: 0; overflow-x: hidden; background: linear-gradient(135deg, rgba(163, 58, 45, .06), transparent 34%), linear-gradient(315deg, rgba(61, 111, 85, .07), transparent 38%), var(--canvas); }
         .topbar { min-height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 16px 34px; border-bottom: 1px solid var(--line); background: rgba(255,253,249,.9); }
         .topbar h1 { margin: 0; font-family: Georgia, serif; font-size: 1.35rem; }
         .topbar p { margin: 3px 0 0; color: var(--muted); font-size: .82rem; }
-        .content { padding: 34px; }
-        .page-header { display: flex; align-items: end; justify-content: space-between; gap: 18px; margin-bottom: 22px; }
-        .eyebrow { margin: 0 0 7px; color: var(--accent); font-size: .78rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+        .content { width: min(1180px, 100%); margin: 0 auto; padding: 34px; }
+        .page-header { position: relative; overflow: hidden; display: flex; align-items: end; justify-content: space-between; gap: 20px; margin-bottom: 24px; padding: 30px; border-radius: 18px; color: #fffaf4; background: linear-gradient(125deg, #96352c, #54201b); box-shadow: 0 20px 50px rgba(91, 29, 29, .18); }
+        .page-header::after { content: ''; position: absolute; width: 240px; height: 240px; right: -68px; top: -100px; border: 1px solid rgba(255,255,255,.16); border-radius: 50%; box-shadow: 0 0 0 22px rgba(255,255,255,.04), 0 0 0 46px rgba(255,255,255,.025); pointer-events: none; }
+        .page-header > * { position: relative; z-index: 1; min-width: 0; }
+        .eyebrow { margin: 0 0 7px; color: #e7bf74; font-size: .72rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
         .page-header h1 { margin: 0; font-family: Georgia, serif; font-size: clamp(2rem, 5vw, 3.2rem); line-height: 1; }
-        .page-header p:last-child { margin: 9px 0 0; color: var(--muted); }
+        .page-header p:last-child { max-width: 720px; margin: 9px 0 0; color: rgba(255, 250, 244, .74); line-height: 1.6; }
+        .page-header .button.secondary { border-color: rgba(255, 255, 255, .18); color: #fff5ec; background: rgba(255, 255, 255, .08); }
         h1, h2, h3, p { overflow-wrap: break-word; word-break: normal; }
         h2 { margin: 0; font-size: 1.25rem; }
         h3 { margin: 0; font-size: 1rem; }
@@ -150,7 +156,7 @@
             .shell.nav-open .sidebar { transform:translateX(0); }
             .shell.nav-open .nav-backdrop { display:block; position:fixed; z-index:30; inset:0; border:0; background:rgba(34,16,12,.42); cursor:pointer; }
             .shell.nav-collapsed .brand { justify-content:flex-start; padding-inline:10px; }
-            .shell.nav-collapsed .brand-word, .shell.nav-collapsed .nav-label, .shell.nav-collapsed .nav-item span, .shell.nav-collapsed .nav-item small, .shell.nav-collapsed .admin-name, .shell.nav-collapsed .admin-role { display:block; }
+            .shell.nav-collapsed .brand-word, .shell.nav-collapsed .nav-label, .shell.nav-collapsed .nav-item > span:not(.admin-nav-icon), .shell.nav-collapsed .nav-item small, .shell.nav-collapsed .admin-name, .shell.nav-collapsed .admin-role { display:block; }
             .shell.nav-collapsed .nav-item { justify-content:flex-start; padding-inline:12px; }
             .nav { grid-template-columns: 1fr; }
             .subnav { grid-column: auto; margin-left: 0; }
@@ -181,60 +187,53 @@
 </head>
 <body>
     @php
-        $heritageShopNavEnabled = request()->routeIs('admin.heritage-shops.*');
         $communityContributionActive = request()->routeIs('admin.community-contributions.*');
         $foodTrailActive = request()->routeIs('admin.food-trails.*');
         $blindBoxActive = request()->routeIs('admin.blind-box-items.*');
-        $placeholderModules = [
-            'heritage-registry' => 'Heritage Registry',
-            'food-map' => 'Food Map',
-            'stories-editorial' => 'Stories & Editorial',
-            'events-trails' => 'Events & Trails',
-            'reports-analytics' => 'Reports & Analytics',
-        ];
+        $passportActive = request()->routeIs('admin.badges.*');
     @endphp
-    <div class="shell">
-        <aside class="sidebar" id="admin-sidebar" @if($heritageShopNavEnabled) data-heritage-nav="true" @endif>
-            <div class="brand"><span class="brand-mark">W</span><span class="brand-word">Warisan Makan</span></div>
+    <div class="shell" data-admin-nav>
+        <aside class="sidebar" id="admin-sidebar">
+            <div class="brand"><span class="brand-mark">@include('partials.brand-logo', ['imageClass' => 'brand-logo-image', 'placeholderClass' => 'brand-logo-placeholder'])</span><span class="brand-word">Warisan Makan</span></div>
             <p class="nav-label">Admin home</p>
             <nav class="nav" aria-label="Administrator modules">
-                <a class="nav-item {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}" data-icon="⌂" data-label="Dashboard" title="Dashboard" href="{{ route('admin.dashboard') }}"><span>Dashboard</span></a>
+                <a class="nav-item {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}" data-label="Dashboard" title="Dashboard" href="{{ route('admin.dashboard') }}"><span class="admin-nav-icon" aria-hidden="true">@include('partials.module-icon', ['icon' => 'dashboard'])</span><span>Dashboard</span></a>
             </nav>
 
             <p class="nav-label">Modules</p>
             <nav class="nav" aria-label="Administrator modules">
-                <a class="nav-item {{ request()->routeIs('admin.users.*') ? 'active' : '' }}" data-icon="◎" data-label="Users &amp; Roles" title="Users &amp; Roles" href="{{ route('admin.users.index') }}">
+                <a class="nav-item {{ request()->routeIs('admin.users.*') ? 'active' : '' }}" data-label="Users &amp; Roles" title="Users &amp; Roles" href="{{ route('admin.users.index') }}">
+                    <span class="admin-nav-icon" aria-hidden="true">@include('partials.module-icon', ['icon' => 'users'])</span>
                     <span>Users &amp; Roles</span>
                 </a>
-                <a class="nav-item {{ request()->routeIs('admin.heritage-shops.*') ? 'active' : '' }}" data-icon="✦" data-label="Heritage Shops" title="Heritage Shops" href="{{ route('admin.heritage-shops.index') }}">
+                <a class="nav-item {{ request()->routeIs('admin.heritage-shops.*') ? 'active' : '' }}" data-label="Heritage Shops" title="Heritage Shops" href="{{ route('admin.heritage-shops.index') }}">
+                    <span class="admin-nav-icon" aria-hidden="true">@include('partials.module-icon', ['icon' => 'shop'])</span>
                     <span>Heritage Shops</span>
                 </a>
-                <a class="nav-item {{ $communityContributionActive ? 'active' : '' }}" data-icon="◌" data-label="Community Contribution" title="Community Contribution" href="{{ route('admin.community-contributions.submissions') }}">
+                <a class="nav-item {{ $communityContributionActive ? 'active' : '' }}" data-label="Community Contribution" title="Community Contribution" href="{{ route('admin.community-contributions.submissions') }}">
+                    <span class="admin-nav-icon" aria-hidden="true">@include('partials.module-icon', ['icon' => 'community'])</span>
                     <span>Community Contribution</span>
                 </a>
                 @if ($communityContributionActive)
                     <div class="subnav" aria-label="Community Contribution functions">
-                        <a class="nav-item {{ request()->routeIs('admin.community-contributions.submissions') ? 'active' : '' }}" href="{{ route('admin.community-contributions.submissions') }}">Review Queue</a>
-                        <a class="nav-item {{ request()->routeIs('admin.community-contributions.show') ? 'active' : '' }}" href="{{ route('admin.community-contributions.submissions') }}">Review Submission</a>
+                        <a class="nav-item {{ request()->routeIs('admin.community-contributions.submissions') || request()->routeIs('admin.community-contributions.show') ? 'active' : '' }}" href="{{ route('admin.community-contributions.submissions') }}">Review Queue</a>
                         <a class="nav-item {{ request()->routeIs('admin.community-contributions.correction-requests*') ? 'active' : '' }}" href="{{ route('admin.community-contributions.correction-requests') }}">Correction Requests</a>
                         <a class="nav-item {{ request()->routeIs('admin.community-contributions.history') ? 'active' : '' }}" href="{{ route('admin.community-contributions.history') }}">Admin History</a>
                     </div>
                 @endif
 
-                <a class="nav-item {{ $blindBoxActive ? 'active' : '' }}" data-icon="◇" data-label="Blind Box" title="Blind Box" href="{{ route('admin.blind-box-items.index') }}">
+                <a class="nav-item {{ $blindBoxActive ? 'active' : '' }}" data-label="Blind Box" title="Blind Box" href="{{ route('admin.blind-box-items.index') }}">
+                    <span class="admin-nav-icon" aria-hidden="true">@include('partials.module-icon', ['icon' => 'box'])</span>
                     <span>Blind Box</span>
                 </a>
-                <a class="nav-item {{ $foodTrailActive ? 'active' : '' }}" href="{{ route('admin.food-trails.index') }}">
-                    <span>Events &amp; Trails</span>
+                <a class="nav-item {{ $passportActive ? 'active' : '' }}" data-label="Food Passport" title="Food Passport" href="{{ route('admin.badges.index') }}">
+                    <span class="admin-nav-icon" aria-hidden="true">@include('partials.module-icon', ['icon' => 'passport'])</span>
+                    <span>Food Passport</span>
                 </a>
-
-                @foreach ($placeholderModules as $slug => $name)
-                    @continue($slug === 'events-trails')
-                    <a class="nav-item placeholder {{ request()->routeIs('admin.modules.show') && request()->route('moduleSlug') === $slug ? 'active' : '' }}" data-icon="◈" data-label="{{ $name }}" title="{{ $name }}" href="{{ route('admin.modules.show', $slug) }}">
-                        <span>{{ $name }}</span>
-                        <small>soon</small>
-                    </a>
-                @endforeach
+                <a class="nav-item {{ $foodTrailActive ? 'active' : '' }}" data-label="Food Trails" title="Food Trails" href="{{ route('admin.food-trails.index') }}">
+                    <span class="admin-nav-icon" aria-hidden="true">@include('partials.module-icon', ['icon' => 'map'])</span>
+                    <span>Food Trails</span>
+                </a>
             </nav>
             <div class="sidebar-footer">
                 <p class="admin-name">{{ auth()->user()->name }}</p>
@@ -245,15 +244,11 @@
                 </form>
             </div>
         </aside>
-        @if ($heritageShopNavEnabled)
-            <button class="nav-backdrop" id="nav-backdrop" type="button" aria-label="Close navigation"></button>
-        @endif
+        <button class="nav-backdrop" id="nav-backdrop" type="button" aria-label="Close navigation"></button>
 
         <section class="main">
             <header class="topbar">
-                @if ($heritageShopNavEnabled)
-                    <button class="nav-toggle" id="nav-toggle" type="button" aria-controls="admin-sidebar" aria-expanded="true"><span aria-hidden="true">☰</span><span id="nav-toggle-label">Collapse</span></button>
-                @endif
+                <button class="nav-toggle" id="nav-toggle" type="button" aria-controls="admin-sidebar" aria-expanded="true"><span aria-hidden="true">☰</span><span id="nav-toggle-label">Collapse</span></button>
                 <div>
                     <h1>@yield('page-title', 'Admin Dashboard')</h1>
                     <p>Warisan Makan management portal</p>
@@ -279,15 +274,14 @@
             </main>
         </section>
     </div>
-    @if ($heritageShopNavEnabled)
-        <script>
+    <script>
         (() => {
             const shell = document.querySelector('.shell');
             const toggle = document.getElementById('nav-toggle');
             const label = document.getElementById('nav-toggle-label');
             const backdrop = document.getElementById('nav-backdrop');
             if (!shell || !toggle || !label) return;
-            const key = 'warisan-heritage-nav-collapsed';
+            const key = 'warisan-admin-nav-collapsed';
             const mobile = () => window.matchMedia('(max-width: 850px)').matches;
             const sync = () => {
                 if (mobile()) {
@@ -301,7 +295,7 @@
                     const collapsed = localStorage.getItem(key) === 'true';
                     shell.classList.toggle('nav-collapsed', collapsed);
                     toggle.setAttribute('aria-expanded', String(!collapsed));
-                    label.textContent = collapsed ? 'Expand' : 'Collapse';
+                    label.textContent = 'Menu';
                     toggle.setAttribute('aria-label', collapsed ? 'Expand navigation' : 'Collapse navigation');
                 }
             };
@@ -321,7 +315,6 @@
             window.addEventListener('resize', sync, {passive:true});
             sync();
         })();
-        </script>
-    @endif
+    </script>
 </body>
 </html>

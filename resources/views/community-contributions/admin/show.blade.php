@@ -32,29 +32,39 @@
                         <div class="full"><dt>Current owner details</dt><dd>{{ $contribution->current_owner_details ?: 'Not provided' }}</dd></div>
                         <div class="full"><dt>Heritage story</dt><dd>{{ $contribution->heritage_story }}</dd></div>
                         <div class="full"><dt>Address</dt><dd>{{ collect([$contribution->address, $contribution->city, $contribution->state, $contribution->postal_code])->filter()->join(', ') }}</dd></div>
-                        <div class="full">
-                            <dt>Food items</dt>
-                            <dd>
-                                @forelse ($contribution->food_items ?? [] as $item)
-                                    <strong>{{ $item['name'] ?: 'Unnamed item' }}</strong>{{ filled($item['desc'] ?? null) ? ': '.$item['desc'] : '' }}<br>
-                                @empty Not provided @endforelse
-                            </dd>
-                        </div>
                     </dl>
                 </section>
+
+                @include('community-contributions.partials.food-items-hours', ['contribution' => $contribution])
 
                 <section class="panel">
                     <h2>Supporting media</h2>
                     @if ($contribution->media->isNotEmpty())
+                        @if ($contribution->status === \App\Models\HeritageShopContribution::STATUS_UNDER_REVIEW)
+                            <p class="muted">Select suitable submitted images to include in the public Heritage Shop gallery after approval.</p>
+                        @endif
                         <div class="media-grid" style="margin-top:14px">
                             @foreach ($contribution->media as $media)
-                                <a class="media-card" href="{{ $media->url }}" target="_blank" rel="noopener">
-                                    @if ($media->media_type === 'video')
-                                        <video controls preload="metadata"><source src="{{ $media->url }}"></video>
+                                @php
+                                    $isPublishableImage = $media->media_type === 'image' && in_array(strtolower((string) $media->mime_type), ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'], true);
+                                @endphp
+                                <article class="media-card review-media-card">
+                                    <a class="review-media-preview" href="{{ $media->url }}" target="_blank" rel="noopener">
+                                        @if ($media->media_type === 'video')
+                                            <video controls preload="metadata"><source src="{{ $media->url }}"></video>
+                                        @else
+                                            <img src="{{ $media->url }}" alt="Supporting evidence">
+                                        @endif
+                                    </a>
+                                    @if ($contribution->status === \App\Models\HeritageShopContribution::STATUS_UNDER_REVIEW && $isPublishableImage)
+                                        <label class="publish-media-option">
+                                            <input type="checkbox" name="publish_media_ids[]" value="{{ $media->id }}" form="moderation-form" @checked(in_array((string) $media->id, old('publish_media_ids', []), true))>
+                                            <span>Publish to Heritage Shop</span>
+                                        </label>
                                     @else
-                                        <img src="{{ $media->url }}" alt="Supporting evidence">
+                                        <p class="review-only-label">Review evidence only</p>
                                     @endif
-                                </a>
+                                </article>
                             @endforeach
                         </div>
                     @else
@@ -73,7 +83,7 @@
                             <button class="button info" type="submit">Start review</button>
                         </form>
                     @elseif ($contribution->status === \App\Models\HeritageShopContribution::STATUS_UNDER_REVIEW)
-                        <form class="form-grid" method="POST" action="{{ route('admin.community-contributions.moderate', $contribution) }}" style="margin-top:14px">
+                        <form id="moderation-form" class="form-grid" method="POST" action="{{ route('admin.community-contributions.moderate', $contribution) }}" style="margin-top:14px">
                             @csrf
                             <div class="field">
                                 <label for="feedback">Administrator feedback</label>
@@ -151,3 +161,35 @@
         </div>
     </div>
 @endsection
+
+@push('styles')
+    <style>
+        .review-media-card { display: grid; align-content: start; }
+        .review-media-preview { display: block; color: inherit; text-decoration: none; }
+        .publish-media-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-height: 44px;
+            padding: 10px;
+            border-top: 1px solid var(--line);
+            background: rgba(196, 147, 60, .08);
+            color: var(--ink);
+            font-size: .78rem;
+            font-weight: 850;
+            cursor: pointer;
+        }
+        .publish-media-option input { width: 16px; height: 16px; accent-color: var(--accent); }
+        .publish-media-option:has(input:checked) { background: rgba(41, 100, 71, .14); color: #296447; }
+        .review-only-label {
+            margin: 0;
+            min-height: 40px;
+            padding: 10px;
+            border-top: 1px solid var(--line);
+            color: var(--muted);
+            background: rgba(119, 102, 92, .08);
+            font-size: .76rem;
+            font-weight: 800;
+        }
+    </style>
+@endpush

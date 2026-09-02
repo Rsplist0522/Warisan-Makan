@@ -1,11 +1,20 @@
-<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ $foodItem->name }} · {{ $shop->shop_name }} · Warisan Makan</title>
-    <meta name="description" content="Discover {{ $foodItem->name }} and its heritage story at {{ $shop->shop_name }}.">
-    <style>
+@extends('layouts.user')
+
+@section('title', $foodItem->name.' - '.$shop->shop_name)
+@section('user-topbar-title', __('Heritage Discovery'))
+@section('user-topbar-subtitle', __('One dish, one story, one living food tradition.'))
+
+@section('user-topbar-actions')
+<a class="user-topbar-link" href="{{ route('heritage-shops.show', ['id' => $shop->id]) }}#food-menu">{{ __('Back to shop profile') }}</a>
+<a class="user-topbar-link" href="{{ route('heritage-shops.menu', $shop) }}">{{ __('Full menu') }}</a>
+@endsection
+
+@push('head')
+<meta name="description" content="Discover {{ $foodItem->name }} and its heritage story at {{ $shop->shop_name }}.">
+@endpush
+
+@push('styles')
+<style>
         :root { --ink:#3c281f; --muted:#806f64; --accent:#7e2723; --gold:#c89232; --cream:#f7efe6; --line:#eadccd; --green:#3d6f55; }
         * { box-sizing:border-box; }
         body { margin:0; color:var(--ink); background:var(--cream); font:15px/1.55 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
@@ -53,25 +62,11 @@
         .context strong { color:var(--accent); }
         @media (max-width:760px) { .shell { grid-template-columns:1fr; } .sidebar { padding:16px 18px; } .nav-label, .sidebar-footer { display:none; } .nav { display:flex; flex-wrap:wrap; margin-top:14px; } .nav-item { padding:7px 9px; } .topbar { align-items:start; } .story-card { grid-template-columns:1fr; } .story-visual, .story-visual img, .visual-empty { min-height:280px; height:280px; } }
     </style>
-</head>
-<body>
-    <div class="shell">
-        <aside class="sidebar">
-            <div class="brand"><span class="brand-mark">W</span> WarisanMakan</div>
-            <p class="nav-label">Explore</p>
-            <nav class="nav" aria-label="HeritageShop navigation">
-                <a class="nav-item" href="{{ route('heritage-shops.index') }}">Heritage Shop Tracking</a>
-                <a class="nav-item" href="{{ route('passport.index') }}">Food Passport</a>
-                <a class="nav-item" href="{{ url('/foodtrails') }}">Food Trail &amp; Navigation</a>
-            </nav>
-        </aside>
-        <main class="main">
-            <header class="topbar">
-                <div><h2>Heritage Shop Tracking</h2><p>One dish, one story, one living food tradition.</p></div>
-                <a class="topbar-link" href="{{ route('heritage-shops.show', ['id' => $shop->id]) }}#food-menu">Back to shop profile</a>
-            </header>
-            <div class="content">
-                <a class="back-link" href="{{ route('heritage-shops.show', ['id' => $shop->id]) }}#food-menu">← Back to {{ $shop->shop_name }}</a>
+@endpush
+
+@section('content')
+<div class="content">
+<a class="back-link" href="{{ route('heritage-shops.show', ['id' => $shop->id]) }}#food-menu">← Back to {{ $shop->shop_name }}</a>
                 <article class="story-card">
                     <div class="story-visual">
                         @if ($foodItem->image_path)
@@ -102,8 +97,5 @@
                     </div>
                 </article>
                 <div class="context"><p><strong>Preservation note.</strong> This record is shown from the published HeritageShop catalog. Food heritage includes the people, techniques, memories, and community practices connected to what is served—not only the product itself.</p></div>
-            </div>
-        </main>
-    </div>
-</body>
-</html>
+</div>
+@endsection

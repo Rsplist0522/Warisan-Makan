@@ -3,11 +3,24 @@
 @section('title', 'Contribution Details')
 
 @section('content')
+    @php
+        $currentRevisionFeedback = $contribution->currentRevisionFeedback();
+        $previousRevisionFeedback = $contribution->previousRevisionFeedback();
+        $rejectionFeedback = $contribution->rejection_reason ?: $contribution->admin_feedback;
+    @endphp
+
     <header class="page-header">
         <div>
             <p class="eyebrow">Contribution details</p>
             <h1>{{ $contribution->contribution_title ?: $contribution->shop_name }}</h1>
-            <p>Submitted {{ $contribution->formatDateTime($contribution->submitted_at, 'as a draft') }}</p>
+            <p>
+                @if ($contribution->wasResubmitted())
+                    Resubmitted {{ $contribution->formatDateTime($contribution->latestSubmissionOccurredAt()) }}
+                    <span class="submission-secondary">Originally submitted {{ $contribution->formatDateTime($contribution->submitted_at, 'date not available') }}</span>
+                @else
+                    Submitted {{ $contribution->formatDateTime($contribution->submitted_at, 'as a draft') }}
+                @endif
+            </p>
         </div>
         <div class="actions">
             <span class="badge badge-{{ $contribution->status }}">{{ $contribution->statusLabel() }}</span>
@@ -20,13 +33,39 @@
             <strong>Deleted by administrator</strong><br>
             {{ $contribution->admin_feedback ?: 'No deletion reason was provided.' }}
         </section>
-    @elseif ($contribution->admin_feedback)
-        <section class="status-banner {{ $contribution->status === \App\Models\HeritageShopContribution::STATUS_APPROVED ? 'success' : 'error' }}">
-            <strong>Administrator feedback</strong><br>
-            {{ $contribution->admin_feedback }}
-        </section>
-    @endif
+    @else
+        @if ($contribution->status === \App\Models\HeritageShopContribution::STATUS_WITHDRAWN)
+            <section class="status-banner neutral">
+                <strong>Withdrawn by contributor</strong><br>
+                This contribution was withdrawn on {{ $contribution->formatDateTime($contribution->withdrawn_at) }}. You can edit and resubmit it when ready.
+            </section>
+        @endif
 
+        @if ($contribution->status === \App\Models\HeritageShopContribution::STATUS_REJECTED && $rejectionFeedback)
+            <section class="status-banner error">
+                <strong>Rejection reason</strong><br>
+                {{ $rejectionFeedback }}
+            </section>
+        @elseif ($contribution->status === \App\Models\HeritageShopContribution::STATUS_APPROVED && $contribution->admin_feedback)
+            <section class="status-banner success">
+                <strong>Administrator feedback</strong><br>
+                {{ $contribution->admin_feedback }}
+            </section>
+        @endif
+
+        @if ($currentRevisionFeedback)
+            <section class="status-banner error">
+                <strong>Administrator feedback</strong><br>
+                {{ $currentRevisionFeedback }}
+            </section>
+        @elseif ($previousRevisionFeedback)
+            <section class="status-banner neutral">
+                <strong>Previous administrator feedback</strong><br>
+                {{ $previousRevisionFeedback }}
+                <p class="status-note">Addressed in the latest resubmission.</p>
+            </section>
+        @endif
+    @endif
     <div class="detail-grid">
         <div class="detail-stack">
             <section class="panel">
@@ -45,32 +84,7 @@
                 </dl>
             </section>
 
-            <section class="panel">
-                <h2>Food items and operating hours</h2>
-                <div class="definition-grid" style="margin-top:16px">
-                    <div>
-                        <dt>Food items</dt>
-                        <dd>
-                            @forelse ($contribution->food_items ?? [] as $item)
-                                <strong>{{ $item['name'] ?: 'Unnamed item' }}</strong>{{ filled($item['desc'] ?? null) ? ': '.$item['desc'] : '' }}<br>
-                            @empty
-                                Not provided
-                            @endforelse
-                        </dd>
-                    </div>
-                    <div>
-                        <dt>Operating hours</dt>
-                        <dd>
-                            @forelse ($contribution->operating_hours ?? [] as $schedule)
-                                <strong>{{ $schedule['day'] }}</strong>:
-                                {{ $schedule['closed'] ? 'Closed' : (($schedule['open'] ?: '—').' - '.($schedule['close'] ?: '—')) }}<br>
-                            @empty
-                                Not provided
-                            @endforelse
-                        </dd>
-                    </div>
-                </div>
-            </section>
+            @include('community-contributions.partials.food-items-hours', ['contribution' => $contribution])
 
             <section class="panel">
                 <h2>Supporting media</h2>
@@ -97,9 +111,14 @@
                 <h2>Available action</h2>
                 <div class="actions" style="margin-top:14px">
                     @if ($contribution->canBeWithdrawnBy(auth()->user()))
-                        <form method="POST" action="{{ route('community-contribution.contributions.withdraw', $contribution) }}" onsubmit="return confirm('Withdraw this contribution? It will remain in your history.')">
+                        <form method="POST" action="{{ route('community-contribution.contributions.withdraw', $contribution) }}" onsubmit="return confirm(@json(__('Withdraw this contribution? It will be removed from the review queue, but you can edit and resubmit it later.')))">
                             @csrf
                             <button class="button danger" type="submit">Withdraw submission</button>
+                        </form>
+                    @elseif ($contribution->status === \App\Models\HeritageShopContribution::STATUS_WITHDRAWN)
+                        <form method="POST" action="{{ route('community-contribution.contributions.edit-resubmit', $contribution) }}">
+                            @csrf
+                            <button class="button info" type="submit">Edit & Resubmit</button>
                         </form>
                     @elseif ($contribution->status === \App\Models\HeritageShopContribution::STATUS_REVISION_REQUIRED)
                         <a class="button info" href="{{ route('community-contribution.edit', $contribution) }}">Revise and resubmit</a>

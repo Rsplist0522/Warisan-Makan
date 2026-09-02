@@ -125,17 +125,17 @@
 
                         <p>
                             {{ __($correctionRequest->fieldLabel()) }}:
-                            {{ str($correctionRequest->suggested_value)->limit(140) }}
+                            {{ str($correctionRequest->suggestedValueDisplay())->limit(140) }}
                         </p>
 
                         <div class="record-meta">
                             <span>
                                 {{ __('Submitted') }}:
-                                {{ $correctionRequest->created_at->format('d M Y, g:i A') }}
+                                {{ $correctionRequest->formatDateTime($correctionRequest->created_at) }}
                             </span>
                             <span>
                                 {{ __('Updated') }}:
-                                {{ $correctionRequest->updated_at->format('d M Y, g:i A') }}
+                                {{ $correctionRequest->formatDateTime($correctionRequest->updated_at) }}
                             </span>
                         </div>
                     </div>

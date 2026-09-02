@@ -15,17 +15,21 @@ class HeritageShopCatalog
         if (Schema::hasTable('heritage_shops')) {
             try {
                 // We eager load 'images' which is the correct relationship in your model
-                return HeritageShop::query()
+                $shops = HeritageShop::query()
                     ->with(['images']) 
                     ->published()
                     ->get()
                     ->map(fn (HeritageShop $shop) => $this->mapShop($shop))
                     ->all();
+
+                if ($shops !== []) {
+                    return $shops;
+                }
             } catch (\Throwable $e) {
                 logger()->error('HeritageShopCatalog: Database query failed. ' . $e->getMessage());
             }
         }
-        return [];
+        return $this->sampleShops();
     }
 
     public function withFilters(array $filters): array
@@ -78,5 +82,14 @@ class HeritageShopCatalog
 
         // Professional fallback if no image is found
         return 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=900&q=80';
+    }
+
+    private function sampleShops(): array
+    {
+        return [
+            ['name' => 'Kedai Kopi Pak Hassan', 'description' => 'A heritage coffee house known for hand-brewed local favourites.', 'category' => 'Drinks', 'state' => 'Selangor', 'year' => '1987', 'image' => 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=900&q=80', 'address' => 'Jalan Besar, Kajang, Selangor'],
+            ['name' => 'Nasi Lemak Seri Warisan', 'description' => 'An old-school nasi lemak stall with recipes passed down through generations.', 'category' => 'Main Dishes', 'state' => 'Penang', 'year' => '1974', 'image' => 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=900&q=80', 'address' => 'Lebuh Chulia, George Town, Penang'],
+            ['name' => 'Kampung Kuih Mak Cik', 'description' => 'A family kitchen celebrated for traditional kuih and festival treats.', 'category' => 'Desserts', 'state' => 'Johor', 'year' => '1992', 'image' => 'https://images.unsplash.com/photo-1482049016688-2d3e1b311543?auto=format&fit=crop&w=900&q=80', 'address' => 'Jalan Wong Ah Fook, Johor Bahru, Johor'],
+        ];
     }
 }

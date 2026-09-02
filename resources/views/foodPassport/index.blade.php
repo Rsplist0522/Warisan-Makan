@@ -1,12 +1,20 @@
-<!doctype html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+@extends('layouts.user')
 
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ __('Food Passport') }}</title>
-    <style>
+@section('title', __('Food Passport'))
+@section('user-topbar-title', __('Food Passport'))
+@section('user-topbar-subtitle', __('Collect stamps, unlock achievements, and compare your progress.'))
+
+@section('user-topbar-actions')
+<a class="user-topbar-link" href="{{ route('heritage-shops.index') }}">{{ __('Heritage Shops') }}</a>
+<a class="user-topbar-link" href="{{ route('passport.index') }}#leaderboard">{{ __('Leaderboard') }}</a>
+@endsection
+
+@push('head')
+<meta name="csrf-token" content="{{ csrf_token() }}">
+@endpush
+
+@push('styles')
+<style>
         :root {
             --primary: #8C1F1F;
             --primary-deep: #6D1717;
@@ -915,31 +923,22 @@
             }
         }
     </style>
-</head>
-<body>
-    <div class="passport-shell">
-        <header class="topbar">
-            <a class="brand" href="{{ url('/') }}" aria-label="Return to the Warisan Makan home page">
-                <span class="brand-mark">W</span>
-                <span>Warisan Makan</span>
-            </a>
-            <nav class="nav" aria-label="Main navigation">
-                <a class="home-link" href="{{ url('/') }}">Home</a>
-            </nav>
-        </header>
+@endpush
 
-        <main>
+@section('content')
+<div class="passport-shell">
+<main>
             <section class="hero" aria-label="{{ __('Heritage passport hero section') }}">
                 <div class="hero-copy">
                     <p class="eyebrow">{{ __('Food Passport') }}</p>
                     <h1>{{ __('Your Heritage Passport') }}</h1>
                     <p>{{ __('Collect stamps from authentic heritage food stops, uncover founder stories, and unlock rewards as you explore the city’s living culinary heritage.') }}</p>
 
-                    <div class="action-row" aria-label="Passport sections">
-                        <a href="#check-in" class="btn secondary section-nav-link active" data-section-nav="check-in">Check In</a>
-                        <a href="#nearby" class="btn secondary section-nav-link" data-section-nav="nearby">Available Shops</a>
-                        <a href="#passport-progress" class="btn secondary section-nav-link" data-section-nav="passport-progress">Passport Progress</a>
-                        <a href="#leaderboard" class="btn secondary section-nav-link" data-section-nav="leaderboard">Leaderboard</a>
+                    <div class="action-row" aria-label="{{ __('Passport sections') }}">
+                        <a href="#check-in" class="btn secondary section-nav-link active" data-section-nav="check-in">{{ __('Check In') }}</a>
+                        <a href="#nearby" class="btn secondary section-nav-link" data-section-nav="nearby">{{ __('Available Shops') }}</a>
+                        <a href="#passport-progress" class="btn secondary section-nav-link" data-section-nav="passport-progress">{{ __('Passport') }}</a>
+                        <a href="#leaderboard" class="btn secondary section-nav-link" data-section-nav="leaderboard">{{ __('Leaderboard') }}</a>
                     </div>
 
                     <div class="stats-row" aria-label="{{ __('Passport progress statistics') }}">
@@ -974,7 +973,7 @@
                 <div class="panel">
                     <div class="panel-inner">
                         <div class="section-header">
-                            <h2>{{ __('Available Heritage Shops') }}</h2>
+                            <h2>{{ __('Nearby heritage stop') }}</h2>
                             <span class="tag">{{ __('Live') }}</span>
                         </div>
 
@@ -996,26 +995,29 @@
                             </div>
 
                             @if ($availableShops->total() > 0)
-                                <nav class="pagination shops-pagination" aria-label="Available shops pages">
+                                <nav class="pagination shops-pagination" aria-label="{{ __('Available shops pages') }}">
                                     @if ($availableShops->lastPage() > 1)
                                         @if ($availableShops->onFirstPage())
-                                            <span aria-disabled="true">Previous</span>
+                                            <span aria-disabled="true">{{ __('Previous') }}</span>
                                         @else
-                                            <a href="{{ $availableShops->previousPageUrl() }}#nearby">Previous</a>
+                                            <a href="{{ $availableShops->previousPageUrl() }}#nearby">{{ __('Previous') }}</a>
                                         @endif
 
                                         @for ($page = 1; $page <= $availableShops->lastPage(); $page++)
                                             @if ($page === $availableShops->currentPage())
                                                 <span class="active" aria-current="page">{{ $page }}</span>
                                             @else
-                                                <a href="{{ $availableShops->url($page) }}#nearby" aria-label="Available shops page {{ $page }}">{{ $page }}</a>
+                                                <a href="{{ $availableShops->url($page) }}#nearby"
+                                                    aria-label="{{ __('Available shops page :page', ['page' => $page]) }}">
+                                                    {{ $page }}
+                                                </a>
                                             @endif
                                         @endfor
 
                                         @if ($availableShops->hasMorePages())
-                                            <a href="{{ $availableShops->nextPageUrl() }}#nearby">Next</a>
+                                            <a href="{{ $availableShops->nextPageUrl() }}#nearby">{{ __('Next') }}</a>
                                         @else
-                                            <span aria-disabled="true">Next</span>
+                                            <span aria-disabled="true">{{ __('Next') }}</span>
                                         @endif
                                     @else
                                         <span class="active" aria-current="page">{{ $availableShops->currentPage() }}</span>
@@ -1047,8 +1049,6 @@
 
                         <div class="button-row">
                             <button type="button" id="btnCheckIn" class="btn primary">{{ __('Use my location') }}</button>
-                            <button type="button" id="btnDemoCheckIn" class="btn secondary">{{ __('Use demo location') }}</button>
-                            <button type="button" id="btnRefresh" class="btn secondary">{{ __('Reset demo') }}</button>
                         </div>
 
                         <pre id="result" class="result-box">{{ __('Ready to check in. Select a shop and allow location access.') }}</pre>
@@ -1082,19 +1082,19 @@
                             @endforeach
                         </div>
                         @if ($visitedLocations->total() > 0)
-                            <nav class="pagination" aria-label="Visited locations pages">
+                            <nav class="pagination" aria-label="{{ __('Visited locations pages') }}">
                                 @if ($visitedLocations->lastPage() > 1)
                                     @if ($visitedLocations->onFirstPage())
                                         <span aria-disabled="true">Previous</span>
                                     @else
-                                        <a href="{{ $visitedLocations->previousPageUrl() }}#visited-locations">Previous</a>
+                                        <a href="{{ $visitedLocations->previousPageUrl() }}#visited-locations">{{ __('Previous') }}</a>
                                     @endif
 
                                     @for ($page = 1; $page <= $visitedLocations->lastPage(); $page++)
                                         @if ($page === $visitedLocations->currentPage())
-                                            <span class="active" aria-current="page">{{ $page }}</span>
+                                            <span class="active" aria-current="page">{{ __('Page :page', ['page' => $page]) }}</span>
                                         @else
-                                            <a href="{{ $visitedLocations->url($page) }}#visited-locations" aria-label="Visited locations page {{ $page }}">{{ $page }}</a>
+                                            <a href="{{ $visitedLocations->url($page) }}#visited-locations" aria-label="{{ __('Visited locations page :page', ['page' => $page]) }}">{{ $page }}</a>
                                         @endif
                                     @endfor
 
@@ -1104,7 +1104,9 @@
                                         <span aria-disabled="true">Next</span>
                                     @endif
                                 @else
-                                    <span class="active" aria-current="page">{{ $visitedLocations->currentPage() }}</span>
+                                    <span class="active" aria-current="page">
+                                        {{ __('Page :page', ['page' => $visitedLocations->currentPage()]) }}
+                                    </span>
                                 @endif
                             </nav>
                         @endif
@@ -1177,7 +1179,10 @@
                                 <h4>{{ __($badge['name']) }}</h4>
                                 <p>{{ __($badge['description']) }}</p>
                                 <p style="margin-top: 8px; color: {{ $badge['earned'] ? '#3E6C4F' : '#675B54' }}; font-weight: 700;">
-                                    {{ $badge['earned'] ? 'Unlocked' : 'Need ' . (int) $badge['threshold'] . ' visits' }}
+                                    {{ $badge['earned']
+                                        ? __('Unlocked')
+                                        : __('Need :count visits', ['count' => (int) $badge['threshold']])
+                                    }}
                                 </p>
                                 @if ($badge['earned'])
                                     <p class="badge-share-hint">{{ __('Click to share') }}</p>
@@ -1216,26 +1221,26 @@
                         </div>
 
                         @if ($leaderboard->total() > 0)
-                            <nav class="pagination leaderboard-pagination" aria-label="Leaderboard pages">
+                            <nav class="pagination leaderboard-pagination" aria-label="{{ __('Leaderboard pages') }}">
                                 @if ($leaderboard->lastPage() > 1)
                                     @if ($leaderboard->onFirstPage())
-                                        <span aria-disabled="true">Previous</span>
+                                        <span aria-disabled="true">{{ __('Previous') }}</span>
                                     @else
-                                        <a href="{{ $leaderboard->previousPageUrl() }}#leaderboard">Previous</a>
+                                        <a href="{{ $leaderboard->previousPageUrl() }}#leaderboard">{{ __('Previous') }}</a>
                                     @endif
 
                                     @for ($page = 1; $page <= $leaderboard->lastPage(); $page++)
                                         @if ($page === $leaderboard->currentPage())
                                             <span class="active" aria-current="page">{{ $page }}</span>
                                         @else
-                                            <a href="{{ $leaderboard->url($page) }}#leaderboard" aria-label="Leaderboard page {{ $page }}">{{ $page }}</a>
+                                            <a href="{{ $leaderboard->url($page) }}#leaderboard" aria-label="{{ __('Leaderboard page :page', ['page' => $page]) }}">{{ $page }}</a>
                                         @endif
                                     @endfor
 
                                     @if ($leaderboard->hasMorePages())
-                                        <a href="{{ $leaderboard->nextPageUrl() }}#leaderboard">Next</a>
+                                        <a href="{{ $leaderboard->nextPageUrl() }}#leaderboard">{{ __('Next') }}</a>
                                     @else
-                                        <span aria-disabled="true">Next</span>
+                                        <span aria-disabled="true">{{ __('Next') }}</span>
                                     @endif
                                 @else
                                     <span class="active" aria-current="page">{{ $leaderboard->currentPage() }}</span>
@@ -1293,7 +1298,19 @@
 
     <script>
         const sendingCheckInRequestMessage = @json(__('Sending check-in request...'));
-        const resettingDemoPassportMessage = @json(__('Resetting the demo passport...'));
+
+        const readyToCheckInMessage = @json(__('Ready to check in. Select a shop and allow location access.'));
+        const unexpectedErrorMessage = @json(__('We could not complete the request. Please try again.'));
+        const signInBeforeCheckInMessage = @json(__('Please sign in before checking in to your heritage passport.'));
+        const sessionExpiredMessage = @json(__('Your session expired. Refresh the page and sign in again before checking in.'));
+        const checkInServiceUnavailableMessage = @json(__('The check-in service is not available. Please verify the Passport routes in web.php.'));
+        const serverCheckInErrorMessage = @json(__('The server could not complete your check-in. Please check the Laravel error log.'));
+        const unexpectedResponseMessage = @json(__('The server returned an unexpected response. Please try again.'));
+        const networkServerErrorMessage = @json(__('Network or server error: :message'));
+        const selectHeritageShopMessage = @json(__('Please select a heritage shop first.'));
+        const geolocationUnsupportedMessage = @json(__('Geolocation is not supported by this browser.'));
+        const requestingLocationMessage = @json(__('Requesting location for your heritage check-in...'));
+        const failedLocationMessage = @json(__('Failed to get location: :message'));
 
         const shops = @json($shops);
         let activeShop = shops[0] || null;
@@ -1374,7 +1391,7 @@
                 return;
             }
 
-            out.textContent = value.message || 'We could not complete the request. Please try again.';
+            out.textContent = value.message || unexpectedErrorMessage;
         }
 
         function openBadgeModal(unlockedBadges, refreshOnClose = false) {
@@ -1391,18 +1408,20 @@
             const primaryBadge = orderedBadges[0];
             const badgeNames = orderedBadges.map(badge => badge.name).join(', ');
             const additionalBadges = orderedBadges.length > 1
-                ? ' Also unlocked: ' + orderedBadges.slice(1).map(badge => badge.name).join(', ') + '.'
+                ? ' ' + @json(__('Also unlocked: :badges.', ['badges' => '__BADGES__'])).replace('__BADGES__', orderedBadges.slice(1).map(badge => badge.name).join(', '))
                 : '';
             const milestone = primaryBadge.threshold || primaryBadge.progress || 'new';
 
             activeBadgeForShare = primaryBadge;
             badgeModalIcon.textContent = primaryBadge.icon || '★';
             badgeModalBadgeName.textContent = primaryBadge.name;
-            badgeModalBadgeDescription.textContent = (primaryBadge.description || 'Keep exploring local food heritage.') + additionalBadges;
+            badgeModalBadgeDescription.textContent = (primaryBadge.description || @json(__('Keep exploring local food heritage.'))) + additionalBadges;
             badgeModalProgress.textContent = primaryBadge.threshold || primaryBadge.progress
-                ? 'Milestone reached: ' + milestone + ' heritage visits'
-                : 'A new story added to my food journey';
-            badgeShareText = 'I just earned the ' + badgeNames + ' badge on the Warisan Makan Heritage Passport after discovering ' + milestone + ' heritage food stories. What should I explore next?';
+                ? @json(__('Milestone reached: :count heritage visits')).replace(':count', milestone)
+                : @json(__('A new story added to my food journey'));
+            badgeShareText = @json(__('I just earned the :badges badge on the Warisan Makan Heritage Passport after discovering :count heritage food stories. What should I explore next?'))
+                .replace(':badges', badgeNames)
+                .replace(':count', milestone);
             shareStatus.textContent = '';
             badgeModal.hidden = false;
             document.body.classList.add('modal-open');
@@ -1512,7 +1531,7 @@
             wrapCanvasText(context, badge.name, width / 2, centerY + 52, width - 240, 70, 2);
             context.fillStyle = 'rgba(251,246,238,0.92)';
             context.font = story ? '32px Arial, sans-serif' : '28px Arial, sans-serif';
-            wrapCanvasText(context, badge.description || 'A new heritage-food milestone.', width / 2, centerY + 150, width - 260, 42, 3);
+            wrapCanvasText(context, badge.description || @json(__('A new heritage-food milestone.')), width / 2, centerY + 150, width - 260, 42, 3);
 
             context.textAlign = 'center';
             context.fillStyle = '#F2D37B';
@@ -1542,8 +1561,8 @@
             link.href = canvas.toDataURL('image/png');
             link.click();
             shareStatus.textContent = format === 'story'
-                ? 'Story card downloaded. Upload it to Instagram Story or WhatsApp Status.'
-                : 'Square card downloaded. It is ready for your social feed.';
+                ? @json(__('Story card downloaded. Upload it to Instagram Story or WhatsApp Status.'))
+                : @json(__('Square card downloaded. It is ready for your social feed.'));
         }
 
         async function shareAchievementFile(format) {
@@ -1570,7 +1589,7 @@
             }
 
             await navigator.share(shareData);
-            shareStatus.textContent = 'Achievement card shared successfully.';
+            shareStatus.textContent = @json(__('Achievement card shared successfully.'));
             return true;
         }
 
@@ -1578,7 +1597,7 @@
             try {
                 if (channel === 'copy') {
                     await copyShareText();
-                    shareStatus.textContent = 'Caption copied. Add it with your achievement card.';
+                    shareStatus.textContent = @json(__('Caption copied. Add it with your achievement card.'));
                     return;
                 }
 
@@ -1596,7 +1615,7 @@
                     await copyShareText();
                     downloadAchievementCard('story');
                     window.open('https://www.instagram.com/', '_blank', 'noopener');
-                    shareStatus.textContent = 'Instagram opened. The story card was downloaded and the caption was copied—upload the PNG after logging in.';
+                    shareStatus.textContent = @json(__('Instagram opened. The story card was downloaded and the caption was copied—upload the PNG after logging in.'));
                     return;
                 }
 
@@ -1605,12 +1624,12 @@
                     downloadAchievementCard('square');
                     const url = 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(window.location.href) + '&quote=' + encodeURIComponent(badgeShareText);
                     window.open(url, '_blank', 'noopener');
-                    shareStatus.textContent = 'Facebook opened. The square card was downloaded and the caption was copied—attach the PNG if needed.';
+                    shareStatus.textContent = @json(__('Facebook opened. The square card was downloaded and the caption was copied—attach the PNG if needed.'));
                     return;
                 }
 
                 if (channel === 'whatsapp') {
-                    shareStatus.textContent = 'Preparing your WhatsApp achievement card...';
+                    shareStatus.textContent = @json(__('Preparing your WhatsApp achievement card...'));
 
                     const isTouchDevice = 'ontouchstart' in window || (window.navigator.maxTouchPoints || 0) > 0;
                     if (isTouchDevice) {
@@ -1625,19 +1644,19 @@
                     const whatsappWindow = window.open(whatsappUrl, '_blank', 'noopener');
                     await copyShareText();
                     if (!whatsappWindow) {
-                        shareStatus.textContent = 'The card was downloaded and the caption was copied, but the browser blocked WhatsApp. Allow pop-ups or open WhatsApp Web manually.';
+                        shareStatus.textContent = @json(__('The card was downloaded and the caption was copied, but the browser blocked WhatsApp. Allow pop-ups or open WhatsApp Web manually.'));
                     } else {
                         shareStatus.textContent = isTouchDevice
-                            ? 'WhatsApp opened. Attach the downloaded card if your device did not include it automatically.'
-                            : 'WhatsApp Web opened. The square card was downloaded and the caption was copied—attach the PNG in the chat.';
+                            ? @json(__('WhatsApp opened. Attach the downloaded card if your device did not include it automatically.'))
+                            : @json(__('WhatsApp Web opened. The square card was downloaded and the caption was copied—attach the PNG in the chat.'));
                     }
                 }
             } catch (error) {
                 if (error && error.name === 'AbortError') {
-                    shareStatus.textContent = 'Sharing cancelled.';
+                    shareStatus.textContent = @json(__('Sharing cancelled.'));
                     return;
                 }
-                shareStatus.textContent = 'We could not prepare the share card. Please use the download buttons instead.';
+                shareStatus.textContent = @json(__('We could not prepare the share card. Please use the download buttons instead.'));
             }
         }
 
@@ -1684,41 +1703,41 @@
             if (response.redirected || response.url.includes('/login')) {
                 return {
                     success: false,
-                    message: 'Please sign in before checking in to your heritage passport.'
+                    message: signInBeforeCheckInMessage
                 };
             }
 
             if (response.status === 401 || response.status === 403) {
                 return {
                     success: false,
-                    message: 'Please sign in before checking in to your heritage passport.'
+                    message: signInBeforeCheckInMessage
                 };
             }
 
             if (response.status === 419) {
                 return {
                     success: false,
-                    message: 'Your session expired. Refresh the page and sign in again before checking in.'
+                    message: sessionExpiredMessage
                 };
             }
 
             if (response.status === 404 || response.status === 405) {
                 return {
                     success: false,
-                    message: 'The check-in service is not available. Please verify the Passport routes in web.php.'
+                    message: checkInServiceUnavailableMessage
                 };
             }
 
             if (response.status >= 500) {
                 return {
                     success: false,
-                    message: 'The server could not complete your check-in. Please check the Laravel error log.'
+                    message: serverCheckInErrorMessage
                 };
             }
 
             return {
                 success: false,
-                message: 'The server returned an unexpected response. Please try again.'
+                message: unexpectedResponseMessage
             };
         }
 
@@ -1740,11 +1759,6 @@
                 const json = await parseApiResponse(response);
                 setResult(json);
 
-                if (response.status === 409) {
-                    window.setTimeout(() => window.location.reload(), 900);
-                    return;
-                }
-
                 if (response.ok && json && json.success) {
                     const newlyUnlockedBadges = Array.isArray(json.newly_unlocked_badges)
                         ? json.newly_unlocked_badges
@@ -1757,62 +1771,21 @@
                     }
                 }
             }).catch(error => {
-                setResult('Network or server error: ' + error.message);
+                setResult( networkServerErrorMessage.replace(':message', error.message));
             });
         }
 
-        document.getElementById('btnRefresh')?.addEventListener('click', async () => {
-            if (!window.confirm('Reset the demo passport and start again?')) {
-                return;
-            }
-
-            setResult(resettingDemoPassportMessage);
-
-            try {
-                const response = await fetch('/passport/reset-demo', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                        'Accept': 'application/json'
-                    }
-                });
-                const json = await parseApiResponse(response);
-                setResult(json);
-
-                if (response.ok && json.success) {
-                    window.setTimeout(() => window.location.reload(), 700);
-                }
-            } catch (error) {
-                setResult('We could not reset the demo right now. Please try again.');
-            }
-        });
-
-        document.getElementById('btnDemoCheckIn')?.addEventListener('click', function () {
-            if (!activeShop) {
-                setResult('Please select a heritage shop first.');
-                return;
-            }
-
-            setResult('Using a demo location near the selected shop...');
-            submitCheckIn({
-                shop_id: Number(activeShop.id),
-                user_latitude: Number((Number(activeShop.lat) + 0.0002).toFixed(6)),
-                user_longitude: Number((Number(activeShop.lng) + 0.0002).toFixed(6)),
-                demo_mode: true
-            });
-        });
-
         document.getElementById('btnCheckIn')?.addEventListener('click', function () {
             if (!activeShop) {
-                setResult('Please select a heritage shop first.');
+                setResult(selectHeritageShopMessage);
                 return;
             }
             if (!navigator.geolocation) {
-                setResult('Geolocation is not supported by this browser.');
+                setResult(geolocationUnsupportedMessage);
                 return;
             }
 
-            setResult('Requesting location for your heritage check-in...');
+            setResult(requestingLocationMessage);
 
             navigator.geolocation.getCurrentPosition(function (position) {
                 const payload = {
@@ -1823,9 +1796,8 @@
 
                 submitCheckIn(payload);
             }, function (error) {
-                setResult('Failed to get location: ' + (error.message || error.code));
+                setResult(failedLocationMessage.replace(':message', error.message || error.code));
             }, { enableHighAccuracy: true, timeout: 10000 });
         });
     </script>
-</body>
-</html>
+@endsection

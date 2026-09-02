@@ -54,11 +54,11 @@
                         <div>
                             <span class="badge badge-{{ $correctionRequest->status }}">{{ $correctionRequest->statusLabel() }}</span>
                             <h2>{{ $correctionRequest->heritageShop?->shop_name ?? 'Deleted heritage shop' }}</h2>
-                            <p>{{ $correctionRequest->fieldLabel() }}: {{ str($correctionRequest->suggested_value)->limit(160) }}</p>
+                            <p>{{ $correctionRequest->fieldLabel() }}: {{ str($correctionRequest->suggestedValueDisplay())->limit(160) }}</p>
                             <div class="record-meta">
                                 <span>Contributor: {{ $correctionRequest->user?->name ?? 'Deleted user' }}</span>
                                 <span>Field: {{ $correctionRequest->fieldLabel() }}</span>
-                                <span>Submitted: {{ $correctionRequest->created_at->format('d M Y, g:i A') }}</span>
+                                <span>Submitted: {{ $correctionRequest->formatDateTime($correctionRequest->created_at) }}</span>
                             </div>
                         </div>
                         <div class="record-actions">

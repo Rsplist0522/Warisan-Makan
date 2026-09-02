@@ -7,7 +7,7 @@
         <div>
             <p class="eyebrow">Correction request details</p>
             <h1>{{ $correctionRequest->heritageShop?->shop_name ?? 'Deleted heritage shop' }}</h1>
-            <p>Submitted {{ $correctionRequest->created_at->format('d M Y, g:i A') }}</p>
+            <p>Submitted {{ $correctionRequest->formatDateTime($correctionRequest->created_at) }}</p>
         </div>
         <div class="actions">
             <span class="badge badge-{{ $correctionRequest->status }}">{{ $correctionRequest->statusLabel() }}</span>
@@ -29,8 +29,8 @@
                 <dl class="definition-grid" style="margin-top:16px">
                     <div><dt>Heritage shop</dt><dd>{{ $correctionRequest->heritageShop?->shop_name ?? 'Deleted heritage shop' }}</dd></div>
                     <div><dt>Incorrect field</dt><dd>{{ $correctionRequest->fieldLabel() }}</dd></div>
-                    <div class="full"><dt>Current information</dt><dd>{{ $correctionRequest->current_value }}</dd></div>
-                    <div class="full"><dt>Suggested corrected information</dt><dd>{{ $correctionRequest->suggested_value }}</dd></div>
+                    <div class="full"><dt>Current information</dt><dd>{!! nl2br(e($correctionRequest->current_value)) !!}</dd></div>
+                    <div class="full"><dt>Suggested corrected information</dt><dd>{!! nl2br(e($correctionRequest->suggestedValueDisplay())) !!}</dd></div>
                     <div class="full"><dt>Reason</dt><dd>{{ $correctionRequest->reason }}</dd></div>
                     @if ($correctionRequest->additional_information)
                         <div class="full"><dt>Additional information provided</dt><dd>{{ $correctionRequest->additional_information }}</dd></div>
@@ -85,7 +85,7 @@
                     @forelse ($correctionRequest->moderationActivities as $activity)
                         <div class="timeline-item">
                             <strong>{{ str($activity->action)->replace('_', ' ')->title() }}</strong>
-                            <p>{{ $activity->created_at->format('d M Y, g:i A') }} by {{ $activity->actor?->name ?? 'Unknown user' }}</p>
+                            <p>{{ $correctionRequest->formatDateTime($activity->created_at) }} by {{ $activity->actor?->name ?? 'Unknown user' }}</p>
                             @if ($activity->comment)<p>{{ $activity->comment }}</p>@endif
                         </div>
                     @empty

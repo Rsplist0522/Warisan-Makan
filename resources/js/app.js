@@ -650,8 +650,9 @@ const foodTrailApp = (() => {
         loadCurrentRoute();
         renderFavorites();
         renderCuratedTrails();
-        setPanelVisibility(state.routeRestaurants.length > 0);
-        if (state.routeRestaurants.length) {
+        const openingSavedTrails = window.location.hash === '#initialPanel';
+        setPanelVisibility(!openingSavedTrails && state.routeRestaurants.length > 0);
+        if (!openingSavedTrails && state.routeRestaurants.length) {
             state.filteredRestaurants = state.routeRestaurants.slice();
             state.activeRestaurants = state.routeRestaurants.slice();
             state.selectedRestaurant = state.routeRestaurants[0] || null;
@@ -667,12 +668,18 @@ const foodTrailApp = (() => {
         } else if (!googleApiKey) {
             showGoogleMapMessage(translate('mapNotConfigured', 'Google Maps is not configured. Add GOOGLE_MAPS_API_KEY to your .env file and reload.'));
         }
+        if (new URLSearchParams(window.location.search).get('trail') === 'empty') {
+            getElement(selectors.selectedTrailSummary).innerText = translate('emptyCurrentTrail', 'Your current trail is empty. Generate a trail and add at least one restaurant to continue.');
+        }
     };
     return {
         init,
     };
 })();
 window.addEventListener('DOMContentLoaded', () => {
+    // This bundle is included by both Food Trails and Current Trail. Only the
+    // Food Trails page has the catalogue needed to validate and persist a route.
+    if (!document.getElementById('trailSearchForm')) return;
     foodTrailApp.init();
 });
 window.addEventListener('googleMapsError', (event) => {

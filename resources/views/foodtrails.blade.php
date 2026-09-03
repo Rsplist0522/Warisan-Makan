@@ -33,6 +33,12 @@
 
 @section('content')
 <div class="max-w-6xl mx-auto px-4 py-6 lg:px-8">
+        @if (request('trail') === 'empty')
+            <div class="mb-6 flex items-start gap-3 rounded-2xl border border-[#E5B8A5] bg-[#FFF2EA] px-5 py-4 text-sm text-[#7D2E1E] shadow-sm" role="alert">
+                <span class="mt-0.5 text-base" aria-hidden="true">!</span>
+                <p>{{ __('Your current trail is empty. Generate a trail and add at least one restaurant to continue.') }}</p>
+            </div>
+        @endif
         <header class="mb-8 rounded-[32px] bg-white p-6 shadow-[0_18px_40px_rgba(62,44,23,0.08)]">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
@@ -287,6 +293,7 @@
     'clearSavedTrails' => __('Clear all saved favourite trails?'),
     'mapNotConfigured' => __('Google Maps is not configured. Add GOOGLE_MAPS_API_KEY to your .env file and reload.'),
     'mapLoadFailed' => __('Google Maps could not be loaded.'),
+    'emptyCurrentTrail' => __('Your current trail is empty. Generate a trail and add at least one restaurant to continue.'),
 ]) }},
             locations: [
                 'Kuala Lumpur',

@@ -644,6 +644,11 @@
         drawUrl: '{{ route('blind-box.draw') }}',
         csrfToken: '{{ csrf_token() }}',
         heritageShopsUrl: '{{ route('heritage-shops.index') }}',
+        // CHANGED: URL template for a specific shop's detail page. We can't call
+        // route('heritage-shops.show', $id) with a real ID yet (we don't know
+        // which shop will be revealed), so we generate it with a placeholder
+        // and swap the placeholder for the real ID at render time in JS.
+        heritageShopDetailUrlTemplate: '{{ route('heritage-shops.show', ['id' => '__SHOP_ID__']) }}',
         foodtrailUrl: '{{ url('/foodtrails') }}',
         initialDraw: @json($currentDraw),
         alreadyDrew: @json($alreadyDrew),
@@ -864,7 +869,19 @@ const mysteryShops = @json(array_map(function($shop) {
         function renderResult(shop, periodKey, { animateIn = false } = {}) {
             result.className = 'result show';
             const shopName = shop.name || shop.shop_name || 'Heritage Shop';
-            
+
+            // CHANGED: Resolve the actual revealed shop's detail page URL.
+            // shop.shop_source_id comes from BlindBoxDraw::toDrawArray() (persisted
+            // from $selectedShop['source_id'] at draw time), which is the real
+            // HeritageShop DB id. If a draw has no linked DB shop (e.g. it came
+            // from the static sample catalog with no source_id), fall back to
+            // the general listing instead of a broken link — never a hardcoded
+            // or default shop.
+            const shopId = shop.id ?? null;
+            const detailUrl = shopId
+                ? BLIND_BOX_CONFIG.heritageShopDetailUrlTemplate.replace('__SHOP_ID__', shopId)
+                : BLIND_BOX_CONFIG.heritageShopsUrl;
+
             result.innerHTML = `
                 <div style="text-align: center; margin-bottom: 25px;">
                     <span class="renewal-tag">✨ ${BLIND_BOX_TEXT.surpriseRevealed} ✨</span>
@@ -886,7 +903,7 @@ const mysteryShops = @json(array_map(function($shop) {
                         </div>
                         <div class="cta-row" style="display: flex; gap: 15px;">
                             <a class="cta-btn cta-primary" style="padding: 16px 30px; font-size: 1.1rem; border-radius: 15px; background: var(--red-dark); color: white; font-weight: 700;" href="${BLIND_BOX_CONFIG.foodtrailUrl}">${BLIND_BOX_TEXT.exploreTrails}</a>
-                            <a class="cta-btn cta-outline" style="padding: 16px 30px; font-size: 1.1rem; border-radius: 15px; border: 2px solid var(--red-dark); color: var(--red-dark); font-weight: 700;" href="${BLIND_BOX_CONFIG.heritageShopsUrl}">${BLIND_BOX_TEXT.viewDetails}</a>
+                            <a class="cta-btn cta-outline" style="padding: 16px 30px; font-size: 1.1rem; border-radius: 15px; border: 2px solid var(--red-dark); color: var(--red-dark); font-weight: 700;" href="${detailUrl}">${BLIND_BOX_TEXT.viewDetails}</a>
                         </div>
                     </div>
                 </div>

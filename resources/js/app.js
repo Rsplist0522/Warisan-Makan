@@ -170,12 +170,17 @@ const foodTrailApp = (() => {
         messageEl.classList.remove('hidden');
     };
     const loadFavorites = () => {
+        const savedFavorites = localStorage.getItem(favoritesKey);
+
         try {
-            state.favorites = JSON.parse(localStorage.getItem(favoritesKey) || '[]');
+            state.favorites = JSON.parse(savedFavorites || '[]');
         } catch (error) {
             state.favorites = [];
         }
-        if (!state.favorites.length && Array.isArray(appData.defaultFavorites)) {
+
+        // Seed demo trails only for a new visitor. An explicitly saved empty list
+        // means the visitor cleared their favourites and must survive refreshes.
+        if (savedFavorites === null && Array.isArray(appData.defaultFavorites)) {
             state.favorites = appData.defaultFavorites.slice();
         }
     };

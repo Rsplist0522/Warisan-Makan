@@ -13,16 +13,15 @@
 <style>
         :root {
             color-scheme: light;
-            --paper: #f6ecd9;
-            --paper-2: #efe0c2;
-            --card: #fdf7ea;
-            --ink: #3b2b1f;
-            --ink-soft: #7a6349;
-            --line: rgba(59, 43, 31, .16);
-            --stamp-red: #a3402c;
-            --stamp-red-dark: #7c2f20;
-            --stamp-teal: #2f6b5e;
-            --thread: #c8963f;
+            --wm-bg: #fbf2e7;
+            --wm-panel: #fff8f0;
+            --wm-ink: #5b4335;
+            --wm-muted: #8c6f5f;
+            --wm-border: rgba(177, 140, 106, .16);
+            --wm-accent: #b34d35;
+            --wm-accent-dark: #7d3020;
+            --wm-gold: #d19c3b;
+            --wm-gold-light: #f7d488;
         }
 
         * { box-sizing: border-box; }
@@ -31,410 +30,460 @@
             margin: 0;
             min-height: 100vh;
             font-family: 'Instrument Sans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: var(--paper);
-            background-image:
-                repeating-linear-gradient(0deg, rgba(59,43,31,.025) 0px, rgba(59,43,31,.025) 1px, transparent 1px, transparent 3px);
-            color: var(--ink);
+            background: linear-gradient(180deg, #fbf2e7 0%, #f5e4d5 100%);
+            color: var(--wm-ink);
         }
 
         a { color: inherit; text-decoration: none; }
         button, input, textarea { font: inherit; }
 
         .page {
-            max-width: 780px;
+            max-width: 820px;
             margin: 0 auto;
-            padding: 28px 22px 48px;
+            padding: 24px 22px 42px;
+            position: relative;
         }
 
-        /* ---- Boarding-pass header ---- */
-
-        .pass-header {
-            display: grid;
-            grid-template-columns: 1fr auto;
-            align-items: stretch;
-            border-radius: 18px;
-            background: var(--card);
-            border: 1px solid var(--line);
-            box-shadow: 0 14px 30px rgba(59, 43, 31, .08);
-            overflow: hidden;
-            margin-bottom: 20px;
+        /* ---- Ambient floating sparkles across the page ---- */
+        .page::before,
+        .page::after {
+            content: "";
+            position: absolute;
+            width: 260px;
+            height: 260px;
+            border-radius: 50%;
+            filter: blur(70px);
+            opacity: .35;
+            z-index: 0;
+            pointer-events: none;
+        }
+        .page::before {
+            top: -60px;
+            left: -80px;
+            background: var(--wm-gold-light);
+            animation: drift-a 12s ease-in-out infinite;
+        }
+        .page::after {
+            bottom: 40px;
+            right: -100px;
+            background: var(--wm-accent);
+            opacity: .15;
+            animation: drift-b 14s ease-in-out infinite;
+        }
+        @keyframes drift-a {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(30px, 20px) scale(1.15); }
+        }
+        @keyframes drift-b {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(-25px, -15px) scale(1.1); }
         }
 
-        .pass-header-main {
-            padding: 26px 28px;
+        .sparkle-particle {
+            position: absolute;
+            pointer-events: none;
+            color: var(--wm-gold);
+            font-size: .8rem;
+            opacity: 0;
+            animation: float-sparkle 7s infinite ease-in-out;
+            z-index: 1;
+        }
+        .sparkle-particle:nth-child(1) { top: 10%; left: 6%; animation-delay: 0s; }
+        .sparkle-particle:nth-child(2) { top: 30%; right: 8%; font-size: 1.1rem; animation-delay: 2s; }
+        .sparkle-particle:nth-child(3) { bottom: 15%; left: 10%; font-size: .6rem; animation-delay: 4s; }
+        .sparkle-particle:nth-child(4) { top: 55%; right: 4%; font-size: .9rem; animation-delay: 1.5s; }
+
+        @keyframes float-sparkle {
+            0% { transform: translateY(0) scale(.5); opacity: 0; }
+            30% { opacity: .55; }
+            70% { opacity: .55; }
+            100% { transform: translateY(-70px) scale(0); opacity: 0; }
         }
 
-        .pass-eyebrow {
-            font-size: .78rem;
-            color: var(--ink-soft);
-            font-variant: small-caps;
-            letter-spacing: .02em;
-        }
-
-        .pass-title {
-            margin: 4px 0 8px;
-            font-family: Georgia, 'Times New Roman', serif;
-            font-size: 1.9rem;
-            color: var(--stamp-red-dark);
-        }
-
-        .pass-copy {
-            margin: 0;
-            color: var(--ink-soft);
-            max-width: 480px;
-            line-height: 1.7;
-        }
-
-        .pass-actions {
+        .topbar {
             display: flex;
-            gap: 10px;
-            margin-top: 18px;
             flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 16px;
+            align-items: center;
+            padding: 26px 28px;
+            margin-bottom: 22px;
+            border-radius: 22px;
+            position: relative;
+            background: linear-gradient(180deg, #fff7f0 0%, #fdf0e3 100%);
+            border: 1px solid rgba(177, 140, 106, .2);
+            box-shadow: 0 18px 36px rgba(104, 71, 42, .1);
+            overflow: hidden;
+            z-index: 1;
         }
 
-        .btn,
-        .btn-outline {
+        /* subtle shifting gold underline glow */
+        .topbar::after {
+            content: "";
+            position: absolute;
+            left: 0; right: 0; bottom: 0;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, var(--wm-gold), var(--wm-accent), var(--wm-gold), transparent);
+            background-size: 200% auto;
+            animation: shimmer-line 4s linear infinite;
+        }
+        @keyframes shimmer-line { to { background-position: -200% center; } }
+
+        .section-heading {
+            margin: 0;
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: 1.95rem;
+            line-height: 1.05;
+            color: #7d4634;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-heading .heading-emoji {
+            display: inline-block;
+            animation: gentle-sway 3s ease-in-out infinite;
+        }
+        @keyframes gentle-sway {
+            0%, 100% { transform: rotate(-6deg); }
+            50% { transform: rotate(6deg); }
+        }
+
+        .section-copy {
+            margin: 10px 0 0;
+            color: var(--wm-muted);
+            max-width: 620px;
+            line-height: 1.75;
+        }
+
+        .section-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .button,
+        .button-secondary {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            min-height: 42px;
-            padding: 0 18px;
-            border-radius: 10px;
+            min-height: 46px;
+            padding: 0 20px;
+            border-radius: 999px;
             border: 1px solid transparent;
             cursor: pointer;
+            text-decoration: none;
             font-weight: 700;
-            font-size: .92rem;
             white-space: nowrap;
-            transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+            transition: transform .2s ease, box-shadow .2s ease;
         }
 
-        .btn {
-            background: var(--stamp-red);
-            color: #fff8ef;
-            box-shadow: 0 8px 16px rgba(163, 64, 44, .28);
+        .button {
+            background: linear-gradient(135deg, var(--wm-accent), var(--wm-accent-dark));
+            color: #fff;
+            box-shadow: 0 8px 18px rgba(179, 77, 53, .3);
         }
-        .btn:hover { transform: translateY(-1px); background: var(--stamp-red-dark); }
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px rgba(179, 77, 53, .4);
+        }
 
-        .btn-outline {
+        .button-secondary {
             background: transparent;
-            color: var(--ink);
-            border-color: var(--line);
+            color: var(--wm-ink);
+            border-color: var(--wm-border);
         }
-        .btn-outline:hover { border-color: var(--stamp-red); color: var(--stamp-red-dark); }
+        .button-secondary:hover {
+            transform: translateY(-2px);
+            border-color: var(--wm-gold);
+            background: #fff7ec;
+        }
 
-        /* perforated stub */
-        .pass-stub {
+        .status-alert {
+            margin-bottom: 18px;
+            padding: 16px 18px;
+            border-radius: 14px;
+            background: rgba(70, 128, 74, .12);
+            color: #14461f;
+            border: 1px solid rgba(70, 128, 74, .18);
+        }
+
+        /* ---- Single unified profile card, now with a shimmering gold border ---- */
+
+        .profile-card {
             position: relative;
-            width: 172px;
-            padding: 26px 20px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            gap: 18px;
-            background: var(--stamp-red);
-            color: #fbe9dd;
-            border-left: 2px dashed rgba(255, 246, 234, .45);
+            border-radius: 30px;
+            background: var(--wm-panel);
+            box-shadow: 0 20px 46px rgba(113, 80, 53, .14);
+            overflow: hidden;
+            z-index: 1;
+            padding: 2px;
+            background-image: linear-gradient(var(--wm-panel), var(--wm-panel)),
+                conic-gradient(from 0deg, var(--wm-gold-light), var(--wm-accent), var(--wm-gold), var(--wm-gold-light));
+            background-origin: border-box;
+            background-clip: padding-box, border-box;
+            border: 2px solid transparent;
+            animation: rotate-border 8s linear infinite;
         }
-        .pass-stub::before,
-        .pass-stub::after {
-            content: "";
-            position: absolute;
-            left: -11px;
-            width: 22px;
-            height: 22px;
-            border-radius: 50%;
-            background: var(--paper);
-        }
-        .pass-stub::before { top: -11px; }
-        .pass-stub::after { bottom: -11px; }
-
-        .stub-stat {
-            text-align: left;
-        }
-        .stub-stat .num {
-            display: block;
-            font-family: Georgia, 'Times New Roman', serif;
-            font-size: 1.6rem;
-            line-height: 1;
-        }
-        .stub-stat .label {
-            display: block;
-            margin-top: 4px;
-            font-size: .74rem;
-            color: rgba(251, 233, 221, .8);
-            font-variant: small-caps;
+        @keyframes rotate-border {
+            to { background-image: linear-gradient(var(--wm-panel), var(--wm-panel)),
+                conic-gradient(from 360deg, var(--wm-gold-light), var(--wm-accent), var(--wm-gold), var(--wm-gold-light)); }
         }
 
-        /* ---- Passport card ---- */
-
-        .passport {
-            border-radius: 20px;
-            background: var(--card);
-            border: 1px solid var(--line);
-            box-shadow: 0 16px 34px rgba(59, 43, 31, .1);
+        .profile-card-inner {
+            background: var(--wm-panel);
+            border-radius: 28px;
             overflow: hidden;
         }
 
-        .passport-top {
-            display: grid;
-            grid-template-columns: 190px 1fr;
-        }
-
-        @media (max-width: 620px) {
-            .pass-header { grid-template-columns: 1fr; }
-            .pass-stub {
-                flex-direction: row;
-                width: auto;
-                border-left: none;
-                border-top: 2px dashed rgba(255, 246, 234, .45);
-            }
-            .pass-stub::before, .pass-stub::after {
-                left: auto; top: -11px;
-            }
-            .pass-stub::before { left: -11px; }
-            .pass-stub::after { right: -11px; left: auto; }
-            .passport-top { grid-template-columns: 1fr; }
-        }
-
-        .id-panel {
-            padding: 30px 24px;
+        .profile-identity {
             display: flex;
-            flex-direction: column;
             align-items: center;
-            text-align: center;
-            gap: 10px;
-            border-right: 1px dashed var(--line);
-            background: var(--paper-2);
+            gap: 20px;
+            padding: 30px 28px 26px;
+            border-bottom: 1px solid var(--wm-border);
+            position: relative;
         }
 
-        .id-seal {
-            width: 96px;
-            height: 96px;
-            border-radius: 50%;
-            border: 3px solid var(--stamp-red);
+        .avatar-ring {
+            position: relative;
+            flex: 0 0 auto;
+            width: 76px;
+            height: 76px;
+            border-radius: 20px;
             padding: 4px;
+            background: conic-gradient(from 0deg, var(--wm-gold), var(--wm-accent), var(--wm-gold-light), var(--wm-gold));
+            animation: rotate-border 6s linear infinite;
         }
-        .id-seal-inner {
+
+        .avatar {
             width: 100%;
             height: 100%;
-            border-radius: 50%;
             display: grid;
             place-items: center;
-            background: #f3e3d0;
-            color: var(--stamp-red-dark);
-            font-size: 1.9rem;
+            border-radius: 16px;
+            background: linear-gradient(160deg, #f3e3d5, #e6d0bb);
+            color: #a14d39;
+            font-size: 1.5rem;
             font-weight: 800;
-            font-family: Georgia, serif;
             overflow: hidden;
         }
-        .id-seal-inner img {
+
+        .avatar img {
             width: 100%;
             height: 100%;
             object-fit: cover;
             display: block;
         }
 
-        .id-name {
-            margin: 6px 0 0;
-            font-family: Georgia, 'Times New Roman', serif;
-            font-size: 1.15rem;
-            color: var(--ink);
-            overflow-wrap: anywhere;
+        .identity-text {
+            min-width: 0;
         }
-        .id-email {
+
+        .identity-name {
             margin: 0;
-            font-size: .84rem;
-            color: var(--ink-soft);
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: #6f432a;
             overflow-wrap: anywhere;
         }
-        .id-role {
-            margin-top: 6px;
+
+        .identity-email {
+            margin: 4px 0 0;
+            color: #8a6f5f;
+            font-size: .92rem;
+            overflow-wrap: anywhere;
+        }
+
+        .identity-badge {
+            margin-top: 10px;
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            padding: 4px 12px;
+            padding: 5px 14px;
             border-radius: 999px;
-            border: 1px solid var(--stamp-teal);
-            color: var(--stamp-teal);
+            background: linear-gradient(90deg, rgba(209, 156, 59, .22), rgba(179, 77, 53, .16));
+            color: #8a5f19;
             font-size: .74rem;
-            font-weight: 700;
+            font-weight: 800;
+            letter-spacing: .06em;
+            text-transform: uppercase;
+            box-shadow: 0 3px 8px rgba(209, 156, 59, .18);
         }
 
-        /* manifest list */
-        .manifest {
-            padding: 24px 26px;
-            display: flex;
-            flex-direction: column;
+        .profile-fields {
+            padding: 24px 28px 28px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
         }
 
-        .manifest-row {
-            display: flex;
-            align-items: baseline;
-            gap: 10px;
-            padding: 12px 0;
-            border-bottom: 1px dotted var(--line);
+        .profile-field {
+            display: grid;
+            gap: 6px;
+            padding: 16px 18px;
+            border-radius: 16px;
+            background: #fff7f1;
+            border: 1px solid rgba(177, 140, 106, .14);
+            transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
         }
-        .manifest-row:last-child { border-bottom: none; }
 
-        .manifest-label {
-            flex: 0 0 auto;
-            font-variant: small-caps;
-            color: var(--ink-soft);
-            font-size: .92rem;
+        .profile-field:hover {
+            transform: translateY(-3px);
+            border-color: rgba(209, 156, 59, .4);
+            box-shadow: 0 10px 22px rgba(179, 77, 53, .1);
         }
-        .manifest-fill {
-            flex: 1;
-            border-bottom: 1px dotted var(--line);
-            transform: translateY(-4px);
-            min-width: 12px;
+
+        .profile-field.span-2 {
+            grid-column: 1 / -1;
         }
-        .manifest-value {
-            flex: 0 0 auto;
-            max-width: 60%;
-            text-align: right;
-            color: var(--ink);
+
+        .profile-field label {
+            font-size: .72rem;
+            font-weight: 800;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            color: #8e6e5e;
         }
-        .manifest-value.empty {
-            color: var(--ink-soft);
+
+        .profile-field span {
+            color: #5b4335;
+            line-height: 1.65;
+        }
+
+        .profile-field span.empty {
+            color: #9b8171;
             font-style: italic;
         }
 
-        .bio-block {
-            padding: 4px 26px 26px;
-        }
-        .bio-block .manifest-label {
-            display: block;
-            margin-bottom: 6px;
-        }
-        .bio-block p {
-            margin: 0;
-            color: var(--ink);
-            line-height: 1.75;
-        }
-        .bio-block p.empty {
-            color: var(--ink-soft);
-            font-style: italic;
+        @media (max-width: 640px) {
+            .profile-fields { grid-template-columns: 1fr; }
+            .profile-identity { flex-wrap: wrap; }
         }
 
-        /* ---- Stamps (badges) ---- */
+        /* ---- Earned badges, now with a shine sweep on hover ---- */
 
-        .stamps-section {
-            padding: 20px 26px 30px;
-            border-top: 1px dashed var(--line);
+        .badges-section {
+            padding: 4px 28px 30px;
+            border-top: 1px solid var(--wm-border);
         }
 
-        .stamps-heading {
-            margin: 4px 0 20px;
+        .badges-section h2 {
+            margin: 24px 0 14px;
+            color: #7d4634;
             font-family: Georgia, 'Times New Roman', serif;
-            font-size: 1.25rem;
-            color: var(--stamp-red-dark);
-        }
-
-        .stamps-row {
+            font-size: 1.3rem;
             display: flex;
-            flex-wrap: wrap;
-            gap: 18px 22px;
-        }
-
-        .stamp {
-            width: 128px;
-            display: flex;
-            flex-direction: column;
             align-items: center;
-            text-align: center;
             gap: 8px;
-            opacity: 0;
-            transform: scale(.6) rotate(var(--tilt, 0deg));
-            animation: stamp-in .5s cubic-bezier(.2, 1.6, .4, 1) forwards;
-            animation-delay: var(--delay, 0s);
-        }
-        .stamp:nth-child(3n)   { --tilt: -6deg; --ring: var(--stamp-teal); }
-        .stamp:nth-child(3n+1) { --tilt: 4deg;  --ring: var(--stamp-red); }
-        .stamp:nth-child(3n+2) { --tilt: -2deg; --ring: var(--thread); }
-
-        @keyframes stamp-in {
-            0%   { opacity: 0; transform: scale(.6) rotate(var(--tilt)); }
-            70%  { opacity: 1; transform: scale(1.06) rotate(var(--tilt)); }
-            100% { opacity: 1; transform: scale(1) rotate(var(--tilt)); }
         }
 
-        .stamp-mark {
-            width: 78px;
-            height: 78px;
-            border-radius: 50%;
-            border: 2px dashed var(--ring, var(--stamp-red));
+        .badges-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 14px;
+        }
+
+        .earned-badge {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+            padding: 15px;
+            border: 1px solid rgba(209, 156, 59, .3);
+            border-radius: 16px;
+            background: linear-gradient(135deg, #fff9ed, #fff2d3);
+            overflow: hidden;
+            transition: transform .25s ease, box-shadow .25s ease;
+        }
+
+        .earned-badge:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 14px 26px rgba(209, 156, 59, .25);
+        }
+
+        /* diagonal shine sweep */
+        .earned-badge::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -150%;
+            width: 60%;
+            height: 100%;
+            background: linear-gradient(115deg, transparent, rgba(255,255,255,.75), transparent);
+            transform: skewX(-20deg);
+            transition: left .7s ease;
+        }
+        .earned-badge:hover::before {
+            left: 150%;
+        }
+
+        .earned-badge-icon {
+            flex: 0 0 auto;
+            width: 46px;
+            height: 46px;
             display: grid;
             place-items: center;
-            font-size: 1.7rem;
-            color: var(--ring, var(--stamp-red));
-            background: rgba(255, 255, 255, .5);
-            transition: transform .2s ease;
+            border-radius: 13px;
+            color: #8a5f19;
+            background: rgba(209, 156, 59, .25);
+            font-size: 1.5rem;
+            font-weight: 800;
+            box-shadow: 0 4px 10px rgba(209, 156, 59, .25);
         }
-        .stamp:hover .stamp-mark { transform: rotate(0deg) scale(1.06); }
 
-        .stamp-name {
-            margin: 0;
-            font-size: .86rem;
-            font-weight: 700;
-            color: var(--ink);
-            line-height: 1.3;
+        .earned-badge-content {
+            min-width: 0;
+            position: relative;
+            z-index: 1;
         }
-        .stamp-desc {
+
+        .earned-badge-name {
             margin: 0;
-            font-size: .74rem;
-            color: var(--ink-soft);
+            color: #6f432a;
+            font-weight: 800;
+            overflow-wrap: anywhere;
+        }
+
+        .earned-badge-description {
+            margin: 4px 0 0;
+            color: var(--wm-muted);
+            font-size: .82rem;
             line-height: 1.4;
         }
-        .stamp-date {
-            margin: 0;
-            font-size: .68rem;
-            color: var(--ink-soft);
-            font-variant: small-caps;
-        }
 
-        .status-alert {
-            margin-bottom: 18px;
-            padding: 14px 18px;
-            border-radius: 12px;
-            background: rgba(47, 107, 94, .12);
-            color: #1f4a40;
-            border: 1px solid rgba(47, 107, 94, .2);
+        .earned-badge-date {
+            margin: 6px 0 0;
+            color: #9b8171;
+            font-size: .72rem;
         }
-</style>
+    </style>
 @endpush
 
 @section('content')
 <div class="page">
+        <span class="sparkle-particle">✦</span>
+        <span class="sparkle-particle">✦</span>
+        <span class="sparkle-particle">✦</span>
+        <span class="sparkle-particle">✦</span>
 
-        <header class="pass-header">
-            <div class="pass-header-main">
-                <span class="pass-eyebrow">{{ __('WarisanMakan · Member Passport') }}</span>
-                <h1 class="pass-title">{{ __('Profile') }}</h1>
-                <p class="pass-copy">{{ __('Manage your WarisanMakan identity, update your contact details, and keep your profile photo current for a personalized experience.') }}</p>
-
-                <div class="pass-actions">
-                    <a class="btn-outline" href="{{ route('profile.edit') }}">{{ __('Edit Profile') }}</a>
-                    <a class="btn" href="{{ route('home') }}">{{ __('Back to dashboard') }}</a>
-                </div>
+        <header class="topbar">
+            <div>
+                <h1 class="section-heading"><span class="heading-emoji">🏮</span> {{ __('Profile') }}</h1>
+                <p class="section-copy">{{ __('Manage your WarisanMakan identity, update your contact details, and keep your profile photo current for a personalized experience.') }}</p>
             </div>
-
-            <div class="pass-stub">
-                <div class="stub-stat">
-                    <span class="num">{{ $badges->count() }}</span>
-                    <span class="label">{{ __('Badges earned') }}</span>
-                </div>
-                <div class="stub-stat">
-                    <span class="num">{{ $user->created_at->format('Y') }}</span>
-                    <span class="label">{{ __('Member since') }}</span>
-                </div>
+            <div class="section-actions">
+                <a class="button-secondary" href="{{ route('profile.edit') }}">{{ __('Edit Profile') }}</a>
+                <a class="button" href="{{ route('home') }}">{{ __('Back to dashboard') }}</a>
             </div>
         </header>
 
-        <section class="passport">
-            <div class="passport-top">
-                <div class="id-panel">
-                    <div class="id-seal">
-                        <div class="id-seal-inner">
+        <section class="profile-card">
+            <div class="profile-card-inner">
+                <div class="profile-identity">
+                    <div class="avatar-ring">
+                        <div class="avatar">
                             @if ($user->profile_photo)
                                 <img src="{{ $user->profilePhotoUrl() }}" alt="{{ $user->name }} profile photo">
                             @else
@@ -442,69 +491,76 @@
                             @endif
                         </div>
                     </div>
-                    <p class="id-name">{{ $user->name }}</p>
-                    <p class="id-email">{{ $user->email }}</p>
-                    <span class="id-role">✦ {{ __($user->isAdmin() ? 'Admin' : 'Member') }}</span>
+                    <div class="identity-text">
+                        <p class="identity-name">{{ $user->name }}</p>
+                        <p class="identity-email">{{ $user->email }}</p>
+                        <span class="identity-badge">✨ {{ __($user->isAdmin() ? 'Admin' : 'Member') }}</span>
+                    </div>
                 </div>
 
-                <div class="manifest">
-                    <div class="manifest-row">
-                        <span class="manifest-label">{{ __('Phone') }}</span>
-                        <span class="manifest-fill"></span>
-                        <span class="manifest-value {{ $user->phone ? '' : 'empty' }}">{{ $user->phone ?: __('Not provided') }}</span>
+                <div class="profile-fields">
+                    <div class="profile-field">
+                        <label>{{ __('Phone') }}</label>
+                        <span class="{{ $user->phone ? '' : 'empty' }}">{{ $user->phone ?: __('Not provided') }}</span>
                     </div>
-                    <div class="manifest-row">
-                        <span class="manifest-label">{{ __('City') }}</span>
-                        <span class="manifest-fill"></span>
-                        <span class="manifest-value {{ $user->city ? '' : 'empty' }}">{{ $user->city ?: __('Not provided') }}</span>
+
+                    <div class="profile-field">
+                        <label>{{ __('City') }}</label>
+                        <span class="{{ $user->city ? '' : 'empty' }}">{{ $user->city ?: __('Not provided') }}</span>
                     </div>
-                    <div class="manifest-row">
-                        <span class="manifest-label">{{ __('Member since') }}</span>
-                        <span class="manifest-fill"></span>
-                        <span class="manifest-value">{{ $user->created_at->format('F j, Y') }}</span>
+
+                    <div class="profile-field">
+                        <label>{{ __('Member since') }}</label>
+                        <span>{{ $user->created_at->format('F j, Y') }}</span>
                     </div>
-                    <div class="manifest-row">
-                        <span class="manifest-label">{{ __('Role') }}</span>
-                        <span class="manifest-fill"></span>
-                        <span class="manifest-value">{{ __($user->isAdmin() ? 'Admin' : 'Member') }}</span>
+
+                    <div class="profile-field">
+                        <label>{{ __('Role') }}</label>
+                        <span>{{ __($user->isAdmin() ? 'Admin' : 'Member') }}</span>
+                    </div>
+
+                    <div class="profile-field span-2">
+                        <label>{{ __('Bio') }}</label>
+                        <span class="{{ $user->bio ? '' : 'empty' }}">{{ $user->bio ?: __('Share a little about your food heritage interests.') }}</span>
                     </div>
                 </div>
+
+                @if ($badges->isNotEmpty())
+                    <div class="badges-section" aria-labelledby="earned-badges-title">
+                        <h2 id="earned-badges-title">🏆 {{ __('Earned badges') }}</h2>
+
+                        <div class="badges-grid">
+                            @foreach ($badges as $userBadge)
+                                @if ($userBadge->badge)
+                                    <article class="earned-badge">
+                                        <div class="earned-badge-icon" aria-hidden="true">
+                                            {{ $userBadge->badge->icon ?: '★' }}
+                                        </div>
+
+                                        <div class="earned-badge-content">
+                                            <h3 class="earned-badge-name">
+                                                {{ $userBadge->badge->badge_name }}
+                                            </h3>
+
+                                            @if ($userBadge->badge->description)
+                                                <p class="earned-badge-description">
+                                                    {{ $userBadge->badge->description }}
+                                                </p>
+                                            @endif
+
+                                            @if ($userBadge->earned_at)
+                                                <p class="earned-badge-date">
+                                                    {{ __('Earned :date', ['date' => $userBadge->earned_at->format('F j, Y')]) }}
+                                                </p>
+                                            @endif
+                                        </div>
+                                    </article>
+                                @endif
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
             </div>
-
-            <div class="bio-block">
-                <span class="manifest-label">{{ __('Bio') }}</span>
-                <p class="{{ $user->bio ? '' : 'empty' }}">{{ $user->bio ?: __('Share a little about your food heritage interests.') }}</p>
-            </div>
-
-            @if ($badges->isNotEmpty())
-                <div class="stamps-section" aria-labelledby="earned-badges-title">
-                    <h2 id="earned-badges-title" class="stamps-heading">{{ __('Earned badges') }}</h2>
-
-                    <div class="stamps-row">
-                        @php $stampIndex = 0; @endphp
-                        @foreach ($badges as $userBadge)
-                            @if ($userBadge->badge)
-                                <article class="stamp" style="--delay: {{ $stampIndex * 0.08 }}s">
-                                    <div class="stamp-mark" aria-hidden="true">
-                                        {{ $userBadge->badge->icon ?: '★' }}
-                                    </div>
-                                    <p class="stamp-name">{{ $userBadge->badge->badge_name }}</p>
-
-                                    @if ($userBadge->badge->description)
-                                        <p class="stamp-desc">{{ $userBadge->badge->description }}</p>
-                                    @endif
-
-                                    @if ($userBadge->earned_at)
-                                        <p class="stamp-date">{{ __('Earned :date', ['date' => $userBadge->earned_at->format('M j, Y')]) }}</p>
-                                    @endif
-                                </article>
-                                @php $stampIndex++; @endphp
-                            @endif
-                        @endforeach
-                    </div>
-                </div>
-            @endif
         </section>
     </div>
 @endsection
-

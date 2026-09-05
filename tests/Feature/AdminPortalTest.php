@@ -125,7 +125,12 @@ class AdminPortalTest extends TestCase
             ->get(route('admin.dashboard'))
             ->assertOk()
             ->assertSee('Users & Roles')
-            ->assertSee(route('admin.users.index'), false);
+            ->assertSee(route('admin.users.index'), false)
+            ->assertSee(route('admin.dashboard'), false)
+            ->assertSee('0 in review')
+            ->assertSee('0 trails')
+            ->assertSee('active shops')
+            ->assertSee('inactive shops');
     }
 
     public function test_admin_can_activate_and_deactivate_regular_users(): void

@@ -64,21 +64,11 @@ class BlindBoxController extends Controller
     {
         $validated = $request->validate([
             'category' => ['required', 'in:' . implode(',', HeritageShopCatalog::CATEGORIES)],
-            'active' => ['nullable', 'in:1'],
         ]);
-
-        // Unchecking "Include in Blind Box reveals" removes the shop from the pool,
-        // moving it back to the "Shops Pending Selection" list on the left.
-        if (false) {
-            $this->catalog->toggleShop($shop);
-
-            return redirect()->route('admin.blind-box-items.index')
-                ->with('status', 'Shop removed from the Blind Box — it now appears under "Shops Pending Selection".');
-        }
 
         $this->catalog->updateShop($shop, $validated['category']);
 
-        return redirect()->route('admin.blind-box-items.edit', $shop)
+        return redirect()->route('admin.blind-box-items.index')
             ->with('status', 'Blind Box shop settings saved.');
     }
 

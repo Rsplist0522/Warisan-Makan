@@ -29,7 +29,9 @@
         .shell.nav-collapsed { grid-template-columns: 82px 1fr; }
         .sidebar { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; overflow-y: auto; padding: 28px 20px; color: #fff5ec; background: linear-gradient(180deg, var(--sidebar), #281010); -ms-overflow-style: none; scrollbar-width: none; }
         .sidebar::-webkit-scrollbar { display: none; }
-        .brand { display: flex; align-items: center; gap: 12px; padding: 2px 10px 28px; border-bottom: 1px solid rgba(255,255,255,.1); font-family: Georgia, serif; font-size: 1.2rem; font-weight: 800; }
+        .brand { display: flex; align-items: center; gap: 12px; padding: 2px 10px 28px; border-bottom: 1px solid rgba(255,255,255,.1); color: inherit; font-family: Georgia, serif; font-size: 1.2rem; font-weight: 800; text-decoration: none; }
+        .brand:hover, .brand:focus-visible { color: #fff; }
+        .brand:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; border-radius: 10px; }
         .brand-mark { width: 38px; height: 38px; display: grid; place-items: center; flex: 0 0 auto; overflow: hidden; border: 0; border-radius: 12px; background: transparent; }
         .brand-mark img { width: 100%; height: 100%; display: block; object-fit: contain; object-position: center; transform: scale(1.28); }
         .brand-logo-placeholder { width: 100%; height: 100%; display: block; border-radius: 12px; background: rgba(200,148,50,.16); }
@@ -62,9 +64,15 @@
         .logout:hover { background: rgba(255,255,255,.08); }
         .main { min-width: 0; overflow-x: hidden; background: linear-gradient(135deg, rgba(163, 58, 45, .06), transparent 34%), linear-gradient(315deg, rgba(61, 111, 85, .07), transparent 38%), var(--canvas); }
         .topbar { min-height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 16px 34px; border-bottom: 1px solid var(--line); background: rgba(255,253,249,.9); }
+        .topbar-inner { min-width: 0; display: flex; align-items: center; gap: 16px; }
         .topbar h1 { margin: 0; font-family: Georgia, serif; font-size: 1.35rem; }
         .topbar p { margin: 3px 0 0; color: var(--muted); font-size: .82rem; }
         .content { width: min(1180px, 100%); margin: 0 auto; padding: 34px; }
+        .back-nav { margin-bottom: 22px; }
+        .back-btn { display: inline-flex; align-items: center; padding: 8px 16px 8px 12px; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,.05); font-size: .82rem; font-weight: 800; text-decoration: none; transition: all .2s ease; }
+        .back-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--canvas); box-shadow: 0 4px 8px rgba(0,0,0,.08); transform: translateX(-4px); }
+        .back-btn svg { margin-right: 8px; transition: transform .2s ease; }
+        .back-btn:hover svg { transform: translateX(-2px); }
         .page-header { position: relative; overflow: hidden; display: flex; align-items: end; justify-content: space-between; gap: 20px; margin-bottom: 24px; padding: 30px; border-radius: 18px; color: #fffaf4; background: linear-gradient(125deg, #96352c, #54201b); box-shadow: 0 20px 50px rgba(91, 29, 29, .18); }
         .page-header::after { content: ''; position: absolute; width: 240px; height: 240px; right: -68px; top: -100px; border: 1px solid rgba(255,255,255,.16); border-radius: 50%; box-shadow: 0 0 0 22px rgba(255,255,255,.04), 0 0 0 46px rgba(255,255,255,.025); pointer-events: none; }
         .page-header > * { position: relative; z-index: 1; min-width: 0; }
@@ -162,7 +170,7 @@
             .subnav { grid-column: auto; margin-left: 0; }
             .sidebar-footer { margin-top: 24px; }
             .topbar, .content { padding-inline: 20px; }
-            .topbar > div { min-width: 0; }
+            .topbar-inner { min-width: 0; }
             .content { width: 100%; }
             .record-card { grid-template-columns: 1fr; }
             .record-actions { justify-content: start; }
@@ -194,7 +202,7 @@
     @endphp
     <div class="shell" data-admin-nav>
         <aside class="sidebar" id="admin-sidebar">
-            <div class="brand"><span class="brand-mark">@include('partials.brand-logo', ['imageClass' => 'brand-logo-image', 'placeholderClass' => 'brand-logo-placeholder'])</span><span class="brand-word">Warisan Makan</span></div>
+            <a class="brand" href="{{ route('admin.dashboard') }}" aria-label="Warisan Makan administrator dashboard"><span class="brand-mark">@include('partials.brand-logo', ['imageClass' => 'brand-logo-image', 'placeholderClass' => 'brand-logo-placeholder'])</span><span class="brand-word">Warisan Makan</span></a>
             <p class="nav-label">Admin home</p>
             <nav class="nav" aria-label="Administrator modules">
                 <a class="nav-item {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}" data-label="Dashboard" title="Dashboard" href="{{ route('admin.dashboard') }}"><span class="admin-nav-icon" aria-hidden="true">@include('partials.module-icon', ['icon' => 'dashboard'])</span><span>Dashboard</span></a>
@@ -248,10 +256,12 @@
 
         <section class="main">
             <header class="topbar">
+                <div class="topbar-inner">
                 <button class="nav-toggle" id="nav-toggle" type="button" aria-controls="admin-sidebar" aria-expanded="true"><span aria-hidden="true">☰</span><span id="nav-toggle-label">Collapse</span></button>
                 <div>
                     <h1>@yield('page-title', 'Admin Dashboard')</h1>
                     <p>Warisan Makan management portal</p>
+                </div>
                 </div>
             </header>
             <main class="content">

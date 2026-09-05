@@ -590,7 +590,7 @@
                     <div id="selectedTrailList" class="mt-6 space-y-4"></div>
                     <div
                         class="mt-6 flex flex-col gap-3 rounded-[24px] border border-[#F0D6C4] bg-[#FFFBF7] p-4 sm:flex-row sm:items-center sm:justify-between">
-                        <div class="flex items-center gap-3 text-sm text-[#6B5B4B]">
+                        <div class="flex min-w-0 items-center gap-3 text-sm text-[#6B5B4B]">
                             <span
                                 class="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-[#FDE7CA] text-[#D98F4F]">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
@@ -602,8 +602,12 @@
                             </span>
                             <span class="font-semibold text-[#1F1B19]">{{ __('Drag and drop to reorder your stops') }}</span>
                         </div>
-                        <button id="clearTrailButton"
-                            class="inline-flex h-12 items-center justify-center rounded-full border border-[#E9D7BF] bg-white px-5 text-sm font-semibold text-[#6B553F] shadow-sm transition hover:bg-[#FBF2E4]">{{ __('Clear Trail') }}</button>
+                        <div class="flex shrink-0 flex-nowrap gap-3">
+                            <button id="markAllStopsCompleteButton"
+                                class="inline-flex h-12 whitespace-nowrap items-center justify-center rounded-full bg-[#EAF5E7] px-5 text-sm font-semibold text-[#3F6B2A] shadow-sm transition hover:bg-[#DFF0D9]">{{ __('Mark all stops complete') }}</button>
+                            <button id="clearTrailButton"
+                                class="inline-flex h-12 whitespace-nowrap items-center justify-center rounded-full border border-[#E9D7BF] bg-white px-5 text-sm font-semibold text-[#6B553F] shadow-sm transition hover:bg-[#FBF2E4]">{{ __('Clear Trail') }}</button>
+                        </div>
                     </div>
                 </section>
             </div>
@@ -619,21 +623,7 @@
                         <span id="favoriteStatus"
                             class="rounded-full bg-[#FFF0D9] px-3 py-1 text-sm font-semibold text-[#B8874A]">{{ __('Not saved') }}</span>
                     </div>
-                    <div class="mt-5 space-y-3">
-                        <div class="rounded-[20px] border border-[#F0D6C4] bg-[#FEFBF8] p-4">
-                            <p class="text-[11px] uppercase tracking-[0.22em] text-[#B08B59]">{{ __('Total stops') }}</p>
-                            <p id="routeTotalStops" class="mt-2 text-2xl font-semibold text-[#1F1B19]">0</p>
-                        </div>
-                        <div class="rounded-[20px] border border-[#F0D6C4] bg-[#FEFBF8] p-4">
-                            <p class="text-[11px] uppercase tracking-[0.22em] text-[#B08B59]">{{ __('Visited') }}</p>
-                            <p id="routeVisitedStops" class="mt-2 text-2xl font-semibold text-[#1F1B19]">0</p>
-                        </div>
-                        <div class="rounded-[20px] border border-[#F0D6C4] bg-[#FEFBF8] p-4">
-                            <p class="text-[11px] uppercase tracking-[0.22em] text-[#B08B59]">{{ __('Next stop') }}</p>
-                            <p id="routeNextStop" class="mt-2 text-2xl font-semibold text-[#1F1B19]">{{ __('None yet') }}</p>
-                        </div>
-                    </div>
-                    <div class="mt-4 rounded-[20px] border border-[#E9D7BF] bg-white px-4 py-4">
+                    <div class="mt-5 rounded-[20px] border border-[#E9D7BF] bg-white px-4 py-4">
                         <label for="travelModeSelect"
                             class="block text-[11px] uppercase tracking-[0.22em] text-[#B08B59]">{{ __('Travel by') }}</label>
                         <select id="travelModeSelect" class="mt-2 w-full bg-transparent text-sm outline-none">
@@ -912,15 +902,20 @@
         };
 
         const updateRouteStats = () => {
-            const stopsEl = getElement('routeTotalStops');
-            const visitedEl = getElement('routeVisitedStops');
-            const nextStopEl = getElement('routeNextStop');
             const closeTrailButton = getElement('closeTrailButton');
             const navigateButton = getElement('showCurrentRouteButton');
+            const markAllStopsCompleteButton = getElement('markAllStopsCompleteButton');
             const hasNextStop = routeData.some((item) => !item.visited);
-            if (stopsEl) stopsEl.innerText = `${routeData.length}`;
-            if (visitedEl) visitedEl.innerText = `${visitedCount}`;
-            if (nextStopEl) nextStopEl.innerText = getNextStopLabel();
+
+            document.querySelectorAll('[data-summary="total-stops"]').forEach((element) => {
+                element.innerText = `${routeData.length}`;
+            });
+            document.querySelectorAll('[data-summary="visited"]').forEach((element) => {
+                element.innerText = `${visitedCount}`;
+            });
+            document.querySelectorAll('[data-summary="next-stop"]').forEach((element) => {
+                element.innerText = getNextStopLabel();
+            });
             if (navigateButton) {
                 navigateButton.disabled = !hasNextStop;
                 navigateButton.classList.toggle('cursor-not-allowed', !hasNextStop);
@@ -930,6 +925,11 @@
                 const canClose = routeData.length > 0 && visitedCount === routeData.length;
                 closeTrailButton.classList.toggle('hidden', !canClose);
                 closeTrailButton.classList.toggle('flex', canClose);
+            }
+            if (markAllStopsCompleteButton) {
+                markAllStopsCompleteButton.disabled = !hasNextStop;
+                markAllStopsCompleteButton.classList.toggle('cursor-not-allowed', !hasNextStop);
+                markAllStopsCompleteButton.classList.toggle('opacity-50', !hasNextStop);
             }
         };
 
@@ -954,10 +954,15 @@
             }
         };
 
-        const getPreviewStops = () => routeData.slice(0, Math.min(previewStopCount, routeData.length));
+        const getPendingStops = () => routeData.filter((item) => !item.visited);
+
+        const getPreviewStops = () => {
+            const pendingStops = getPendingStops();
+            return pendingStops.slice(0, Math.min(previewStopCount, pendingStops.length));
+        };
 
         const setPreviewStopCount = (count) => {
-            previewStopCount = Math.max(1, Math.min(count, routeData.length || 1));
+            previewStopCount = Math.max(1, Math.min(count, getPendingStops().length || 1));
             updateRouteModeButtons();
             renderTrailMap();
         };
@@ -972,8 +977,9 @@
             const previousButton = getElement('showPreviousRouteButton');
             const nextButton = getElement('showCurrentRouteShortcutButton');
             const allStopsButton = getElement('showAllStopsButton');
+            const pendingStops = getPendingStops();
             const atFirstStop = previewStopCount <= 1;
-            const atAllStops = !routeData.length || previewStopCount >= routeData.length;
+            const atAllStops = !pendingStops.length || previewStopCount >= pendingStops.length;
 
             [
                 [previousButton, atFirstStop],
@@ -1115,7 +1121,7 @@
             return div.textContent || div.innerText || '';
         };
 
-        const renderRouteDirections = (result, routeStops = []) => {
+        const renderRouteDirections = (result, routeStops = [], legStartNumber = 1) => {
             const panel = getElement('trailDirectionsPanel');
             if (!panel) return;
             const route = result?.routes?.[0];
@@ -1160,7 +1166,7 @@
 
                 return `
                     <div class="rounded-[20px] border border-[#F0D6C4] bg-[#FEFBF8] p-3">
-                        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-[#B08B59]">Leg ${legIndex + 1}</p>
+                        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-[#B08B59]">Leg ${legStartNumber + legIndex}</p>
                         <p class="mt-1 font-semibold text-[#1F1B19]">To ${destination?.name || leg.end_address}</p>
                         <p class="mt-1 text-xs text-[#6B5B4B]">${leg.distance?.text || 'Distance unavailable'} - ${leg.duration?.text || 'Duration unavailable'}</p>
                         <div class="trail-directions-list">${stepHtml}</div>
@@ -1404,6 +1410,15 @@
 
             const previewStops = getPreviewStops();
 
+            if (!previewStops.length) {
+                const directionsPanel = getElement('trailDirectionsPanel');
+                if (directionsPanel) {
+                    directionsPanel.innerHTML = `<p class="font-semibold text-[#1F1B19]">All stops in this trail are complete.</p>`;
+                }
+                showTrailMessage('All stops in this trail are complete.');
+                return;
+            }
+
             const computeAndRender = (stops, renderer, opts = {}) => {
                 if (!stops.length) return;
                 const destination = getStopLabel(stops[stops.length - 1]);
@@ -1430,7 +1445,7 @@
                         if (status === 'OK') {
                             renderer.setDirections(result);
                             if (opts.showDirections) {
-                                renderRouteDirections(result, stops);
+                                renderRouteDirections(result, stops, opts.legStartNumber);
                             }
                         }
                     });
@@ -1442,9 +1457,10 @@
             computeAndRender(previewStops, directionsRenderer, {
                 useCurrentAsOrigin: true,
                 showDirections: true,
+                legStartNumber: routeData.indexOf(previewStops[0]) + 1,
                 polylineOptions: { strokeColor: '#D98F4F', strokeOpacity: 0.9, strokeWeight: 6 },
             });
-            showTrailMessage(previewStopCount >= routeData.length
+            showTrailMessage(previewStopCount >= getPendingStops().length
                 ? 'Showing all destinations from your current location.'
                 : `Showing the next ${previewStops.length} stop${previewStops.length === 1 ? '' : 's'} from your current location.`);
             await placeStopMarkers(previewStops);
@@ -1493,7 +1509,7 @@
             }
             visitedCount = routeData.filter((item) => item.visited).length;
             estimatedTime = routeData.reduce((total, item) => total + Math.max(8, Math.round(item.distance * 7)), 0);
-            previewStopCount = Math.max(1, Math.min(previewStopCount, routeData.length || 1));
+            previewStopCount = Math.max(1, Math.min(previewStopCount, getPendingStops().length || 1));
             updateRouteModeButtons();
         };
 
@@ -1524,6 +1540,8 @@
                 return;
             }
 
+            const nextStopId = routeData.find((item) => !item.visited)?.id;
+
             routeData.forEach((item, index) => {
                 const card = document.createElement('article');
                 card.className = 'trail-stop-card';
@@ -1536,7 +1554,7 @@
                     <div class="trail-stop-content">
                         <div class="trail-stop-title-row">
                             <p class="trail-stop-title">${item.name}</p>
-                            ${index === 0 && !item.visited ? '<span class="trail-next-badge">Next stop</span>' : ''}
+                            ${item.id === nextStopId ? '<span class="trail-next-badge">Next stop</span>' : ''}
                         </div>
                         <div class="trail-stop-meta">
                             <span>${item.location}</span>
@@ -1660,7 +1678,7 @@
             // Keep the in-page map aligned with the selected next stop, then
             // hand off turn-by-turn navigation to Google Maps from the user's
             // current location.
-            setPreviewStopCount(routeData.indexOf(nextStop) + 1);
+            setPreviewStopCount(1);
             const destination = encodeURIComponent(getStopLabel(nextStop));
             const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=${travelMode.toLowerCase()}`;
             window.open(mapsUrl, '_blank', 'noopener');
@@ -1792,6 +1810,19 @@
             showToast(`${nextStop.name} marked as complete.`);
         };
 
+        const markAllStopsComplete = () => {
+            const remainingStops = routeData.filter((item) => !item.visited);
+            if (!remainingStops.length) return;
+
+            routeData = routeData.map((item) => ({ ...item, visited: true }));
+            localStorage.setItem(currentRouteKey, JSON.stringify(routeData));
+            updateRouteData();
+            renderRouteItems();
+            updateHeaderStatus();
+            renderTrailMap();
+            showToast(`${remainingStops.length} stop${remainingStops.length === 1 ? '' : 's'} marked as complete.`);
+        };
+
         const clearTrail = () => {
             if (!routeData.length) {
                 showToast('Your trail is already empty.');
@@ -1833,6 +1864,7 @@
             getElement('addFavoriteButton')?.addEventListener('click', saveFavoriteTrail);
             getElement('completeTrailButton')?.addEventListener('click', toggleCompleteTrail);
             getElement('completeAllButton')?.addEventListener('click', toggleCompleteTrail);
+            getElement('markAllStopsCompleteButton')?.addEventListener('click', markAllStopsComplete);
             getElement('closeTrailButton')?.addEventListener('click', openCompleteTrailModal);
             getElement('saveCompletedTrailButton')?.addEventListener('click', openCompletedTrailFavoriteNameModal);
             getElement('confirmCompletedTrailFavoriteButton')?.addEventListener('click', () => {
@@ -1847,7 +1879,7 @@
             getElement('discardCompletedTrailButton')?.addEventListener('click', () => finishCompletedTrail(false));
             getElement('clearTrailButton')?.addEventListener('click', clearTrail);
             getElement('exitTrailButton')?.addEventListener('click', exitTrail);
-            getElement('showAllStopsButton')?.addEventListener('click', () => setPreviewStopCount(routeData.length));
+            getElement('showAllStopsButton')?.addEventListener('click', () => setPreviewStopCount(getPendingStops().length));
             getElement('showCurrentRouteButton')?.addEventListener('click', navigateToNextStop);
             getElement('showCurrentRouteShortcutButton')?.addEventListener('click', () => setPreviewStopCount(previewStopCount + 1));
             getElement('showPreviousRouteButton')?.addEventListener('click', () => setPreviewStopCount(previewStopCount - 1));

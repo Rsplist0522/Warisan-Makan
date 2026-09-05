@@ -1,129 +1,119 @@
-%%{init: {"theme":"base", "themeVariables": {"fontFamily":"Arial", "fontSize":"15px", "lineColor":"#475569", "primaryTextColor":"#0f172a"}, "flowchart": {"curve":"basis", "nodeSpacing":45, "rankSpacing":60}}}%%
+%%{init: {"theme":"base", "themeVariables": {"fontFamily":"Arial", "fontSize":"14px", "lineColor":"#4b5563", "primaryTextColor":"#111827"}, "flowchart": {"curve":"linear", "nodeSpacing":34, "rankSpacing":44}}}%%
 flowchart LR
-    TITLE["WARISAN MAKAN<br/>Modular Monolith Architecture using Laravel MVC with Service Layer<br/><i>Culinary Heritage Tourism System</i>"]:::title
-    TITLE ~~~ APP
+    subgraph SYSTEM["WARISAN MAKAN — Modular Monolith Architecture using Laravel MVC with Service Layer\nCulinary Heritage Tourism System"]
+        direction LR
 
-    %% LEFT: actors and browser
-    subgraph ACTORS["Actors / Client Access"]
-        direction TB
-        G["Guest"]:::actor
-        U["Registered User"]:::actor
-        A["System Administrator"]:::actor
-        B["Web / Mobile Browser<br/>HTML • JavaScript • PWA-style interface"]:::browser
-        GEO["Browser Geolocation API<br/>check-in • trail location"]:::browser
-        G --> B
-        U --> B
-        A --> B
-        GEO -. "latitude / longitude when required" .-> B
-    end
-
-    B -->|HTTP / HTTPS| APP
-
-    %% CENTER: single Laravel modular monolith boundary
-    subgraph APP["WARISAN MAKAN\nLaravel Application — Modular Monolith"]
-        direction TB
-
-        subgraph MODULES["Logical Functional Modules"]
-            direction LR
-            UM["User Management"]:::module
-            HS["Heritage Shop Tracking\nCENTRAL HERITAGE CONTENT SOURCE"]:::central
-            FP["Food Passport & Achievement"]:::module
-            FT["Food Trail & Navigation"]:::module
-            CC["Community Contribution &\nVendor Submission"]:::module
-            BB["Blind Box Recommendation"]:::module
-        end
-
-        UM -->|"Authentication / User Identity / Authorization"| FP
-        UM -->|"Authentication / User Identity / Authorization"| FT
-        UM -->|"Authentication / User Identity / Authorization"| CC
-        UM -->|"Authentication / User Identity / Authorization"| BB
-        HS -->|"Heritage Shop + Location Data"| FP
-        HS -->|"Heritage Shop + Location Data"| FT
-        HS -->|"Existing Heritage Shop Data"| CC
-        HS -->|"Published Heritage Shop Data"| BB
-        CC -->|"Approved Contribution / Approved Correction"| HS
-
-        subgraph REQUEST["Shared Laravel Request Processing"]
+        subgraph CLIENT["Client Access\nPurpose: Provides the interface for guests, registered users, and administrators to access the system through web or mobile browsers."]
             direction TB
-            R["Laravel Routes\nroutes/web.php"]:::request
-            MW["Middleware / Access Control\nguest • auth • active_user • admin • throttle"]:::request
-            VLD["Form Requests / Validation / Authorization"]:::request
-            C["CONTROLLER (C)\nReceives requests • coordinates use cases\nauthorizes • validates • returns views / redirects / JSON"]:::controller
-            R --> MW --> VLD --> C
+            ACTORS["Guest\nRegistered User\nSystem Administrator"]:::actor
+            BROWSER["Web / Mobile Browser\nHTML • JavaScript • PWA-style interface"]:::browser
+            GEO["Browser Geolocation API\nFood passport check-in\nFood trail location / navigation"]:::browser
+            ACTORS --> BROWSER
+            GEO -. "latitude / longitude when required" .-> BROWSER
+            CNOTE["• Responsive public, user, and admin interfaces\n• Browser sends requests through HTTP / HTTPS\n• No separate client server is required"]:::note
         end
 
-        subgraph MVC["Laravel MVC + Selected Service Layer"]
-            direction LR
-            V["VIEW (V) — Presentation Layer\nBlade Templates: resources/views\nJavaScript • Vite\nPublic / Registered User / Administrator Interfaces"]:::view
-            S["SERVICE LAYER\nBusiness / Integration Logic\nShopCrawlerService\nHeritageShopAiGuideService\nHeritageShopImageService\nHeritageShopUrlGuard\nHeritageShopCatalog\nBlindBoxCatalogManager"]:::service
-            M["MODEL (M)\nLaravel Eloquent ORM / Domain Models\nUser • HeritageShop • HeritageFoodItem • ShopImage\nPassportStamp • Badge • UserBadge • FoodTrailSuggestion\nHeritageShopContribution • CorrectionRequest • BlindBoxDraw"]:::model
+        subgraph APP["Laravel Application\nONE application boundary — Modular Monolith"]
+            direction TB
+            APPNOTE["Purpose: Processes business logic, validates requests, coordinates MVC components, and provides secure shared application services."]:::note
+
+            subgraph MODULES["Logical Functional Modules"]
+                direction LR
+                UM["User Management"]:::module
+                HS["Heritage Shop Tracking\nCENTRAL HERITAGE CONTENT SOURCE"]:::central
+                FP["Food Passport &\nAchievement"]:::module
+                FT["Food Trail &\nNavigation"]:::module
+                CC["Community Contribution &\nVendor Submission"]:::module
+                BB["Blind Box\nRecommendation"]:::module
+            end
+
+            UM -->|"Authentication / User Identity / Authorization"| FP
+            UM -->|"Authentication / User Identity / Authorization"| FT
+            UM -->|"Authentication / User Identity / Authorization"| CC
+            UM -->|"Authentication / User Identity / Authorization"| BB
+            HS -->|"Heritage Shop + Location Data"| FP
+            HS -->|"Heritage Shop + Location Data"| FT
+            HS -->|"Existing Heritage Shop Data"| CC
+            HS -->|"Published Heritage Shop Data"| BB
+            CC -->|"Approved Contribution / Approved Correction"| HS
+
+            subgraph FLOW["Shared Laravel Request Flow"]
+                direction LR
+                ROUTES["Laravel Routes\nroutes/web.php"]:::request
+                MIDDLE["Middleware / Access Control\nguest • auth • active_user\nadmin • throttle"]:::request
+                VALIDATE["Form Requests\nValidation / Authorization"]:::request
+                ROUTES --> MIDDLE --> VALIDATE
+            end
+
+            subgraph MVC["Laravel MVC and Selected Service Layer"]
+                direction LR
+                CONTROLLER["CONTROLLER (C)\nReceives routed requests\nCoordinates use cases\nAuthorization / validated handling\nReturns views, redirects, or JSON"]:::controller
+                VIEW["VIEW (V)\nBlade Templates: resources/views\nJavaScript • Vite\nPublic • Registered User • Administrator Interfaces"]:::view
+                SERVICE["SERVICE LAYER\nBusiness / Integration Logic\nShopCrawlerService\nHeritageShopAiGuideService\nHeritageShopImageService\nHeritageShopUrlGuard\nHeritageShopCatalog\nBlindBoxCatalogManager"]:::service
+                MODEL["MODEL (M)\nLaravel Eloquent ORM / Domain Models\nUser • HeritageShop • HeritageFoodItem\nShopImage • PassportStamp • Badge • UserBadge\nFoodTrailSuggestion • Contribution • CorrectionRequest\nBlindBoxDraw"]:::model
+                FLOW --> CONTROLLER
+                CONTROLLER -->|"Render Blade View / Response"| VIEW
+                VIEW -->|"User Action / New HTTP Request"| CONTROLLER
+                CONTROLLER -->|"Business / Integration Operation"| SERVICE
+                SERVICE -->|"Read / Update Domain Data"| MODEL
+                CONTROLLER -.->|"Direct Eloquent Access"| MODEL
+                CONTROLLER -->|"Browser / User Request"| MODEL
+                MODEL -->|"Domain Data / Result"| CONTROLLER
+            end
+
+            subgraph CONTROLLERS["Representative Controllers"]
+                direction LR
+                USERCTL["AuthController\nProfileController\nHeritageShopController\nPassportController\nFoodTrailController"]:::controllerSmall
+                COMMUNITYCTL["CommunityContributionController\nCorrectionRequestController\nBlindBoxController\nChatController"]:::controllerSmall
+                ADMINCTL["UserManagementController\nHeritageShopAdminController\nHeritageFoodItemAdminController\nAdminCommunityContributionController\nFoodTrailSuggestionController\nBadgeManagementController\nAdmin BlindBoxController"]:::controllerSmall
+            end
+            CONTROLLER -. "includes" .-> USERCTL
+            CONTROLLER -. "includes" .-> COMMUNITYCTL
+            CONTROLLER -. "includes" .-> ADMINCTL
+
+            subgraph INFRA["Shared Laravel Infrastructure"]
+                direction LR
+                INFRA1["Authentication\nSession Management\nAuthorization / Roles"]:::infra
+                INFRA2["CSRF Protection\nValidation\nLaravel Notifications"]:::infra
+                INFRA3["Cache\nQueue Infrastructure\nMedia / File Handling"]:::infra
+            end
+            CONTROLLER -.-> INFRA
+            SERVICE -.-> INFRA
+
+            APPRESP["• All six modules run inside the same Laravel application\n• Controllers can call Services or directly use Eloquent Models\n• Shared infrastructure is not a separate functional module\n• No API Gateway, message broker, Kubernetes, or microservices"]:::note
         end
 
-        C -->|"Render Blade View / Response"| V
-        V -->|"User Action / HTTP Request"| C
-        C -->|"Business / Integration Operation"| S
-        S -->|"Read / Update Domain Data"| M
-        C -.->|"Direct Eloquent Access"| M
-        C -->|"Browser / User Request"| M
-        M -->|"Domain Data / Result"| C
-        C -->|"Response"| V
-
-        subgraph INFRA["Shared Laravel Infrastructure"]
-            direction LR
-            I1["Authentication"]:::infra
-            I2["Session Management"]:::infra
-            I3["Authorization / Roles"]:::infra
-            I4["CSRF Protection"]:::infra
-            I5["Validation"]:::infra
-            I6["Laravel Notifications"]:::infra
-            I7["Cache"]:::infra
-            I8["Queue Infrastructure"]:::infra
-            I9["Media / File Handling"]:::infra
+        subgraph RIGHT["Shared Data, Media, and External Integrations"]
+            direction TB
+            RIGHTNOTE["Purpose: Provides shared persistence, media storage, maps, authentication, AI, web research, and email capabilities while remaining outside the Laravel application boundary."]:::note
+            subgraph EXTERNAL["External Services"]
+                direction LR
+                OAUTH["Google OAuth\nLaravel Socialite"]:::external
+                MAPS["Google Maps JavaScript API\nFood Trail Map / Navigation"]:::external
+                GROQ["Groq API\nAI Guide • crawler enhancement\nChat Assistant"]:::external
+                TAVILY["Tavily Search API\nCrawler Web Research"]:::external
+                MAIL["Mail Service / Laravel Mail Transport\nEmail Notifications"]:::external
+            end
+            subgraph STORAGE["Shared Persistence and Storage"]
+                direction LR
+                DB["MySQL Database\nShared Warisan Makan Relational Database\nAll six modules share one database"]:::data
+                FILES["File / Object Storage\nCloudflare R2 — deployed media\nLaravel Local / Public Storage — development / testing"]:::data
+            end
         end
 
-        C -.-> INFRA
-        S -.-> INFRA
-
-        subgraph EXAMPLES["Representative Controller Components"]
-            direction LR
-            CTL1["AuthController • ProfileController\nHeritageShopController • PassportController\nFoodTrailController • CommunityContributionController\nCorrectionRequestController • BlindBoxController • ChatController"]:::controllerSmall
-            CTL2["Administrator Controllers\nUserManagementController • HeritageShopAdminController\nHeritageFoodItemAdminController • AdminCommunityContributionController\nFoodTrailSuggestionController • BadgeManagementController\nAdmin BlindBoxController"]:::controllerSmall
-        end
-        C -. "includes" .-> EXAMPLES
+        BROWSER -->|"HTTP / HTTPS"| ROUTES
+        VIEW -->|"Rendered interface"| BROWSER
+        CONTROLLER -. "AuthController ↔" .-> OAUTH
+        VIEW -. "Food Trail JavaScript ↔" .-> MAPS
+        SERVICE -. "AI / Service / Chat logic ↔" .-> GROQ
+        SERVICE -. "ShopCrawlerService ↔" .-> TAVILY
+        CC -. "Contribution status notifications" .-> MAIL
+        MODEL -->|"Eloquent / SQL"| DB
+        SERVICE -. "HeritageShopImageService / contribution media" .-> FILES
     end
 
-    %% RIGHT: external integrations
-    subgraph EXT["External Services / Integrations"]
-        direction TB
-        OAUTH["Google OAuth\nAuthentication through Laravel Socialite"]:::external
-        MAPS["Google Maps JavaScript API\nFood Trail Map / Navigation / Location Display"]:::external
-        GROQ["Groq API\nAI Processing\nAI Guide • crawler enhancement • chat assistant"]:::external
-        TAVILY["Tavily Search API\nCrawler Web Research"]:::external
-        MAIL["Mail Service / Laravel Mail Transport\nEmail Notifications"]:::external
-    end
-
-    APP -. "AuthController ↔" .-> OAUTH
-    V -. "Food Trail View / JavaScript ↔" .-> MAPS
-    S -. "AI / Service / Chat logic ↔" .-> GROQ
-    S -. "ShopCrawlerService ↔" .-> TAVILY
-    CC -. "status notifications" .-> MAIL
-
-    %% BOTTOM RIGHT: shared persistence and storage
-    subgraph DATA["Shared Persistence and Media"]
-        direction TB
-        DB["MySQL Database\nShared Warisan Makan Relational Database\nAll six modules share one database"]:::data
-        FS["File / Object Storage\nCloudflare R2 — deployed heritage shop / media storage\nLaravel Local / Public Storage — development / testing"]:::data
-    end
-
-    M -->|"Eloquent / SQL"| DB
-    S -. "HeritageShopImageService / contribution media" .-> FS
-
-    %% return to browser
-    V -->|"Rendered interface"| B
-
-    classDef title fill:#ffffff,stroke:#1e293b,stroke-width:3px,color:#0f172a,font-size:20px,font-weight:bold;
-    classDef actor fill:#f1f5f9,stroke:#64748b,stroke-width:1.5px,color:#0f172a;
-    classDef browser fill:#e2e8f0,stroke:#64748b,stroke-width:1.5px,color:#0f172a;
+    classDef actor fill:#f3f4f6,stroke:#4b5563,stroke-width:2px,color:#111827;
+    classDef browser fill:#e5e7eb,stroke:#4b5563,stroke-width:2px,color:#111827;
     classDef module fill:#ffedd5,stroke:#c2410c,stroke-width:1.5px,color:#431407;
     classDef central fill:#dcfce7,stroke:#15803d,stroke-width:3px,color:#14532d;
     classDef request fill:#fef3c7,stroke:#b45309,stroke-width:1.5px,color:#451a03;
@@ -135,15 +125,16 @@ flowchart LR
     classDef infra fill:#f8fafc,stroke:#94a3b8,stroke-width:1px,color:#334155;
     classDef external fill:#ccfbf1,stroke:#0f766e,stroke-width:1.5px,color:#134e4a;
     classDef data fill:#e5e7eb,stroke:#4b5563,stroke-width:2px,color:#111827;
+    classDef note fill:#ffffff,stroke:#9ca3af,stroke-width:1px,color:#374151,font-size:12px;
 
-    style APP fill:#ffffff,stroke:#1e293b,stroke-width:4px
-    style ACTORS fill:#f8fafc,stroke:#94a3b8,stroke-width:2px
+    style SYSTEM fill:#ffffff,stroke:#111827,stroke-width:4px
+    style CLIENT fill:#fafafa,stroke:#6b7280,stroke-width:2px
+    style APP fill:#ffffff,stroke:#374151,stroke-width:3px
+    style RIGHT fill:#fafafa,stroke:#6b7280,stroke-width:2px
     style MODULES fill:#fff7ed,stroke:#fb923c,stroke-width:2px
-    style REQUEST fill:#fffbeb,stroke:#f59e0b,stroke-width:2px
+    style FLOW fill:#fffbeb,stroke:#f59e0b,stroke-width:2px
     style MVC fill:#f8fafc,stroke:#64748b,stroke-width:2px
+    style CONTROLLERS fill:#eff6ff,stroke:#93c5fd,stroke-width:1px
     style INFRA fill:#f8fafc,stroke:#94a3b8,stroke-width:2px
-    style EXT fill:#f0fdfa,stroke:#5eead4,stroke-width:2px
-    style DATA fill:#f9fafb,stroke:#9ca3af,stroke-width:2px
-    style EXAMPLES fill:#eff6ff,stroke:#93c5fd,stroke-width:1px
-
-    %% Title: WARISAN MAKAN — Modular Monolith Architecture using Laravel MVC with Service Layer
+    style EXTERNAL fill:#f0fdfa,stroke:#5eead4,stroke-width:2px
+    style STORAGE fill:#f9fafb,stroke:#9ca3af,stroke-width:2px

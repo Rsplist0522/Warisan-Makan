@@ -789,8 +789,24 @@
                 <button id="saveCompletedTrailButton"
                     class="h-12 rounded-full bg-[#B8874A] px-4 text-sm font-semibold text-white hover:bg-[#9c6f33]">{{ __('Save as Favourite') }}</button>
                 <button id="discardCompletedTrailButton"
-                    class="h-12 rounded-full border border-[#E9D7BF] bg-white px-4 text-sm font-semibold text-[#6B553F] hover:bg-[#FBF2E4]">{{ __('Not Now') }}
-                    Now</button>
+                    class="h-12 rounded-full border border-[#E9D7BF] bg-white px-4 text-sm font-semibold text-[#6B553F] hover:bg-[#FBF2E4]">{{ __('Not Now') }}</button>
+            </div>
+        </div>
+    </div>
+    <div id="trailFavoriteNameModal" class="trail-complete-modal is-hidden" role="dialog" aria-modal="true"
+        aria-labelledby="trailFavoriteNameTitle">
+        <div class="w-full max-w-md rounded-[28px] bg-white p-6 shadow-[0_24px_60px_rgba(31,27,25,0.22)]">
+            <p class="text-xs font-semibold uppercase tracking-[0.24em] text-[#B08B59]">{{ __('Save trail') }}</p>
+            <h2 id="trailFavoriteNameTitle" class="mt-3 text-2xl font-semibold text-[#1F1B19]">{{ __('Name this favorite trail') }}</h2>
+            <p class="mt-3 text-sm leading-6 text-[#6B5B4B]">{{ __('Choose a name so you can find this trail again in Food Trails.') }}</p>
+            <label for="completedTrailFavoriteName" class="mt-5 block text-sm font-semibold text-[#6B553F]">{{ __('Trail name') }}</label>
+            <input id="completedTrailFavoriteName" type="text" value="My heritage food trail" maxlength="100"
+                class="mt-2 h-12 w-full rounded-2xl border border-[#E6D8C4] bg-[#FFFBF6] px-4 text-sm text-[#1F1B19] outline-none focus:border-[#B8874A] focus:ring-2 focus:ring-[#F3DFC1]" />
+            <div class="mt-6 grid gap-3 sm:grid-cols-2">
+                <button id="confirmCompletedTrailFavoriteButton"
+                    class="h-12 rounded-full bg-[#B8874A] px-4 text-sm font-semibold text-white hover:bg-[#9c6f33]">{{ __('Save as Favourite') }}</button>
+                <button id="cancelCompletedTrailFavoriteButton"
+                    class="h-12 rounded-full border border-[#E9D7BF] bg-white px-4 text-sm font-semibold text-[#6B553F] hover:bg-[#FBF2E4]">{{ __('Cancel') }}</button>
             </div>
         </div>
     </div>
@@ -1726,7 +1742,22 @@
             getElement('trailCompleteModal')?.classList.remove('is-hidden');
         };
 
-        const finishCompletedTrail = (saveAsFavorite) => {
+        const openCompletedTrailFavoriteNameModal = () => {
+            getElement('trailCompleteModal')?.classList.add('is-hidden');
+            getElement('trailFavoriteNameModal')?.classList.remove('is-hidden');
+
+            const input = getElement('completedTrailFavoriteName');
+            input?.focus();
+            input?.select();
+        };
+
+        const closeCompletedTrailFavoriteNameModal = () => {
+            getElement('trailFavoriteNameModal')?.classList.add('is-hidden');
+            getElement('trailCompleteModal')?.classList.remove('is-hidden');
+        };
+
+        const finishCompletedTrail = (saveAsFavorite, favoriteName = null) => {
+
             const completedTrails = JSON.parse(localStorage.getItem(completedTrailsKey) || '[]');
             completedTrails.push({
                 id: `completed-${Date.now()}`,
@@ -1736,12 +1767,13 @@
             localStorage.setItem(completedTrailsKey, JSON.stringify(completedTrails));
 
             if (saveAsFavorite) {
-                saveFavorite('Completed heritage food trail');
+                saveFavorite(favoriteName);
                 showToast(window.foodTrailAuth.isAuthenticated ? 'Trail saved to favourites.' : 'Trail saved to local favourites.');
             }
 
             localStorage.removeItem(currentRouteKey);
             getElement('trailCompleteModal')?.classList.add('is-hidden');
+            getElement('trailFavoriteNameModal')?.classList.add('is-hidden');
             window.setTimeout(() => {
                 window.location.href = '/foodtrails';
             }, 650);
@@ -1802,7 +1834,16 @@
             getElement('completeTrailButton')?.addEventListener('click', toggleCompleteTrail);
             getElement('completeAllButton')?.addEventListener('click', toggleCompleteTrail);
             getElement('closeTrailButton')?.addEventListener('click', openCompleteTrailModal);
-            getElement('saveCompletedTrailButton')?.addEventListener('click', () => finishCompletedTrail(true));
+            getElement('saveCompletedTrailButton')?.addEventListener('click', openCompletedTrailFavoriteNameModal);
+            getElement('confirmCompletedTrailFavoriteButton')?.addEventListener('click', () => {
+                const favoriteName = getElement('completedTrailFavoriteName')?.value.trim();
+                if (!favoriteName) {
+                    getElement('completedTrailFavoriteName')?.focus();
+                    return;
+                }
+                finishCompletedTrail(true, favoriteName);
+            });
+            getElement('cancelCompletedTrailFavoriteButton')?.addEventListener('click', closeCompletedTrailFavoriteNameModal);
             getElement('discardCompletedTrailButton')?.addEventListener('click', () => finishCompletedTrail(false));
             getElement('clearTrailButton')?.addEventListener('click', clearTrail);
             getElement('exitTrailButton')?.addEventListener('click', exitTrail);

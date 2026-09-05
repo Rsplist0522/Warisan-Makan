@@ -32,6 +32,8 @@ const foodTrailApp = (() => {
         favoritesList: 'favoritesList',
         clearFavoritesButton: 'clearFavoritesButton',
         curatedTrailCards: 'curatedTrailCards',
+        continueTrailCard: 'continueTrailCard',
+        continueTrailButton: 'continueTrailButton',
         startNowButton: 'startNowButton',
         closeRestaurantDrawer: 'closeRestaurantDrawer',
     };
@@ -225,6 +227,14 @@ const foodTrailApp = (() => {
             resultsPanel.classList.toggle('hidden', !showResults);
             initialPanel.classList.toggle('hidden', showResults);
         }
+    };
+    const renderContinueTrail = () => {
+        const card = getElement(selectors.continueTrailCard);
+        if (!card) return;
+
+        const hasUnfinishedRoute = state.routeRestaurants.length > 0
+            && state.routeRestaurants.some((restaurant) => !restaurant.visited);
+        card.classList.toggle('hidden', !hasUnfinishedRoute);
     };
     const formatTags = (tags = []) => tags.map((tag) => `<span class="inline-flex items-center rounded-full bg-[#F7E4C1] px-3 py-1 text-[11px] font-semibold text-[#8A5A24]">${tag}</span>`).join(' ');
     const renderFavorites = () => {
@@ -647,6 +657,9 @@ const foodTrailApp = (() => {
             renderFavorites();
         });
         getElement(selectors.startNowButton)?.addEventListener('click', handleStartNow);
+        getElement(selectors.continueTrailButton)?.addEventListener('click', () => {
+            window.location.href = '/start_trail';
+        });
         getElement(selectors.closeRestaurantDrawer)?.addEventListener('click', handleCloseRestaurantDrawer);
     };
     const init = () => {
@@ -654,14 +667,11 @@ const foodTrailApp = (() => {
         loadLikes();
         loadCurrentRoute();
         renderFavorites();
+        renderContinueTrail();
         renderCuratedTrails();
-        const openingSavedTrails = window.location.hash === '#initialPanel';
-        setPanelVisibility(!openingSavedTrails && state.routeRestaurants.length > 0);
-        if (!openingSavedTrails && state.routeRestaurants.length) {
-            state.filteredRestaurants = state.routeRestaurants.slice();
-            state.activeRestaurants = state.routeRestaurants.slice();
-            state.selectedRestaurant = state.routeRestaurants[0] || null;
-        }
+        // A saved in-progress route remains available from Current Trail, but
+        // Food Trails itself always opens on discovery after a refresh.
+        setPanelVisibility(false);
         wireEvents();
         renderRestaurantList();
         renderRouteSummary();

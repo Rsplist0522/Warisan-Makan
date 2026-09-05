@@ -74,6 +74,43 @@
 
 @push('styles')
 <style>
+        #routeMapFrame {
+            position: relative;
+            z-index: 0;
+        }
+
+        #routeMapLoading {
+            position: absolute;
+            inset: 0;
+            z-index: 2147483647;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            background: rgba(255, 251, 246, 0.97);
+            color: #6B5B4B;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        #routeMapLoading.hidden {
+            display: none;
+        }
+
+        .route-map-loading-spinner {
+            width: 34px;
+            height: 34px;
+            border: 4px solid #F3DFC1;
+            border-top-color: #B8874A;
+            border-radius: 50%;
+            animation: route-map-loading-spin 0.8s linear infinite;
+        }
+
+        @keyframes route-map-loading-spin {
+            to { transform: rotate(360deg); }
+        }
+
         .trail-stop-card {
             display: grid;
             grid-template-columns: 32px 30px 72px minmax(0, 1fr) auto;
@@ -524,6 +561,10 @@
                             class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(255,210,146,0.35),_transparent_40%),radial-gradient(circle_at_bottom_right,_rgba(222,164,95,0.16),_transparent_35%)] pointer-events-none">
                         </div>
                         <div id="routeMapFrame" class="h-full w-full"></div>
+                        <div id="routeMapLoading">
+                            <span class="route-map-loading-spinner"></span>
+                            <span>{{ __('Loading your destinations...') }}</span>
+                        </div>
                         <div id="trailMapMessage"
                             class="absolute inset-x-4 bottom-4 hidden rounded-2xl bg-white/95 px-4 py-3 text-sm text-[#6B5B4B] shadow-lg">
                         </div>
@@ -587,7 +628,13 @@
                             <span id="estimateTimeText">{{ __('Estimated time') }}: 0 min</span>
                         </div>
                     </div>
-                    <div id="selectedTrailList" class="mt-6 space-y-4"></div>
+                    <div id="selectedTrailList" class="mt-6 space-y-4" aria-live="polite">
+                        <div class="animate-pulse rounded-[28px] border border-[#E9D7BF] bg-[#FEFBF7] p-5">
+                            <div class="h-5 w-2/5 rounded bg-[#F0E5D8]"></div>
+                            <div class="mt-4 h-4 w-4/5 rounded bg-[#F6EEE5]"></div>
+                            <div class="mt-3 h-4 w-3/5 rounded bg-[#F6EEE5]"></div>
+                        </div>
+                    </div>
                     <div
                         class="mt-6 flex flex-col gap-3 rounded-[24px] border border-[#F0D6C4] bg-[#FFFBF7] p-4 sm:flex-row sm:items-center sm:justify-between">
                         <div class="flex min-w-0 items-center gap-3 text-sm text-[#6B5B4B]">
@@ -812,6 +859,10 @@
 
         const getElement = (id) => document.getElementById(id);
 
+        const setRouteMapLoading = (isLoading) => {
+            getElement('routeMapLoading')?.classList.toggle('hidden', !isLoading);
+        };
+
         let trailGoogleMap = null;
         let trailGoogleGeocoder = null;
         let trailGoogleMarkers = [];
@@ -826,6 +877,7 @@
         let previewStopCount = 1;
         let travelMode = 'DRIVING';
         let currentLocation = null;
+        let locationRequestInFlight = false;
         let hasOptimizedRouteOrder = false;
         const geocodeCache = new Map();
 
@@ -1023,6 +1075,19 @@
                 showTrailMessage('Location permission is unavailable, so the trail starts from the first restaurant.');
             }
             return null;
+        };
+
+        const refreshRouteWithCurrentLocation = () => {
+            if (currentLocation || locationRequestInFlight) return;
+
+            locationRequestInFlight = true;
+            getCurrentPosition().then((position) => {
+                locationRequestInFlight = false;
+                if (!position) return;
+
+                currentLocation = position;
+                renderTrailMap();
+            });
         };
 
         const geocodeRouteItem = (item, locationHint = '') => {
@@ -1391,22 +1456,18 @@
 
         const renderTrailMap = async () => {
             if (!trailGoogleMap || !trailGoogleGeocoder) return;
+            setRouteMapLoading(true);
             clearTrailMarkers();
 
             if (!routeData.length) {
                 showTrailMessage('No route selected yet. Add a trail from Food Trails.');
+                setRouteMapLoading(false);
                 return;
             }
-            currentLocation = await getCurrentPositionForRoute(!currentLocation);
+            // Draw the saved route immediately. GPS is requested in the
+            // background and refreshes the route when it becomes available.
+            refreshRouteWithCurrentLocation();
             if (currentLocation) placeCurrentLocationMarker(currentLocation);
-
-            if (!hasOptimizedRouteOrder && routeData.length > 1) {
-                const geocodedStops = await Promise.all(routeData.map((item) => geocodeRouteItem(item, item.location)));
-                saveRouteOrder(orderStopsByNearestNeighbor(routeData, currentLocation, geocodedStops));
-                saveRouteOrder(await optimizeRouteOrder(currentLocation));
-                hasOptimizedRouteOrder = true;
-                showToast('Trail route ordered from your current location.');
-            }
 
             const previewStops = getPreviewStops();
 
@@ -1416,6 +1477,7 @@
                     directionsPanel.innerHTML = `<p class="font-semibold text-[#1F1B19]">All stops in this trail are complete.</p>`;
                 }
                 showTrailMessage('All stops in this trail are complete.');
+                setRouteMapLoading(false);
                 return;
             }
 
@@ -1448,9 +1510,10 @@
                                 renderRouteDirections(result, stops, opts.legStartNumber);
                             }
                         }
+                        setRouteMapLoading(false);
                     });
                 } catch (e) {
-                    // ignore route failures
+                    setRouteMapLoading(false);
                 }
             };
 

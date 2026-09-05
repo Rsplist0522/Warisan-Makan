@@ -97,11 +97,25 @@ class BlindBoxLandingPageTest extends TestCase
         $response = $this->get('/foodPassport');
 
         $response->assertStatus(200);
-        $response->assertSee('data-hash-target="check-in"', false);
-        $response->assertSee('data-hash-target="passport-progress"', false);
-        $response->assertSee('data-hash-target="leaderboard"', false);
+        $response->assertSee('/foodPassport/history', false);
+        $response->assertSee('/foodPassport/statistics', false);
+        $response->assertSee('/foodPassport/leaderboard', false);
         $response->assertSee('Passport Statistics', false);
         $response->assertSee('Leaderboard', false);
+    }
+
+    public function test_passport_statistics_and_leaderboard_have_dedicated_pages(): void
+    {
+        $this->createShop(['shop_name' => 'Dedicated Page Kitchen']);
+
+        $this->get('/foodPassport/statistics')
+            ->assertStatus(200)
+            ->assertSee('Passport Statistics &amp; Achievements', false)
+            ->assertSee('Passport achievements', false);
+
+        $this->get('/foodPassport/leaderboard')
+            ->assertStatus(200)
+            ->assertSee('Leaderboard', false);
     }
 
     public function test_signed_in_user_receives_passport_stats_and_badge_from_real_shop_check_in(): void
@@ -121,7 +135,7 @@ class BlindBoxLandingPageTest extends TestCase
             ])
             ->assertStatus(201);
 
-        $response = $this->actingAs($user)->get('/foodPassport');
+        $response = $this->actingAs($user)->get('/foodPassport/statistics');
 
         $response->assertStatus(200);
         $response->assertSee('Heritage Starter');
@@ -150,7 +164,7 @@ class BlindBoxLandingPageTest extends TestCase
             ->assertStatus(409);
     }
 
-    public function test_visited_locations_are_paginated_in_pages_of_five(): void
+    public function test_visit_history_is_paginated_and_searchable(): void
     {
         $user = User::create([
             'name' => 'History User',
@@ -169,13 +183,17 @@ class BlindBoxLandingPageTest extends TestCase
             ]);
         }
 
-        $firstPage = $this->actingAs($user)->get('/foodPassport');
-        $this->assertSame(5, substr_count($firstPage->getContent(), 'data-visited-location'));
-        $firstPage->assertSee('Page 1');
+        $firstPage = $this->actingAs($user)->get('/foodPassport/history');
+        $this->assertSame(5, substr_count($firstPage->getContent(), 'data-visit-record'));
+        $firstPage->assertSee('Visit History');
+        $firstPage->assertDontSee('View shop details');
 
-        $secondPage = $this->actingAs($user)->get('/foodPassport?visited_page=2');
-        $this->assertSame(1, substr_count($secondPage->getContent(), 'data-visited-location'));
+        $secondPage = $this->actingAs($user)->get('/foodPassport/history?page=2');
         $secondPage->assertSee('Heritage Shop 6');
+
+        $filtered = $this->actingAs($user)->get('/foodPassport/history?search=Heritage%20Shop%202');
+        $filtered->assertSee('Heritage Shop 2');
+        $filtered->assertDontSee('Heritage Shop 1');
     }
 
     private function createShop(array $attributes = []): HeritageShop

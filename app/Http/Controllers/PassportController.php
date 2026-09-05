@@ -33,9 +33,71 @@ class PassportController extends Controller
             'shops' => $passportData['shops'],
             'availableShops' => $passportData['availableShops'],
             'stats' => $passportData['stats'],
-            'visitedLocations' => $passportData['visitedLocations'],
             'badges' => $passportData['badges'],
             'leaderboard' => $passportData['leaderboard'],
+        ]);
+    }
+
+    public function history(Request $request)
+    {
+        $user = $request->user();
+        $search = trim((string) $request->query('search', ''));
+        $state = trim((string) $request->query('state', ''));
+        $sort = $request->query('sort') === 'oldest' ? 'oldest' : 'newest';
+
+        $query = PassportStamp::query()
+            ->join('heritage_shops', 'heritage_shops.id', '=', 'passport_stamps.shop_id')
+            ->where('passport_stamps.user_id', $user->id)
+            ->select([
+                'passport_stamps.stamp_id',
+                'passport_stamps.shop_id',
+                'passport_stamps.stamp_datetime',
+                'heritage_shops.shop_name',
+                'heritage_shops.founder_name',
+                'heritage_shops.city',
+                'heritage_shops.state',
+            ]);
+
+        if ($search !== '') {
+            $query->where(function ($builder) use ($search) {
+                $builder->where('heritage_shops.shop_name', 'like', "%{$search}%")
+                    ->orWhere('heritage_shops.city', 'like', "%{$search}%")
+                    ->orWhere('heritage_shops.state', 'like', "%{$search}%");
+            });
+        }
+
+        if ($state !== '') {
+            $query->where('heritage_shops.state', $state);
+        }
+
+        $query->orderBy('passport_stamps.stamp_datetime', $sort === 'oldest' ? 'asc' : 'desc');
+
+        $visits = $query->paginate(5, ['*'], 'page')->withQueryString();
+        $states = HeritageShop::query()
+            ->whereIn('id', PassportStamp::where('user_id', $user->id)->select('shop_id'))
+            ->whereNotNull('state')
+            ->where('state', '!=', '')
+            ->distinct()
+            ->orderBy('state')
+            ->pluck('state');
+
+        return view('foodPassport.history', compact('visits', 'states', 'search', 'state', 'sort'));
+    }
+
+    public function statistics(Request $request)
+    {
+        $passportData = $this->buildPassportSummary($request->user());
+
+        return view('foodPassport.statistics', [
+            'stats' => $passportData['stats'],
+            'badges' => $passportData['badges'],
+        ]);
+    }
+
+    public function leaderboard()
+    {
+        return view('foodPassport.leaderboard', [
+            'leaderboard' => $this->buildLeaderboard(),
         ]);
     }
 
@@ -46,14 +108,9 @@ class PassportController extends Controller
         $totalShops = $availableShops->total();
         $shopsForView = $availableShops->items();
 
-        $currentPage = LengthAwarePaginator::resolveCurrentPage('visited_page');
-        $visitedLocations = $user
-            ? $this->visitedLocationsForUser($user, $currentPage)
-            : new LengthAwarePaginator([], 0, 5, $currentPage, [
-                'path' => LengthAwarePaginator::resolveCurrentPath(),
-                'pageName' => 'visited_page',
-            ]);
-        $visitedCount = $visitedLocations->total();
+        $visitedCount = $user
+            ? PassportStamp::where('user_id', $user->id)->distinct('shop_id')->count('shop_id')
+            : 0;
 
         $completion = $totalShops > 0 ? (int) round(($visitedCount / $totalShops) * 100) : 0;
         $badgeList = $this->badgeSummary($user, $visitedCount);
@@ -70,7 +127,6 @@ class PassportController extends Controller
             'shops' => $shopsForView,
             'availableShops' => $availableShops,
             'stats' => $stats,
-            'visitedLocations' => $visitedLocations,
             'badges' => $badgeList,
             'leaderboard' => $this->buildLeaderboard(),
         ];

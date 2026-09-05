@@ -46,15 +46,19 @@
                 <span class="user-nav-chevron" aria-hidden="true">&rsaquo;</span>
             </summary>
             <div class="user-nav-submenu" aria-label="{{ __('Food passport navigation') }}">
-                <a class="user-nav-item user-nav-child" data-label="{{ __('Check In') }}" title="{{ __('Check In') }}" href="{{ route('passport.index') }}#check-in" data-hash-target="check-in">
+                <a class="user-nav-item user-nav-child {{ request()->routeIs('passport.index') ? 'active' : '' }}" data-label="{{ __('Check In') }}" title="{{ __('Check In') }}" href="{{ route('passport.index') }}#check-in">
                     <span class="user-nav-icon" aria-hidden="true">@include('partials.module-icon', ['icon' => 'passport'])</span>
                     <span class="user-nav-text">{{ __('Check In') }}</span>
                 </a>
-                <a class="user-nav-item user-nav-child" data-label="{{ __('Passport Statistics') }}" title="{{ __('Passport Statistics') }}" href="{{ route('passport.index') }}#passport-progress" data-hash-target="passport-progress">
+                <a class="user-nav-item user-nav-child {{ request()->routeIs('passport.history') ? 'active' : '' }}" data-label="{{ __('View Visit History') }}" title="{{ __('View Visit History') }}" href="{{ route('passport.history') }}">
+                    <span class="user-nav-icon" aria-hidden="true">@include('partials.module-icon', ['icon' => 'history-list'])</span>
+                    <span class="user-nav-text">{{ __('View Visit History') }}</span>
+                </a>
+                <a class="user-nav-item user-nav-child {{ request()->routeIs('passport.statistics') ? 'active' : '' }}" data-label="{{ __('Passport Statistics') }}" title="{{ __('Passport Statistics') }}" href="{{ route('passport.statistics') }}">
                     <span class="user-nav-icon" aria-hidden="true">@include('partials.module-icon', ['icon' => 'award'])</span>
                     <span class="user-nav-text">{{ __('Passport Statistics') }}</span>
                 </a>
-                <a class="user-nav-item user-nav-child" data-label="{{ __('Leaderboard') }}" title="{{ __('Leaderboard') }}" href="{{ route('passport.index') }}#leaderboard" data-hash-target="leaderboard">
+                <a class="user-nav-item user-nav-child {{ request()->routeIs('passport.leaderboard') ? 'active' : '' }}" data-label="{{ __('Leaderboard') }}" title="{{ __('Leaderboard') }}" href="{{ route('passport.leaderboard') }}">
                     <span class="user-nav-icon" aria-hidden="true">@include('partials.module-icon', ['icon' => 'ranking'])</span>
                     <span class="user-nav-text">{{ __('Leaderboard') }}</span>
                 </a>

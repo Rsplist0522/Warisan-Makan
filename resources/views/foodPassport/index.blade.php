@@ -107,7 +107,7 @@
             grid-template-columns: 1.2fr 0.8fr;
             gap: 22px;
             align-items: stretch;
-            background: rgba(255,255,255,0.42);
+            background: rgba(255,255,255,0.36);
             border: 1px solid var(--line);
             border-radius: 22px;
             box-shadow: 0 18px 38px var(--shadow);
@@ -161,8 +161,14 @@
         .action-row {
             display: flex;
             flex-wrap: wrap;
+            justify-content: center;
             gap: 12px;
             margin-top: 24px;
+        }
+
+        .passport-actions {
+            margin-top: 26px;
+            background: rgba(255,255,255,0.36);
         }
 
         .btn {
@@ -934,13 +940,6 @@
                     <h1>{{ __('Your Heritage Passport') }}</h1>
                     <p>{{ __('Collect stamps from authentic heritage food stops, uncover founder stories, and unlock rewards as you explore the city’s living culinary heritage.') }}</p>
 
-                    <div class="action-row" aria-label="{{ __('Passport sections') }}">
-                        <a href="#check-in" class="btn secondary section-nav-link active" data-section-nav="check-in">{{ __('Check In') }}</a>
-                        <a href="#nearby" class="btn secondary section-nav-link" data-section-nav="nearby">{{ __('Available Shops') }}</a>
-                        <a href="#passport-progress" class="btn secondary section-nav-link" data-section-nav="passport-progress">{{ __('Passport') }}</a>
-                        <a href="#leaderboard" class="btn secondary section-nav-link" data-section-nav="leaderboard">{{ __('Leaderboard') }}</a>
-                    </div>
-
                     <div class="stats-row" aria-label="{{ __('Passport progress statistics') }}">
                         <div class="stat">
                             <strong>{{ $stats['visited'] ?? 0 }}</strong>
@@ -969,6 +968,16 @@
                 @endif
             </section>
 
+            <section class="panel passport-actions" aria-label="{{ __('Passport sections') }}">
+                <div class="panel-inner">
+                    <div class="action-row" style="margin-top: 0;">
+                        <a href="{{ route('passport.history') }}" class="btn secondary">{{ __('View Visit History') }}</a>
+                        <a href="{{ route('passport.statistics') }}" class="btn secondary">{{ __('Passport Statistics & Achievements') }}</a>
+                        <a href="{{ route('passport.leaderboard') }}" class="btn secondary">{{ __('Leaderboard') }}</a>
+                    </div>
+                </div>
+            </section>
+
             <section class="content-grid" id="nearby">
                 <div class="panel">
                     <div class="panel-inner">
@@ -989,7 +998,7 @@
                                                 <span>{{ $shop['status'] }}</span>
                                             </div>
                                         </div>
-                                        <button type="button" class="mini-action select-shop">{{ __('Check In') }}</button>
+                                        <button type="button" class="mini-action select-shop">{{ __('Select') }}</button>
                                     </article>
                                 @endforeach
                             </div>
@@ -1048,7 +1057,7 @@
                         </div>
 
                         <div class="button-row">
-                            <button type="button" id="btnCheckIn" class="btn primary">{{ __('Use my location') }}</button>
+                            <button type="button" id="btnCheckIn" class="btn primary">{{ __('Check In') }}</button>
                         </div>
 
                         <pre id="result" class="result-box">{{ __('Ready to check in. Select a shop and allow location access.') }}</pre>
@@ -1060,200 +1069,6 @@
                 </aside>
             </section>
 
-            <section class="panel" id="visited-locations" style="margin-top: 26px;">
-                <div class="panel-inner">
-                    <div class="section-header">
-                        <h2>{{ __('Visited locations') }}</h2>
-                        <span class="tag">{{ __('History') }}</span>
-                    </div>
-
-                    @if ($visitedLocations->isNotEmpty())
-                        <div class="shop-list">
-                            @foreach ($visitedLocations as $location)
-                                <article class="shop-item active" data-visited-location>
-                                    <div class="shop-body">
-                                        <h3>{{ $location['shop_name'] }}</h3>
-                                        <p>{{ $location['founder'] }}</p>
-                                        <div class="shop-meta">
-                                            <span>{{ $location['stamped_at'] ?? 'Checked in' }}</span>
-                                        </div>
-                                    </div>
-                                </article>
-                            @endforeach
-                        </div>
-                        @if ($visitedLocations->total() > 0)
-                            <nav class="pagination" aria-label="{{ __('Visited locations pages') }}">
-                                @if ($visitedLocations->lastPage() > 1)
-                                    @if ($visitedLocations->onFirstPage())
-                                        <span aria-disabled="true">Previous</span>
-                                    @else
-                                        <a href="{{ $visitedLocations->previousPageUrl() }}#visited-locations">{{ __('Previous') }}</a>
-                                    @endif
-
-                                    @for ($page = 1; $page <= $visitedLocations->lastPage(); $page++)
-                                        @if ($page === $visitedLocations->currentPage())
-                                            <span class="active" aria-current="page">{{ __('Page :page', ['page' => $page]) }}</span>
-                                        @else
-                                            <a href="{{ $visitedLocations->url($page) }}#visited-locations" aria-label="{{ __('Visited locations page :page', ['page' => $page]) }}">{{ $page }}</a>
-                                        @endif
-                                    @endfor
-
-                                    @if ($visitedLocations->hasMorePages())
-                                        <a href="{{ $visitedLocations->nextPageUrl() }}#visited-locations">Next</a>
-                                    @else
-                                        <span aria-disabled="true">Next</span>
-                                    @endif
-                                @else
-                                    <span class="active" aria-current="page">
-                                        {{ __('Page :page', ['page' => $visitedLocations->currentPage()]) }}
-                                    </span>
-                                @endif
-                            </nav>
-                        @endif
-                    @else
-                        <p style="margin: 0; color: var(--muted);">
-                            {{ __('No visited heritage locations yet. Complete a check-in to start building your food passport.') }}
-                        </p>
-                    @endif
-                </div>
-            </section>
-
-            <section class="panel" id="passport-progress" style="margin-top: 26px;">
-                <div class="panel-inner">
-                    <div class="section-header">
-                        <h2>{{ __('Passport progress & statistics') }}</h2>
-                        <span class="tag">{{ __('Live') }}</span>
-                    </div>
-
-                    <div class="stats-row" style="margin-top: 0;">
-                        <div class="stat">
-                            <strong>{{ $stats['visited'] ?? 0 }}</strong>
-                            <span>{{ __('Visited') }}</span>
-                        </div>
-                        <div class="stat">
-                            <strong>{{ $stats['completion'] ?? 0 }}%</strong>
-                            <span>{{ __('Completion') }}</span>
-                        </div>
-                        <div class="stat">
-                            <strong>{{ $stats['stamps'] ?? 0 }}</strong>
-                            <span>{{ __('Stamps') }}</span>
-                        </div>
-                    </div>
-
-                    <div style="margin-top: 16px; padding: 14px 16px; border-radius: 14px; background: rgba(140,31,31,0.04); border: 1px solid rgba(140,31,31,0.08);">
-                        <div style="display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 8px; color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em;">
-                            <span>{{ __('Progress') }}</span>
-                            <strong style="color: var(--primary);">{{ $stats['visited'] ?? 0 }}/{{ $stats['goal'] ?? 0 }}</strong>
-                        </div>
-                        <div style="height: 12px; background: rgba(86,59,48,0.08); border-radius: 999px; overflow: hidden;">
-                            <div style="width: {{ $stats['completion'] ?? 0 }}%; height: 100%; background: linear-gradient(135deg, var(--primary), var(--accent)); border-radius: 999px;"></div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <section class="panel" style="margin-top: 26px;">
-                <div class="panel-inner">
-                    <div class="section-header">
-                        <h2>{{ __('Passport rewards') }}</h2>
-                        <span class="tag">{{ __('Unlocked') }}</span>
-                    </div>
-
-                    <div class="badge-grid">
-                        @foreach ($badges as $badge)
-                            <div
-                                class="badge-card {{ $badge['earned'] ? 'badge-card-shareable' : '' }}"
-                                @if ($badge['earned'])
-                                    role="button"
-                                    tabindex="0"
-                                    data-badge-share
-                                    data-badge-name="{{ $badge['name'] }}"
-                                    data-badge-description="{{ $badge['description'] }}"
-                                    data-badge-icon="{{ $badge['icon'] }}"
-                                    data-badge-progress="{{ $badge['progress'] }}"
-                                    data-badge-threshold="{{ $badge['threshold'] }}"
-                                    aria-label="{{ __('Share your :name badge', ['name' => $badge['name']]) }}"
-                                @endif
-                            >
-                                <div class="badge-crest">{{ $badge['icon'] }}</div>
-                                <h4>{{ __($badge['name']) }}</h4>
-                                <p>{{ __($badge['description']) }}</p>
-                                <p style="margin-top: 8px; color: {{ $badge['earned'] ? '#3E6C4F' : '#675B54' }}; font-weight: 700;">
-                                    {{ $badge['earned']
-                                        ? __('Unlocked')
-                                        : __('Need :count visits', ['count' => (int) $badge['threshold']])
-                                    }}
-                                </p>
-                                @if ($badge['earned'])
-                                    <p class="badge-share-hint">{{ __('Click to share') }}</p>
-                                @endif
-                            </div>
-                        @endforeach
-                    </div>
-                </div>
-            </section>
-
-            <section class="panel" id="leaderboard" style="margin-top: 26px;">
-                <div class="panel-inner">
-                    <div class="section-header">
-                        <h2>{{ __('Leaderboard') }}</h2>
-                        <span class="tag">{{ __('Top 10') }}</span>
-                    </div>
-                    <p class="leaderboard-intro">
-                        {{ __('Ranked by badges received, then total check-ins. Recent check-ins decide ties.') }}
-                    </p>
-
-                    @if ($leaderboard->isNotEmpty())
-                        <div class="leaderboard-list">
-                            @foreach ($leaderboard as $entry)
-                                <article class="leaderboard-row">
-                                    <div class="leaderboard-rank">#{{ $entry->rank }}</div>
-                                    <div class="leaderboard-user">
-                                        <h3>{{ $entry->name ?: __('Heritage Explorer') }}</h3>
-                                        <p>{{ __('Last check-in: :date', ['date' => $entry->last_check_in_label]) }}</p>
-                                    </div>
-                                    <div class="leaderboard-metrics">
-                                        <span>{{ __(':count badges', ['count' => $entry->badges_received]) }}</span>
-                                        <span>{{ __(':count check-ins', ['count' => $entry->check_ins]) }}</span>
-                                    </div>
-                                </article>
-                            @endforeach
-                        </div>
-
-                        @if ($leaderboard->total() > 0)
-                            <nav class="pagination leaderboard-pagination" aria-label="{{ __('Leaderboard pages') }}">
-                                @if ($leaderboard->lastPage() > 1)
-                                    @if ($leaderboard->onFirstPage())
-                                        <span aria-disabled="true">{{ __('Previous') }}</span>
-                                    @else
-                                        <a href="{{ $leaderboard->previousPageUrl() }}#leaderboard">{{ __('Previous') }}</a>
-                                    @endif
-
-                                    @for ($page = 1; $page <= $leaderboard->lastPage(); $page++)
-                                        @if ($page === $leaderboard->currentPage())
-                                            <span class="active" aria-current="page">{{ $page }}</span>
-                                        @else
-                                            <a href="{{ $leaderboard->url($page) }}#leaderboard" aria-label="{{ __('Leaderboard page :page', ['page' => $page]) }}">{{ $page }}</a>
-                                        @endif
-                                    @endfor
-
-                                    @if ($leaderboard->hasMorePages())
-                                        <a href="{{ $leaderboard->nextPageUrl() }}#leaderboard">{{ __('Next') }}</a>
-                                    @else
-                                        <span aria-disabled="true">{{ __('Next') }}</span>
-                                    @endif
-                                @else
-                                    <span class="active" aria-current="page">{{ $leaderboard->currentPage() }}</span>
-                                @endif
-                            </nav>
-                        @endif
-                    @else
-                        <p class="leaderboard-empty">
-                            {{ __('The leaderboard will appear after users start checking in and earning badges.') }}
-                        </p>
-                    @endif
-                </div>
-            </section>
         </main>
 
         <footer>

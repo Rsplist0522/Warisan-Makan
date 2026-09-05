@@ -971,7 +971,7 @@
             <section class="panel passport-actions" aria-label="{{ __('Passport sections') }}">
                 <div class="panel-inner">
                     <div class="action-row" style="margin-top: 0;">
-                        <a href="{{ route('passport.history') }}" class="btn secondary">{{ __('View Visit History') }}</a>
+                        <a href="{{ route('passport.history') }}" class="btn secondary">{{ __('Visit History') }}</a>
                         <a href="{{ route('passport.statistics') }}" class="btn secondary">{{ __('Passport Statistics & Achievements') }}</a>
                         <a href="{{ route('passport.leaderboard') }}" class="btn secondary">{{ __('Leaderboard') }}</a>
                     </div>

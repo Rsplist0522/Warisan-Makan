@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\CorrectionRequest;
 use App\Models\HeritageShop;
+use App\Rules\MalaysianPhoneNumber;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -249,7 +250,7 @@ class CorrectionRequestController extends Controller
             'primary_food_category' => ['required', 'string', 'max:255'],
             'establishment_year' => ['required', 'integer', 'min:1000', 'max:'.now()->year],
             'heritage_story' => ['required', 'string', 'max:10000'],
-            'contact_number' => ['required', 'string', 'max:30', 'regex:/^[0-9+()\-\s]*$/'],
+            'contact_number' => ['required', 'string', 'max:30', new MalaysianPhoneNumber],
             default => ['required', 'string', 'max:5000'],
         };
 

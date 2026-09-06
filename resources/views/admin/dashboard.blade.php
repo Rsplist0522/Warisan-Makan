@@ -28,7 +28,19 @@
         $heritageShopCount = \App\Models\HeritageShop::query()->count();
         $heritagePublishedCount = \App\Models\HeritageShop::query()->published()->count();
         $heritageFoodCount = \App\Models\HeritageFoodItem::query()->where('is_active', true)->count();
+        $contributionReviewCount = \App\Models\HeritageShopContribution::query()
+            ->whereIn('status', [
+                \App\Models\HeritageShopContribution::STATUS_PENDING_REVIEW,
+                \App\Models\HeritageShopContribution::STATUS_UNDER_REVIEW,
+                \App\Models\HeritageShopContribution::STATUS_REVISION_REQUIRED,
+            ])->count();
         $badgeCount = \App\Models\Badge::query()->where('is_active', true)->count();
+        $trailCount = \App\Models\FoodTrailSuggestion::query()->count();
+        $blindBoxCatalog = app(\App\Services\BlindBoxCatalogManager::class);
+        $blindBoxShopCount = count($blindBoxCatalog->activeShops());
+        $activeUserCount = \App\Models\User::query()->where('status', '!=', 'inactive')->count();
+        $inactiveUserCount = \App\Models\User::query()->where('status', 'inactive')->count();
+        $inactiveBlindBoxShopCount = count($blindBoxCatalog->availableShops());
     @endphp
     <section class="welcome">
         <p class="eyebrow">Administrator portal</p>
@@ -48,7 +60,8 @@
             <span class="module-icon" aria-hidden="true">@include('partials.module-icon', ['icon' => 'community'])</span>
             <h3>Community Contribution</h3>
             <p>Review heritage eatery submissions, move items through moderation, and inspect the admin activity history.</p>
-            <strong class="module-status">Open module</strong>
+            <div class="module-stats"><span>{{ $contributionReviewCount }} in review queue</span></div>
+            <strong class="module-status">Review Submissions &rarr;</strong>
         </a>
         <a class="module-card" href="{{ route('admin.badges.index') }}">
             <span class="module-icon" aria-hidden="true">@include('partials.module-icon', ['icon' => 'passport'])</span>
@@ -61,19 +74,22 @@
             <span class="module-icon" aria-hidden="true">@include('partials.module-icon', ['icon' => 'map'])</span>
             <h3>Food Trails</h3>
             <p>Create and publish food trail suggestions that users can browse and follow.</p>
-            <strong class="module-status">Open module</strong>
+            <div class="module-stats"><span>{{ $trailCount }} trails</span></div>
+            <strong class="module-status">Manage Trails &rarr;</strong>
         </a>
         <a class="module-card" href="{{ route('admin.blind-box-items.index') }}">
             <span class="module-icon" aria-hidden="true">@include('partials.module-icon', ['icon' => 'box'])</span>
             <h3>Blind Box</h3>
             <p>Manage the recommendation pool, categories, and shops available for user reveals.</p>
-            <strong class="module-status">Open module</strong>
+            <div class="module-stats"><span>{{ $blindBoxShopCount }} active shops</span><span>{{ $inactiveBlindBoxShopCount }} inactive shops</span></div>
+            <strong class="module-status">Manage Recommendations Pool &rarr;</strong>
         </a>
         <a class="module-card" href="{{ route('admin.users.index') }}">
             <span class="module-icon" aria-hidden="true">@include('partials.module-icon', ['icon' => 'users'])</span>
             <h3>Users &amp; Roles</h3>
             <p>Review member accounts, activation status, and access controls for regular users.</p>
-            <strong class="module-status">Open module</strong>
+            <div class="module-stats"><span>{{ $activeUserCount }} active users</span><span>{{ $inactiveUserCount }} inactive users</span></div>
+            <strong class="module-status">Manage Accounts &rarr;</strong>
         </a>
     </section>
 @endsection

@@ -79,26 +79,29 @@
 
 @section('content')
 <main>
-        <a class="back-link" href="{{ route('heritage-shops.show', ['id' => $shop->id]) }}">← Back to {{ $shop->shop_name }} profile</a>
+        <a class="back-link" href="{{ route('heritage-shops.show', ['id' => $shop->id]) }}">← {{ __('Back to') }} {{ $shop->shop_name }} {{ __('profile') }}</a>
         <section class="hero">
             <div>
-                <p class="eyebrow">Verified menu &amp; living food heritage</p>
+                <p class="eyebrow">{{ __('Verified menu & living food heritage') }}</p>
                 <h1>{{ $shop->shop_name }}</h1>
-                <p>Explore the recorded dishes, the stories behind them, and the details that help visitors understand this shop’s food heritage.</p>
+                <p>{{ __('Explore the recorded dishes, the stories behind them, and the details that help visitors understand this shop’s food heritage.') }}</p>
             </div>
             <div class="hero-meta">
                 @if ($shop->primary_food_category)<span>{{ $shop->primary_food_category }}</span>@endif
                 @if ($shop->state || $shop->city)<span>{{ $shop->state ?: $shop->city }}</span>@endif
-                <span>{{ count($menuItems) }} recorded dish{{ count($menuItems) === 1 ? '' : 'es' }}</span>
+                        <span>
+                            {{ count($menuItems) }}
+                            {{ count($menuItems) === 1 ? __('recorded dish') : __('recorded dishes') }}
+                        </span>
             </div>
         </section>
 
         <section class="panel" aria-labelledby="menu-heading">
             <div class="section-heading">
                 <div>
-                    <p class="eyebrow" style="color:var(--gold);">Food stories</p>
-                    <h2 id="menu-heading">Menu &amp; heritage stories</h2>
-                    <p>These are the verified dishes currently recorded for this HeritageShop profile.</p>
+                    <p class="eyebrow" style="color:var(--gold);">{{ __('Food stories') }}</p>
+                    <h2 id="menu-heading">{{ __('Menu & heritage stories') }}</h2>
+                    <p>{{ __('These are the verified dishes currently recorded for this HeritageShop profile.') }}</p>
                 </div>
                 <span class="count">{{ count($menuItems) }} item{{ count($menuItems) === 1 ? '' : 's' }}</span>
             </div>
@@ -131,16 +134,16 @@
                     @endforeach
                 </div>
             @else
-                <div class="empty"><strong>The menu is still being documented</strong><span>Return to the profile to explore the shop’s verified heritage information. New dishes will appear here after an administrator records them.</span></div>
+                <div class="empty"><strong>{{ __('The menu is still being documented') }}</strong><span>{{ __('Return to the profile to explore the shop’s verified heritage information. New dishes will appear here after an administrator records them.') }}</span></div>
             @endif
         </section>
 
         @if ($shop->source_url)
-            <div class="panel source">This menu page is based on the registered HeritageShop source. <a href="{{ $shop->source_url }}" target="_blank" rel="noopener noreferrer">View source ↗</a></div>
+            <div class="panel source">{{ __('This menu page is based on the registered HeritageShop source.') }}<a href="{{ $shop->source_url }}" target="_blank" rel="noopener noreferrer">{{ __('View source') }} ↗</a></div>
         @endif
         <div class="footer-actions">
-            <a class="button" href="{{ route('heritage-shops.show', ['id' => $shop->id]) }}">View full profile</a>
-            <a class="button primary" href="{{ route('heritage-shops.index') }}">Discover more heritage shops</a>
+            <a class="button" href="{{ route('heritage-shops.show', ['id' => $shop->id]) }}">{{ __('View full profile') }}</a>
+            <a class="button primary" href="{{ route('heritage-shops.index') }}">{{ __('Discover more heritage shops') }}</a>
         </div>
     </main>
 @endsection

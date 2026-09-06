@@ -12,6 +12,48 @@
 
 @push('head-scripts')
 <script>
+        window.foodTrailTranslations = {
+        complete: @json(__('complete')),
+        estimatedTime: @json(__('Estimated time')),
+        pending: @json(__('Pending')),
+        visited: @json(__('Visited')),
+        remove: @json(__('Remove')),
+        maps: @json(__('Maps')),
+        showingAllDestinations: @json(__('Showing all destinations in your food trail.')),
+        directionsUnavailable: @json(__('Directions are unavailable right now. The map still shows your destination markers.')),
+        routeOrderStarts: @json(__('Route order starts from your current location when GPS is available.')),
+        directionsGenerated: @json(__('Directions generated')),
+        publicTransportGuidance: @json(__('Public transport guidance')),
+        noTransit: @json(__('No bus or train segment was returned for this route. Try Public Transport mode to check available scheduled transit options.')),
+        transitTimes: @json(__('Transit times are scheduled values returned by Google Maps Directions at request time unless real-time data is available from Google.')),
+        tipReorder: @json(__('Tip: You can reorder your stops by dragging and dropping.')),
+        nextStop: @json(__('Next stop')),
+        walking: @json(__('walk')),
+        travel: @json(__('travel')),
+        stop: @json(__('Stop')),
+        to: @json(__('To')),
+        leg: @json(__('Leg')),
+        board: @json(__('Board')),
+        getOff: @json(__('Get off')),
+        transitService: @json(__('Transit service')),
+        stopUnavailable: @json(__('Stop unavailable')),
+        distanceUnavailable: @json(__('Distance unavailable')),
+        durationUnavailable: @json(__('Duration unavailable')),
+        shortDistance: @json(__('Short distance')),
+        continue: @json(__('Continue')),
+        usePublicTransport: @json(__('Use public transport')),
+        noRouteSelected: @json(__('No route selected yet. Add a trail from Food Trails.')),
+        currentLocationUnavailable: @json(__('Current location is unavailable. The route will start from the first stop.')),
+        locationPermissionUnavailable: @json(__('Location permission is unavailable, so the trail starts from the first restaurant.')),
+        travelModeSet: @json(__('Travel mode set to :mode.')),
+        showingAllFromCurrentLocation: @json(__('Showing all destinations from your current location.')),
+        showingNextStops: @json(__('Showing the next :count stop(s) from your current location.')),
+        stopStatusUpdated: @json(__('Stop status updated.')),
+        routeOrdered: @json(__('Trail route ordered from your current location.')),
+        removedStop: @json(__('Removed stop from route.')),
+        routeOrderUpdated: @json(__('Route order updated.')),
+    };
+
         window.googleMapsApiKey = @json(config('services.google.maps_api_key'));
         window.googleMapsLoaded = false;
         window._onGoogleMapsLoaded = function () {
@@ -32,6 +74,43 @@
 
 @push('styles')
 <style>
+        #routeMapFrame {
+            position: relative;
+            z-index: 0;
+        }
+
+        #routeMapLoading {
+            position: absolute;
+            inset: 0;
+            z-index: 2147483647;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            background: rgba(255, 251, 246, 0.97);
+            color: #6B5B4B;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        #routeMapLoading.hidden {
+            display: none;
+        }
+
+        .route-map-loading-spinner {
+            width: 34px;
+            height: 34px;
+            border: 4px solid #F3DFC1;
+            border-top-color: #B8874A;
+            border-radius: 50%;
+            animation: route-map-loading-spin 0.8s linear infinite;
+        }
+
+        @keyframes route-map-loading-spin {
+            to { transform: rotate(360deg); }
+        }
+
         .trail-stop-card {
             display: grid;
             grid-template-columns: 32px 30px 72px minmax(0, 1fr) auto;
@@ -434,8 +513,8 @@
                         </svg>
                     </a>
                     <div>
-                        <h1 class="text-3xl font-semibold text-[#1F1B19]">Start Trail</h1>
-                        <p class="mt-2 text-sm text-[#6B5B4B]">Plan your perfect food adventure</p>
+                        <h1 class="text-3xl font-semibold text-[#1F1B19]">{{ __('Start Trail') }}</h1>
+                        <p class="mt-2 text-sm text-[#6B5B4B]">{{ __('Plan your perfect food adventure') }}</p>
                     </div>
                 </div>
                 <div
@@ -449,7 +528,7 @@
                         </svg>
                     </div>
                     <div>
-                        <p class="text-[11px] uppercase tracking-[0.22em] text-[#B08B59]">Food Trail</p>
+                        <p class="text-[11px] uppercase tracking-[0.22em] text-[#B08B59]">{{ __('Food Trail') }}</p>
                         <p class="mt-1 font-semibold text-[#1F1B19]">Kuala Lumpur</p>
                     </div>
                     <div class="ml-auto text-[#B8874A]">
@@ -469,19 +548,23 @@
                         <div
                             class="flex items-center gap-3 text-sm font-semibold uppercase tracking-[0.22em] text-[#B8874A]">
                             <span class="inline-flex h-3.5 w-3.5 rounded-full bg-[#D98F4F]"></span>
-                            LIVE MAP
+                            {{ __('LIVE MAP') }}
                         </div>
                         <span id="trailProgressBadge"
                             class="rounded-full bg-[#FFF0D9] px-3 py-1 text-xs font-semibold text-[#B8874A]">0%
-                            complete</span>
+                            {{ __('complete') }}</span>
                     </div>
-                    <h2 class="mt-4 text-2xl font-semibold text-[#1F1B19]">Your current route</h2>
+                    <h2 class="mt-4 text-2xl font-semibold text-[#1F1B19]">{{ __('Your current route') }}</h2>
                     <div id="startMapContainer"
                         class="mt-5 h-[500px] overflow-hidden rounded-[28px] border border-[#E8D4BE] bg-[#FBF6F1] shadow-inner relative">
                         <div
                             class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(255,210,146,0.35),_transparent_40%),radial-gradient(circle_at_bottom_right,_rgba(222,164,95,0.16),_transparent_35%)] pointer-events-none">
                         </div>
                         <div id="routeMapFrame" class="h-full w-full"></div>
+                        <div id="routeMapLoading">
+                            <span class="route-map-loading-spinner"></span>
+                            <span>{{ __('Loading your destinations...') }}</span>
+                        </div>
                         <div id="trailMapMessage"
                             class="absolute inset-x-4 bottom-4 hidden rounded-2xl bg-white/95 px-4 py-3 text-sm text-[#6B5B4B] shadow-lg">
                         </div>
@@ -497,7 +580,7 @@
                                     <path d="M12 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" fill="#D98F4F" />
                                 </svg>
                             </div>
-                            <p class="mt-4 text-[11px] uppercase tracking-[0.24em] text-[#B08B59]">Total stops</p>
+                            <p class="mt-4 text-[11px] uppercase tracking-[0.24em] text-[#B08B59]">{{ __('Total stops') }}</p>
                             <p class="mt-2 text-2xl font-semibold text-[#1F1B19]" data-summary="total-stops">0</p>
                         </div>
                         <div class="rounded-[24px] border border-[#D7E8D0] bg-[#F5FCF5] p-4">
@@ -509,7 +592,7 @@
                                         stroke-linejoin="round" />
                                 </svg>
                             </div>
-                            <p class="mt-4 text-[11px] uppercase tracking-[0.24em] text-[#B08B59]">Visited</p>
+                            <p class="mt-4 text-[11px] uppercase tracking-[0.24em] text-[#B08B59]">{{ __('Visited') }}</p>
                             <p class="mt-2 text-2xl font-semibold text-[#1F1B19]" data-summary="visited">0</p>
                         </div>
                         <div class="rounded-[24px] border border-[#E6D4F1] bg-[#FBF2FF] p-4">
@@ -522,8 +605,8 @@
                                     <path d="M12 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" fill="#8C56D9" />
                                 </svg>
                             </div>
-                            <p class="mt-4 text-[11px] uppercase tracking-[0.24em] text-[#B08B59]">Next stop</p>
-                            <p class="mt-2 text-2xl font-semibold text-[#1F1B19]" data-summary="next-stop">None yet</p>
+                            <p class="mt-4 text-[11px] uppercase tracking-[0.24em] text-[#B08B59]">{{ __('Next stop') }}</p>
+                            <p class="mt-2 text-2xl font-semibold text-[#1F1B19]" data-summary="next-stop">{{ __('None yet') }}</p>
                         </div>
                     </div>
                 </section>
@@ -531,8 +614,8 @@
                 <section class="trail-route-card rounded-[32px] bg-white p-6 shadow-[0_18px_40px_rgba(62,44,23,0.08)]">
                     <div class="flex items-center justify-between gap-4">
                         <div>
-                            <p class="text-xs uppercase tracking-[0.24em] text-[#D98F4F]">Route detail</p>
-                            <h2 class="mt-3 text-xl font-semibold text-[#1F1B19]">Selected restaurants</h2>
+                            <p class="text-xs uppercase tracking-[0.24em] text-[#D98F4F]">{{ __('Route detail') }}</p>
+                            <h2 class="mt-3 text-xl font-semibold text-[#1F1B19]">{{ __('Selected restaurants') }}</h2>
                         </div>
                         <div
                             class="inline-flex items-center gap-2 rounded-full bg-[#FFF4E7] px-3 py-2 text-sm font-semibold text-[#B8874A]">
@@ -542,13 +625,19 @@
                                     stroke-linejoin="round" />
                                 <circle cx="12" cy="12" r="8" stroke="#B8874A" stroke-width="2" />
                             </svg>
-                            <span id="estimateTimeText">Estimated time: 0 min</span>
+                            <span id="estimateTimeText">{{ __('Estimated time') }}: 0 min</span>
                         </div>
                     </div>
-                    <div id="selectedTrailList" class="mt-6 space-y-4"></div>
+                    <div id="selectedTrailList" class="mt-6 space-y-4" aria-live="polite">
+                        <div class="animate-pulse rounded-[28px] border border-[#E9D7BF] bg-[#FEFBF7] p-5">
+                            <div class="h-5 w-2/5 rounded bg-[#F0E5D8]"></div>
+                            <div class="mt-4 h-4 w-4/5 rounded bg-[#F6EEE5]"></div>
+                            <div class="mt-3 h-4 w-3/5 rounded bg-[#F6EEE5]"></div>
+                        </div>
+                    </div>
                     <div
                         class="mt-6 flex flex-col gap-3 rounded-[24px] border border-[#F0D6C4] bg-[#FFFBF7] p-4 sm:flex-row sm:items-center sm:justify-between">
-                        <div class="flex items-center gap-3 text-sm text-[#6B5B4B]">
+                        <div class="flex min-w-0 items-center gap-3 text-sm text-[#6B5B4B]">
                             <span
                                 class="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-[#FDE7CA] text-[#D98F4F]">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
@@ -558,11 +647,14 @@
                                         stroke-linejoin="round" />
                                 </svg>
                             </span>
-                            <span class="font-semibold text-[#1F1B19]">Drag and drop to reorder your stops</span>
+                            <span class="font-semibold text-[#1F1B19]">{{ __('Drag and drop to reorder your stops') }}</span>
                         </div>
-                        <button id="clearTrailButton"
-                            class="inline-flex h-12 items-center justify-center rounded-full border border-[#E9D7BF] bg-white px-5 text-sm font-semibold text-[#6B553F] shadow-sm transition hover:bg-[#FBF2E4]">Clear
-                            Trail</button>
+                        <div class="flex shrink-0 flex-nowrap gap-3">
+                            <button id="markAllStopsCompleteButton"
+                                class="inline-flex h-12 whitespace-nowrap items-center justify-center rounded-full bg-[#EAF5E7] px-5 text-sm font-semibold text-[#3F6B2A] shadow-sm transition hover:bg-[#DFF0D9]">{{ __('Mark all stops complete') }}</button>
+                            <button id="clearTrailButton"
+                                class="inline-flex h-12 whitespace-nowrap items-center justify-center rounded-full border border-[#E9D7BF] bg-white px-5 text-sm font-semibold text-[#6B553F] shadow-sm transition hover:bg-[#FBF2E4]">{{ __('Clear Trail') }}</button>
+                        </div>
                     </div>
                 </section>
             </div>
@@ -572,35 +664,20 @@
                     class="trail-actions-card rounded-[32px] bg-white p-6 shadow-[0_18px_40px_rgba(62,44,23,0.08)]">
                     <div class="flex items-start justify-between gap-4">
                         <div>
-                            <p class="text-xs uppercase tracking-[0.24em] text-[#B08B59]">Trail actions</p>
-                            <h2 class="mt-3 text-xl font-semibold text-[#1F1B19]">Complete your route</h2>
+                            <p class="text-xs uppercase tracking-[0.24em] text-[#B08B59]">{{ __('Trail actions') }}</p>
+                            <h2 class="mt-3 text-xl font-semibold text-[#1F1B19]">{{ __('Complete your route') }}</h2>
                         </div>
                         <span id="favoriteStatus"
-                            class="rounded-full bg-[#FFF0D9] px-3 py-1 text-sm font-semibold text-[#B8874A]">Not
-                            saved</span>
+                            class="rounded-full bg-[#FFF0D9] px-3 py-1 text-sm font-semibold text-[#B8874A]">{{ __('Not saved') }}</span>
                     </div>
-                    <div class="mt-5 space-y-3">
-                        <div class="rounded-[20px] border border-[#F0D6C4] bg-[#FEFBF8] p-4">
-                            <p class="text-[11px] uppercase tracking-[0.22em] text-[#B08B59]">Total stops</p>
-                            <p id="routeTotalStops" class="mt-2 text-2xl font-semibold text-[#1F1B19]">0</p>
-                        </div>
-                        <div class="rounded-[20px] border border-[#F0D6C4] bg-[#FEFBF8] p-4">
-                            <p class="text-[11px] uppercase tracking-[0.22em] text-[#B08B59]">Visited</p>
-                            <p id="routeVisitedStops" class="mt-2 text-2xl font-semibold text-[#1F1B19]">0</p>
-                        </div>
-                        <div class="rounded-[20px] border border-[#F0D6C4] bg-[#FEFBF8] p-4">
-                            <p class="text-[11px] uppercase tracking-[0.22em] text-[#B08B59]">Next stop</p>
-                            <p id="routeNextStop" class="mt-2 text-2xl font-semibold text-[#1F1B19]">None yet</p>
-                        </div>
-                    </div>
-                    <div class="mt-4 rounded-[20px] border border-[#E9D7BF] bg-white px-4 py-4">
+                    <div class="mt-5 rounded-[20px] border border-[#E9D7BF] bg-white px-4 py-4">
                         <label for="travelModeSelect"
-                            class="block text-[11px] uppercase tracking-[0.22em] text-[#B08B59]">Travel by</label>
+                            class="block text-[11px] uppercase tracking-[0.22em] text-[#B08B59]">{{ __('Travel by') }}</label>
                         <select id="travelModeSelect" class="mt-2 w-full bg-transparent text-sm outline-none">
-                            <option value="WALKING">Walking</option>
-                            <option value="DRIVING" selected>Driving</option>
-                            <option value="TRANSIT">Public Transport</option>
-                            <option value="BICYCLING">Cycling</option>
+                            <option value="WALKING">{{ __('Walking') }}</option>
+                            <option value="DRIVING" selected>{{ __('Driving') }}</option>
+                            <option value="TRANSIT">{{ __('Public Transport') }}</option>
+                            <option value="BICYCLING">{{ __('Cycling') }}</option>
                         </select>
                     </div>
                     <button id="showCurrentRouteButton"
@@ -610,7 +687,7 @@
                             <path d="M14 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                 stroke-linejoin="round" />
                         </svg>
-                        Navigate to Next Stop
+                        {{ __('Navigate to Next Stop') }}
                     </button>
                     <div class="trail-preview-controls">
                         <button id="showPreviousRouteButton" class="trail-preview-btn previous">
@@ -620,15 +697,15 @@
                                 <path d="M10 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                     stroke-linejoin="round" />
                             </svg>
-                            <span class="truncate">Previous</span>
+                            <span class="truncate">{{ __('Previous') }}</span>
                         </button>
 
                         <button id="showAllStopsButton" class="trail-preview-btn all">
-                            <span class="truncate">All Stops</span>
+                            <span class="truncate">{{ __('All Stops') }}</span>
                         </button>
 
                         <button id="showCurrentRouteShortcutButton" class="trail-preview-btn next">
-                            <span class="truncate">Next</span>
+                            <span class="truncate">{{ __('Next') }}</span>
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
                                 xmlns="http://www.w3.org/2000/svg">
                                 <path d="M4 12h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
@@ -642,14 +719,14 @@
                             <path d="m5 12 4 4L19 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"
                                 stroke-linejoin="round" />
                         </svg>
-                        Mark Stop Complete
+                        {{ __('Mark Stop Complete') }}
                     </button>
                     <button id="closeTrailButton"
                         class="mt-3 hidden h-12 w-full items-center justify-center gap-2 rounded-full bg-[#B8874A] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#9c6f33]">
-                        Complete Food Trail
+                        {{ __('Complete Food Trail') }}
                     </button>
                     <div class="mt-5">
-                        <p class="text-[11px] uppercase tracking-[0.22em] text-[#B08B59]">Share trail</p>
+                        <p class="text-[11px] uppercase tracking-[0.22em] text-[#B08B59]">{{ __('Share trail') }}</p>
 
                         <div class="trail-share-grid">
                             <button id="whatsappShareButton" type="button" class="trail-share-btn whatsapp">
@@ -674,7 +751,7 @@
                                             stroke="currentColor" stroke-width="2" stroke-linecap="round" />
                                     </svg>
                                 </span>
-                                <span>Copy Link</span>
+                                <span>{{ __('Copy Link') }}</span>
                             </button>
 
                             <button id="openMapsButton" type="button" class="trail-share-btn maps">
@@ -687,14 +764,14 @@
                                         <circle cx="12" cy="9.5" r="2.2" fill="white" />
                                     </svg>
                                 </span>
-                                <span>Maps</span>
+                                <span>{{ __('Maps') }}</span>
                             </button>
                         </div>
                     </div>
 
                     <button id="addFavoriteButton" type="button" class="trail-favourite-btn">
                         <span class="text-xl">★</span>
-                        <span>Add to Favourite</span>
+                        <span>{{ __('Add to Favourite') }}</span>
                     </button>
 
                     <button id="exitTrailButton" type="button" class="trail-exit-btn">
@@ -705,12 +782,12 @@
                                 stroke-linejoin="round" />
                             <path d="M8 12H18" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
                         </svg>
-                        <span>Exit Trail</span>
+                        <span>{{ __('Exit Trail') }}</span>
                     </button>
 
                     <div id="trailDirectionsPanel"
                         class="mt-4 rounded-[18px] border border-[#F0DDC8] bg-[#FFF9F1] px-4 py-3 text-sm text-[#6B5B4B]">
-                        <p class="font-semibold text-[#1F1B19]">Showing all destinations in your food trail.</p>
+                        <p class="font-semibold text-[#1F1B19]">Showing all destinations in your food trail.'</p>
                         <p class="mt-1">Directions will appear after the route is loaded.</p>
                     </div>
                 </section>
@@ -725,12 +802,12 @@
                         <path d="M12 5v14M5 12h14" stroke="#D98F4F" stroke-width="2" stroke-linecap="round" />
                     </svg>
                 </span>
-                <p class="font-semibold text-[#1F1B19]">Tip: You can reorder your stops by dragging and dropping.</p>
+                <p class="font-semibold text-[#1F1B19]">{{ __('Tip: You can reorder your stops by dragging and dropping.') }}</p>
             </div>
             <a href="#"
                 class="mt-3 inline-flex items-center gap-2 font-semibold text-[#B8874A] hover:text-[#9c6f33] sm:mt-0">
-                <span>Need help?</span>
-                <span class="text-[#B8874A]">View guide</span>
+                <span>{{ __('Need help?') }}</span>
+                <span class="text-[#B8874A]">{{ __('View guide') }}</span>
             </a>
         </div>
     </main>
@@ -742,18 +819,31 @@
     <div id="trailCompleteModal" class="trail-complete-modal is-hidden" role="dialog" aria-modal="true"
         aria-labelledby="trailCompleteTitle">
         <div class="w-full max-w-md rounded-[28px] bg-white p-6 shadow-[0_24px_60px_rgba(31,27,25,0.22)]">
-            <p class="text-xs font-semibold uppercase tracking-[0.24em] text-[#B08B59]">Trail complete</p>
-            <h2 id="trailCompleteTitle" class="mt-3 text-2xl font-semibold text-[#1F1B19]">Would you like to save this
-                food trail as a favourite?</h2>
-            <p class="mt-3 text-sm leading-6 text-[#6B5B4B]">You finished all selected destinations. Save this route so
-                you can open it again from Food Trails.</p>
+            <p class="text-xs font-semibold uppercase tracking-[0.24em] text-[#B08B59]">{{ __('Trail complete') }}</p>
+            <h2 id="trailCompleteTitle" class="mt-3 text-2xl font-semibold text-[#1F1B19]">{{ __('Would you like to save this food trail as a favourite?') }}</h2>
+            <p class="mt-3 text-sm leading-6 text-[#6B5B4B]">{{ __('You finished all selected destinations. Save this route so you can open it again from Food Trails.') }}</p>
             <div class="mt-6 grid gap-3 sm:grid-cols-2">
                 <button id="saveCompletedTrailButton"
-                    class="h-12 rounded-full bg-[#B8874A] px-4 text-sm font-semibold text-white hover:bg-[#9c6f33]">Save
-                    as Favourite</button>
+                    class="h-12 rounded-full bg-[#B8874A] px-4 text-sm font-semibold text-white hover:bg-[#9c6f33]">{{ __('Save as Favourite') }}</button>
                 <button id="discardCompletedTrailButton"
-                    class="h-12 rounded-full border border-[#E9D7BF] bg-white px-4 text-sm font-semibold text-[#6B553F] hover:bg-[#FBF2E4]">Not
-                    Now</button>
+                    class="h-12 rounded-full border border-[#E9D7BF] bg-white px-4 text-sm font-semibold text-[#6B553F] hover:bg-[#FBF2E4]">{{ __('Not Now') }}</button>
+            </div>
+        </div>
+    </div>
+    <div id="trailFavoriteNameModal" class="trail-complete-modal is-hidden" role="dialog" aria-modal="true"
+        aria-labelledby="trailFavoriteNameTitle">
+        <div class="w-full max-w-md rounded-[28px] bg-white p-6 shadow-[0_24px_60px_rgba(31,27,25,0.22)]">
+            <p class="text-xs font-semibold uppercase tracking-[0.24em] text-[#B08B59]">{{ __('Save trail') }}</p>
+            <h2 id="trailFavoriteNameTitle" class="mt-3 text-2xl font-semibold text-[#1F1B19]">{{ __('Name this favorite trail') }}</h2>
+            <p class="mt-3 text-sm leading-6 text-[#6B5B4B]">{{ __('Choose a name so you can find this trail again in Food Trails.') }}</p>
+            <label for="completedTrailFavoriteName" class="mt-5 block text-sm font-semibold text-[#6B553F]">{{ __('Trail name') }}</label>
+            <input id="completedTrailFavoriteName" type="text" value="My heritage food trail" maxlength="100"
+                class="mt-2 h-12 w-full rounded-2xl border border-[#E6D8C4] bg-[#FFFBF6] px-4 text-sm text-[#1F1B19] outline-none focus:border-[#B8874A] focus:ring-2 focus:ring-[#F3DFC1]" />
+            <div class="mt-6 grid gap-3 sm:grid-cols-2">
+                <button id="confirmCompletedTrailFavoriteButton"
+                    class="h-12 rounded-full bg-[#B8874A] px-4 text-sm font-semibold text-white hover:bg-[#9c6f33]">{{ __('Save as Favourite') }}</button>
+                <button id="cancelCompletedTrailFavoriteButton"
+                    class="h-12 rounded-full border border-[#E9D7BF] bg-white px-4 text-sm font-semibold text-[#6B553F] hover:bg-[#FBF2E4]">{{ __('Cancel') }}</button>
             </div>
         </div>
     </div>
@@ -769,6 +859,10 @@
 
         const getElement = (id) => document.getElementById(id);
 
+        const setRouteMapLoading = (isLoading) => {
+            getElement('routeMapLoading')?.classList.toggle('hidden', !isLoading);
+        };
+
         let trailGoogleMap = null;
         let trailGoogleGeocoder = null;
         let trailGoogleMarkers = [];
@@ -783,6 +877,7 @@
         let previewStopCount = 1;
         let travelMode = 'DRIVING';
         let currentLocation = null;
+        let locationRequestInFlight = false;
         let hasOptimizedRouteOrder = false;
         const geocodeCache = new Map();
 
@@ -859,17 +954,34 @@
         };
 
         const updateRouteStats = () => {
-            const stopsEl = getElement('routeTotalStops');
-            const visitedEl = getElement('routeVisitedStops');
-            const nextStopEl = getElement('routeNextStop');
             const closeTrailButton = getElement('closeTrailButton');
-            if (stopsEl) stopsEl.innerText = `${routeData.length}`;
-            if (visitedEl) visitedEl.innerText = `${visitedCount}`;
-            if (nextStopEl) nextStopEl.innerText = getNextStopLabel();
+            const navigateButton = getElement('showCurrentRouteButton');
+            const markAllStopsCompleteButton = getElement('markAllStopsCompleteButton');
+            const hasNextStop = routeData.some((item) => !item.visited);
+
+            document.querySelectorAll('[data-summary="total-stops"]').forEach((element) => {
+                element.innerText = `${routeData.length}`;
+            });
+            document.querySelectorAll('[data-summary="visited"]').forEach((element) => {
+                element.innerText = `${visitedCount}`;
+            });
+            document.querySelectorAll('[data-summary="next-stop"]').forEach((element) => {
+                element.innerText = getNextStopLabel();
+            });
+            if (navigateButton) {
+                navigateButton.disabled = !hasNextStop;
+                navigateButton.classList.toggle('cursor-not-allowed', !hasNextStop);
+                navigateButton.classList.toggle('opacity-50', !hasNextStop);
+            }
             if (closeTrailButton) {
                 const canClose = routeData.length > 0 && visitedCount === routeData.length;
                 closeTrailButton.classList.toggle('hidden', !canClose);
                 closeTrailButton.classList.toggle('flex', canClose);
+            }
+            if (markAllStopsCompleteButton) {
+                markAllStopsCompleteButton.disabled = !hasNextStop;
+                markAllStopsCompleteButton.classList.toggle('cursor-not-allowed', !hasNextStop);
+                markAllStopsCompleteButton.classList.toggle('opacity-50', !hasNextStop);
             }
         };
 
@@ -894,10 +1006,15 @@
             }
         };
 
-        const getPreviewStops = () => routeData.slice(0, Math.min(previewStopCount, routeData.length));
+        const getPendingStops = () => routeData.filter((item) => !item.visited);
+
+        const getPreviewStops = () => {
+            const pendingStops = getPendingStops();
+            return pendingStops.slice(0, Math.min(previewStopCount, pendingStops.length));
+        };
 
         const setPreviewStopCount = (count) => {
-            previewStopCount = Math.max(1, Math.min(count, routeData.length || 1));
+            previewStopCount = Math.max(1, Math.min(count, getPendingStops().length || 1));
             updateRouteModeButtons();
             renderTrailMap();
         };
@@ -912,8 +1029,9 @@
             const previousButton = getElement('showPreviousRouteButton');
             const nextButton = getElement('showCurrentRouteShortcutButton');
             const allStopsButton = getElement('showAllStopsButton');
+            const pendingStops = getPendingStops();
             const atFirstStop = previewStopCount <= 1;
-            const atAllStops = !routeData.length || previewStopCount >= routeData.length;
+            const atAllStops = !pendingStops.length || previewStopCount >= pendingStops.length;
 
             [
                 [previousButton, atFirstStop],
@@ -957,6 +1075,19 @@
                 showTrailMessage('Location permission is unavailable, so the trail starts from the first restaurant.');
             }
             return null;
+        };
+
+        const refreshRouteWithCurrentLocation = () => {
+            if (currentLocation || locationRequestInFlight) return;
+
+            locationRequestInFlight = true;
+            getCurrentPosition().then((position) => {
+                locationRequestInFlight = false;
+                if (!position) return;
+
+                currentLocation = position;
+                renderTrailMap();
+            });
         };
 
         const geocodeRouteItem = (item, locationHint = '') => {
@@ -1055,14 +1186,14 @@
             return div.textContent || div.innerText || '';
         };
 
-        const renderRouteDirections = (result, routeStops = []) => {
+        const renderRouteDirections = (result, routeStops = [], legStartNumber = 1) => {
             const panel = getElement('trailDirectionsPanel');
             if (!panel) return;
             const route = result?.routes?.[0];
             if (!route?.legs?.length) {
                 panel.innerHTML = `
-                    <p class="font-semibold text-[#1F1B19]">Showing all destinations in your food trail.</p>
-                    <p class="mt-1">Directions are unavailable right now. The map still shows your destination markers.</p>
+                    <p class="font-semibold text-[#1F1B19]">${window.foodTrailTranslations.showingAllDestinations}</p>
+                    <p class="mt-1">${window.foodTrailTranslations.directionsUnavailable}</p>
                 `;
                 return;
             }
@@ -1100,7 +1231,7 @@
 
                 return `
                     <div class="rounded-[20px] border border-[#F0D6C4] bg-[#FEFBF8] p-3">
-                        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-[#B08B59]">Leg ${legIndex + 1}</p>
+                        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-[#B08B59]">Leg ${legStartNumber + legIndex}</p>
                         <p class="mt-1 font-semibold text-[#1F1B19]">To ${destination?.name || leg.end_address}</p>
                         <p class="mt-1 text-xs text-[#6B5B4B]">${leg.distance?.text || 'Distance unavailable'} - ${leg.duration?.text || 'Duration unavailable'}</p>
                         <div class="trail-directions-list">${stepHtml}</div>
@@ -1109,23 +1240,53 @@
             }).join('');
 
             const transitSummary = transitSteps.length
-                ? transitSteps.map((transit) => `
-                    <div class="trail-direction-step">
-                        <p class="font-semibold text-[#1F1B19]">${transit.line?.short_name || transit.line?.name || 'Transit service'}</p>
-                        <p class="mt-1 text-xs text-[#6B5B4B]">Board: ${transit.departure_stop?.name || 'Stop unavailable'}${transit.departure_time?.text ? ` at ${transit.departure_time.text}` : ''}</p>
-                        <p class="mt-1 text-xs text-[#6B5B4B]">Get off: ${transit.arrival_stop?.name || 'Stop unavailable'}${transit.arrival_time?.text ? ` at ${transit.arrival_time.text}` : ''}</p>
-                    </div>
-                `).join('')
-                : '<p class="mt-2 text-xs text-[#6B5B4B]">No bus or train segment was returned for this route. Try Public Transport mode to check available scheduled transit options.</p>';
+                    ? transitSteps.map((transit) => `
+                        <div class="trail-direction-step">
+                            <p class="font-semibold text-[#1F1B19]">
+                                ${transit.line?.short_name || transit.line?.name || window.foodTrailTranslations.transitService}
+                            </p>
+
+                            <p class="mt-1 text-xs text-[#6B5B4B]">
+                                ${window.foodTrailTranslations.board}: 
+                                ${transit.departure_stop?.name || window.foodTrailTranslations.stopUnavailable}
+                                ${transit.departure_time?.text ? ` at ${transit.departure_time.text}` : ''}
+                            </p>
+
+                            <p class="mt-1 text-xs text-[#6B5B4B]">
+                                ${window.foodTrailTranslations.getOff}: 
+                                ${transit.arrival_stop?.name || window.foodTrailTranslations.stopUnavailable}
+                                ${transit.arrival_time?.text ? ` at ${transit.arrival_time.text}` : ''}
+                            </p>
+                        </div>
+                    `).join('')
+                    : `<p class="mt-2 text-xs text-[#6B5B4B]">
+                        ${window.foodTrailTranslations.noTransit}
+                    </p>`;
 
             panel.innerHTML = `
-                <p class="font-semibold text-[#1F1B19]">Showing all destinations in your food trail.</p>
-                <p class="mt-1 text-xs text-[#6B5B4B]">Route order starts from your current location when GPS is available. Directions generated ${departureStamp}.</p>
-                <div class="mt-3 grid gap-3">${legHtml}</div>
+                <p class="font-semibold text-[#1F1B19]">
+                    ${window.foodTrailTranslations.showingAllDestinations}
+                </p>
+
+                <p class="mt-1 text-xs text-[#6B5B4B]">
+                    ${window.foodTrailTranslations.routeOrderStarts}
+                    ${window.foodTrailTranslations.directionsGenerated} ${departureStamp}.
+                </p>
+
+                <div class="mt-3 grid gap-3">
+                    ${legHtml}
+                </div>
+
                 <div class="mt-3 rounded-[20px] border border-[#D7E8D0] bg-[#F5FCF5] p-3">
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-[#4A6B31]">Public transport guidance</p>
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-[#4A6B31]">
+                        ${window.foodTrailTranslations.publicTransportGuidance}
+                    </p>
+
                     ${transitSummary}
-                    <p class="mt-2 text-xs text-[#6B5B4B]">Transit times are scheduled values returned by Google Maps Directions at request time unless real-time data is available from Google.</p>
+
+                    <p class="mt-2 text-xs text-[#6B5B4B]">
+                        ${window.foodTrailTranslations.transitTimes}
+                    </p>
                 </div>
             `;
         };
@@ -1295,24 +1456,30 @@
 
         const renderTrailMap = async () => {
             if (!trailGoogleMap || !trailGoogleGeocoder) return;
+            setRouteMapLoading(true);
             clearTrailMarkers();
 
             if (!routeData.length) {
                 showTrailMessage('No route selected yet. Add a trail from Food Trails.');
+                setRouteMapLoading(false);
                 return;
             }
-            currentLocation = await getCurrentPositionForRoute(!currentLocation);
+            // Draw the saved route immediately. GPS is requested in the
+            // background and refreshes the route when it becomes available.
+            refreshRouteWithCurrentLocation();
             if (currentLocation) placeCurrentLocationMarker(currentLocation);
 
-            if (!hasOptimizedRouteOrder && routeData.length > 1) {
-                const geocodedStops = await Promise.all(routeData.map((item) => geocodeRouteItem(item, item.location)));
-                saveRouteOrder(orderStopsByNearestNeighbor(routeData, currentLocation, geocodedStops));
-                saveRouteOrder(await optimizeRouteOrder(currentLocation));
-                hasOptimizedRouteOrder = true;
-                showToast('Trail route ordered from your current location.');
-            }
-
             const previewStops = getPreviewStops();
+
+            if (!previewStops.length) {
+                const directionsPanel = getElement('trailDirectionsPanel');
+                if (directionsPanel) {
+                    directionsPanel.innerHTML = `<p class="font-semibold text-[#1F1B19]">All stops in this trail are complete.</p>`;
+                }
+                showTrailMessage('All stops in this trail are complete.');
+                setRouteMapLoading(false);
+                return;
+            }
 
             const computeAndRender = (stops, renderer, opts = {}) => {
                 if (!stops.length) return;
@@ -1340,21 +1507,23 @@
                         if (status === 'OK') {
                             renderer.setDirections(result);
                             if (opts.showDirections) {
-                                renderRouteDirections(result, stops);
+                                renderRouteDirections(result, stops, opts.legStartNumber);
                             }
                         }
+                        setRouteMapLoading(false);
                     });
                 } catch (e) {
-                    // ignore route failures
+                    setRouteMapLoading(false);
                 }
             };
 
             computeAndRender(previewStops, directionsRenderer, {
                 useCurrentAsOrigin: true,
                 showDirections: true,
+                legStartNumber: routeData.indexOf(previewStops[0]) + 1,
                 polylineOptions: { strokeColor: '#D98F4F', strokeOpacity: 0.9, strokeWeight: 6 },
             });
-            showTrailMessage(previewStopCount >= routeData.length
+            showTrailMessage(previewStopCount >= getPendingStops().length
                 ? 'Showing all destinations from your current location.'
                 : `Showing the next ${previewStops.length} stop${previewStops.length === 1 ? '' : 's'} from your current location.`);
             await placeStopMarkers(previewStops);
@@ -1394,18 +1563,35 @@
         const favoriteStatus = getElement('favoriteStatus');
 
         const updateRouteData = () => {
-            routeData = JSON.parse(localStorage.getItem(currentRouteKey) || '[]');
+            try {
+                const savedRoute = JSON.parse(localStorage.getItem(currentRouteKey) || '[]');
+                routeData = Array.isArray(savedRoute) ? savedRoute : [];
+            } catch (error) {
+                routeData = [];
+                localStorage.removeItem(currentRouteKey);
+            }
             visitedCount = routeData.filter((item) => item.visited).length;
             estimatedTime = routeData.reduce((total, item) => total + Math.max(8, Math.round(item.distance * 7)), 0);
-            previewStopCount = Math.max(1, Math.min(previewStopCount, routeData.length || 1));
+            previewStopCount = Math.max(1, Math.min(previewStopCount, getPendingStops().length || 1));
             updateRouteModeButtons();
         };
 
         const updateHeaderStatus = () => {
-            if (trailProgressBadge) trailProgressBadge.innerText = `${routeData.length ? Math.round((visitedCount / routeData.length) * 100) : 0}% complete`;
-            if (estimateTimeText) estimateTimeText.innerText = `Estimated time: ${estimatedTime} min`;
+            if (trailProgressBadge) {
+                trailProgressBadge.innerText =
+                    `${routeData.length ? Math.round((visitedCount / routeData.length) * 100) : 0}% ${window.foodTrailTranslations.complete}`;
+            }
+
+            if (estimateTimeText) {
+                estimateTimeText.innerText =
+                `${window.foodTrailTranslations.estimatedTime}: ${estimatedTime} min`;
+                }
+
             updateRouteStats();
-            if (routeData.length) showTrailMessage('');
+
+            if (routeData.length) {
+                showTrailMessage('');
+            }
         };
 
         const renderRouteItems = () => {
@@ -1416,6 +1602,8 @@
                 selectedTrailList.innerHTML = `<div class="rounded-[28px] border border-[#E9D7BF] bg-[#FEFBF7] p-6 text-sm text-[#6B5B4E]">No route selected. Go back to the food trails page and add restaurants to your trail.</div>`;
                 return;
             }
+
+            const nextStopId = routeData.find((item) => !item.visited)?.id;
 
             routeData.forEach((item, index) => {
                 const card = document.createElement('article');
@@ -1429,7 +1617,7 @@
                     <div class="trail-stop-content">
                         <div class="trail-stop-title-row">
                             <p class="trail-stop-title">${item.name}</p>
-                            ${index === 0 && !item.visited ? '<span class="trail-next-badge">Next stop</span>' : ''}
+                            ${item.id === nextStopId ? '<span class="trail-next-badge">Next stop</span>' : ''}
                         </div>
                         <div class="trail-stop-meta">
                             <span>${item.location}</span>
@@ -1439,10 +1627,12 @@
                     </div>
                     <div class="trail-stop-actions">
                         <button data-visit-id="${item.id}" class="trail-visit-button ${item.visited ? 'is-visited' : ''}">
-                            ${item.visited ? '✓ Visited' : 'Pending'}
+                            ${item.visited
+                                ? `✓ ${window.foodTrailTranslations.visited}`
+                                : window.foodTrailTranslations.pending}
                         </button>
                         <button data-remove-id="${item.id}" class="trail-remove-button" aria-label="Remove ${item.name}">
-                            × Remove
+                            × ${window.foodTrailTranslations.remove}
                         </button>
                     </div>
                 `;
@@ -1541,6 +1731,22 @@
             return mapsUrl;
         };
 
+        const navigateToNextStop = () => {
+            const nextStop = routeData.find((item) => !item.visited);
+            if (!nextStop) {
+                showToast('All stops in this trail are complete.');
+                return;
+            }
+
+            // Keep the in-page map aligned with the selected next stop, then
+            // hand off turn-by-turn navigation to Google Maps from the user's
+            // current location.
+            setPreviewStopCount(1);
+            const destination = encodeURIComponent(getStopLabel(nextStop));
+            const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=${travelMode.toLowerCase()}`;
+            window.open(mapsUrl, '_blank', 'noopener');
+        };
+
         const shareWhatsapp = async () => {
             if (!routeData.length) {
                 showToast('Add restaurants to your trail first.');
@@ -1589,6 +1795,7 @@
                 location: routeData[0]?.location || 'Selected trail',
                 description: `Saved trail with ${routeData.length} stops and ${estimatedTime} min estimated time.`,
                 stops: routeData.length,
+                restaurants: routeData.map((restaurant) => ({ ...restaurant, visited: false })),
             };
             existingFavorites.push(favorite);
             localStorage.setItem(favoritesKey, JSON.stringify(existingFavorites));
@@ -1616,7 +1823,22 @@
             getElement('trailCompleteModal')?.classList.remove('is-hidden');
         };
 
-        const finishCompletedTrail = (saveAsFavorite) => {
+        const openCompletedTrailFavoriteNameModal = () => {
+            getElement('trailCompleteModal')?.classList.add('is-hidden');
+            getElement('trailFavoriteNameModal')?.classList.remove('is-hidden');
+
+            const input = getElement('completedTrailFavoriteName');
+            input?.focus();
+            input?.select();
+        };
+
+        const closeCompletedTrailFavoriteNameModal = () => {
+            getElement('trailFavoriteNameModal')?.classList.add('is-hidden');
+            getElement('trailCompleteModal')?.classList.remove('is-hidden');
+        };
+
+        const finishCompletedTrail = (saveAsFavorite, favoriteName = null) => {
+
             const completedTrails = JSON.parse(localStorage.getItem(completedTrailsKey) || '[]');
             completedTrails.push({
                 id: `completed-${Date.now()}`,
@@ -1626,12 +1848,13 @@
             localStorage.setItem(completedTrailsKey, JSON.stringify(completedTrails));
 
             if (saveAsFavorite) {
-                saveFavorite('Completed heritage food trail');
+                saveFavorite(favoriteName);
                 showToast(window.foodTrailAuth.isAuthenticated ? 'Trail saved to favourites.' : 'Trail saved to local favourites.');
             }
 
             localStorage.removeItem(currentRouteKey);
             getElement('trailCompleteModal')?.classList.add('is-hidden');
+            getElement('trailFavoriteNameModal')?.classList.add('is-hidden');
             window.setTimeout(() => {
                 window.location.href = '/foodtrails';
             }, 650);
@@ -1648,6 +1871,19 @@
             updateHeaderStatus();
             renderTrailMap();
             showToast(`${nextStop.name} marked as complete.`);
+        };
+
+        const markAllStopsComplete = () => {
+            const remainingStops = routeData.filter((item) => !item.visited);
+            if (!remainingStops.length) return;
+
+            routeData = routeData.map((item) => ({ ...item, visited: true }));
+            localStorage.setItem(currentRouteKey, JSON.stringify(routeData));
+            updateRouteData();
+            renderRouteItems();
+            updateHeaderStatus();
+            renderTrailMap();
+            showToast(`${remainingStops.length} stop${remainingStops.length === 1 ? '' : 's'} marked as complete.`);
         };
 
         const clearTrail = () => {
@@ -1671,6 +1907,10 @@
 
         document.addEventListener('DOMContentLoaded', async () => {
             updateRouteData();
+            if (!routeData.length) {
+                window.location.replace('/foodtrails?trail=empty#trailSearchForm');
+                return;
+            }
             if (window.google?.maps) {
                 initStartTrailMapHelpers();
             }
@@ -1687,13 +1927,23 @@
             getElement('addFavoriteButton')?.addEventListener('click', saveFavoriteTrail);
             getElement('completeTrailButton')?.addEventListener('click', toggleCompleteTrail);
             getElement('completeAllButton')?.addEventListener('click', toggleCompleteTrail);
+            getElement('markAllStopsCompleteButton')?.addEventListener('click', markAllStopsComplete);
             getElement('closeTrailButton')?.addEventListener('click', openCompleteTrailModal);
-            getElement('saveCompletedTrailButton')?.addEventListener('click', () => finishCompletedTrail(true));
+            getElement('saveCompletedTrailButton')?.addEventListener('click', openCompletedTrailFavoriteNameModal);
+            getElement('confirmCompletedTrailFavoriteButton')?.addEventListener('click', () => {
+                const favoriteName = getElement('completedTrailFavoriteName')?.value.trim();
+                if (!favoriteName) {
+                    getElement('completedTrailFavoriteName')?.focus();
+                    return;
+                }
+                finishCompletedTrail(true, favoriteName);
+            });
+            getElement('cancelCompletedTrailFavoriteButton')?.addEventListener('click', closeCompletedTrailFavoriteNameModal);
             getElement('discardCompletedTrailButton')?.addEventListener('click', () => finishCompletedTrail(false));
             getElement('clearTrailButton')?.addEventListener('click', clearTrail);
             getElement('exitTrailButton')?.addEventListener('click', exitTrail);
-            getElement('showAllStopsButton')?.addEventListener('click', () => setPreviewStopCount(routeData.length));
-            getElement('showCurrentRouteButton')?.addEventListener('click', () => setPreviewStopCount(previewStopCount));
+            getElement('showAllStopsButton')?.addEventListener('click', () => setPreviewStopCount(getPendingStops().length));
+            getElement('showCurrentRouteButton')?.addEventListener('click', navigateToNextStop);
             getElement('showCurrentRouteShortcutButton')?.addEventListener('click', () => setPreviewStopCount(previewStopCount + 1));
             getElement('showPreviousRouteButton')?.addEventListener('click', () => setPreviewStopCount(previewStopCount - 1));
             getElement('travelModeSelect')?.addEventListener('change', (event) => setTravelMode(event.target.value));
@@ -1701,5 +1951,3 @@
         });
     </script>
 @endsection
-
-

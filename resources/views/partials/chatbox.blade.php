@@ -43,7 +43,7 @@
 
 <div id="chatPanel" class="chat-panel">
     <div class="chat-header">
-        <div class="chat-header-title">🏮 Heritage Assistant</div>
+        <div class="chat-header-title">🤖 Heritage Assistant</div>
         <button id="chatClose" style="background:none;border:none;color:#fff;font-size:1.2rem;cursor:pointer">✕</button>
     </div>
     

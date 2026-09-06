@@ -200,10 +200,10 @@
         }
         .user-nav-child .user-nav-icon svg { width: 13px; height: 13px; }
         .user-nav-child.active {
-            color: #3b1b16;
-            background: var(--wm-highlight);
+            color: #fffaf4;
+            background: var(--wm-sidebar-soft);
         }
-        .user-nav-child.active .user-nav-icon { border-color: rgba(59, 27, 22, .18); background: rgba(59, 27, 22, .12); color: #3b1b16; }
+        .user-nav-child.active .user-nav-icon { border-color: rgba(200, 148, 50, .42); background: var(--wm-highlight); color: #3b1b16; }
 
         .user-sidebar-footer {
             margin-top: auto;
@@ -280,6 +280,16 @@
         .user-topbar h2 { margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 1.35rem; }
         .user-topbar p { margin: 3px 0 0; color: var(--wm-muted); font-size: .82rem; }
         .user-topbar-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+        .language-form { display: inline-flex; align-items: center; }
+        .language-form select { min-height: 44px; padding: 0 34px 0 13px; border: 1px solid rgba(46, 36, 32, .14); border-radius: 999px; color: var(--wm-accent); background: #fff; font: inherit; font-weight: 800; cursor: pointer; }
+        .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+        .topbar-account-group { display: inline-flex; align-items: center; justify-content: flex-end; gap: 8px; margin-left: auto; }
+        .dashboard-profile-link { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 7px 13px; border: 1px solid var(--wm-border); border-radius: 999px; color: var(--wm-text); background: #fff; font-size: .92rem; font-weight: 700; text-decoration: none; }
+        .dashboard-profile-link:hover { border-color: rgba(163, 58, 45, .35); background: #fffaf4; }
+        .dashboard-profile-image, .dashboard-profile-avatar { width: 30px; height: 30px; flex: 0 0 auto; border-radius: 50%; }
+        .dashboard-profile-image { object-fit: cover; }
+        .dashboard-profile-avatar { display: inline-grid; place-items: center; color: var(--wm-accent); background: #f2e7dd; font-weight: 800; }
+        .dashboard-profile-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .user-nav-toggle {
             display: inline-flex;
             align-items: center;
@@ -524,6 +534,7 @@
             .user-topbar p { max-width: 100%; font-size: .76rem; line-height: 1.35; overflow-wrap: anywhere; }
             .user-topbar-actions { width: 100%; justify-content: start; }
             .user-topbar-link { max-width: 100%; min-height: 36px; white-space: normal; text-align: center; }
+            .dashboard-profile-name { display: none; }
             .page-shell { width: 100%; padding: 22px 16px 34px; }
             .page-header { max-width: 100%; padding: 22px; border-radius: 16px; }
             .page-header > div { width: 100%; min-width: 0; max-width: 100%; }
@@ -564,22 +575,48 @@
                     </div>
                 </div>
                 <div class="user-topbar-actions">
-                    @hasSection('user-topbar-actions')
-                        @yield('user-topbar-actions')
+                    @auth
+                        <div class="topbar-account-group">
+                            <form class="language-form" method="POST" action="{{ route('profile.update') }}">
+                                @csrf
+                                <input type="hidden" name="language_only" value="1">
+                                <input type="hidden" name="name" value="{{ auth()->user()->name }}">
+                                <input type="hidden" name="email" value="{{ auth()->user()->email }}">
+                                <input type="hidden" name="phone" value="{{ auth()->user()->phone }}">
+                                <input type="hidden" name="city" value="{{ auth()->user()->city }}">
+                                <input type="hidden" name="bio" value="{{ auth()->user()->bio }}">
+                                <label class="sr-only" for="user-layout-language">{{ __('Language') }}</label>
+                                <select id="user-layout-language" name="language" onchange="this.form.submit()">
+                                    <option value="en" @selected((auth()->user()->language ?? 'en') === 'en')>{{ __('English') }}</option>
+                                    <option value="ms" @selected((auth()->user()->language ?? 'en') === 'ms')>{{ __('Malay') }}</option>
+                                    <option value="zh" @selected((auth()->user()->language ?? 'en') === 'zh')>{{ __('Chinese') }}</option>
+                                </select>
+                            </form>
+                            <a class="dashboard-profile-link" href="{{ route('profile.show') }}">
+                                @if (auth()->user()->profile_photo)
+                                    <img class="dashboard-profile-image" src="{{ auth()->user()->profilePhotoUrl() }}" alt="Profile photo">
+                                @else
+                                    <span class="dashboard-profile-avatar">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</span>
+                                @endif
+                                <span class="dashboard-profile-name">{{ auth()->user()->name }}</span>
+                            </a>
+                        </div>
                     @else
-                        <a class="user-topbar-link" href="{{ route('home') }}">{{ __('Back to Home') }}</a>
-                        <a class="user-topbar-link" href="{{ route('heritage-shops.index') }}">{{ __('Heritage Shops') }}</a>
-                    @endif
+                        @hasSection('user-topbar-actions')
+                            @yield('user-topbar-actions')
+                        @else
+                            <a class="user-topbar-link" href="{{ route('home') }}">{{ __('Back to Home') }}</a>
+                            <a class="user-topbar-link" href="{{ route('heritage-shops.index') }}">{{ __('Heritage Shops') }}</a>
+                        @endif
+                    @endauth
                 </div>
             </header>
 
             <main class="page-shell">
-                @if (session('status'))
-                    <div class="status-banner success" role="status">{{ session('status') }}</div>
-                @endif
-
                 @if (session('success'))
-                    <div class="status-banner success" role="status">{{ session('success') }}</div>
+                    <div class="status-banner success" role="status">
+                        {{ session('success') }}
+                    </div>
                 @endif
 
                 @if ($errors->any())
@@ -640,33 +677,6 @@
         sync();
     })();
 
-    (() => {
-        const hashLinks = document.querySelectorAll('.user-nav-item.user-nav-child[data-hash-target]');
-        if (!hashLinks.length) return;
-
-        const updateHashActiveState = () => {
-            const currentHash = window.location.hash.replace('#', '');
-            let matched = false;
-
-            hashLinks.forEach(link => {
-                const target = link.dataset.hashTarget;
-                const isActive = !currentHash && target === 'check-in'
-                    ? true
-                    : target === currentHash;
-
-                link.classList.toggle('active', isActive);
-                if (isActive) matched = true;
-            });
-
-            if (!matched && !currentHash) {
-                const defaultLink = document.querySelector('.user-nav-item.user-nav-child[data-hash-target="check-in"]');
-                defaultLink?.classList.add('active');
-            }
-        };
-
-        updateHashActiveState();
-        window.addEventListener('hashchange', updateHashActiveState, { passive: true });
-    })();
     </script>
 
     @include('partials.chatbox')

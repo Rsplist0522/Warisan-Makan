@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\HeritageShopContribution;
+use App\Rules\MalaysianPhoneNumber;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,11 +19,14 @@ use Throwable;
 
 class CommunityContributionController extends Controller
 {
+    private const MAX_SUPPORTING_MEDIA = 6;
+
     public function index(): View
     {
         return view('community-contribution', [
             'contribution' => null,
             'formToken' => (string) Str::uuid(),
+            'maxSupportingMedia' => self::MAX_SUPPORTING_MEDIA,
         ]);
     }
 
@@ -31,6 +35,7 @@ class CommunityContributionController extends Controller
         return view('community-contribution', [
             'contribution' => null,
             'formToken' => (string) Str::uuid(),
+            'maxSupportingMedia' => self::MAX_SUPPORTING_MEDIA,
         ]);
     }
 
@@ -122,6 +127,7 @@ class CommunityContributionController extends Controller
 
         return view('community-contribution', [
             'contribution' => $contribution,
+            'maxSupportingMedia' => self::MAX_SUPPORTING_MEDIA,
         ]);
     }
 
@@ -129,7 +135,7 @@ class CommunityContributionController extends Controller
     {
         Gate::authorize('update', $contribution);
 
-        $validated = $this->validateContribution($request);
+        $validated = $this->validateContribution($request, $contribution);
         $contribution->load('media');
         $requestedRemovalIds = collect($request->input('remove_media', []))
             ->map(fn ($id): int => (int) $id)
@@ -138,17 +144,11 @@ class CommunityContributionController extends Controller
             ->whereIn('id', $requestedRemovalIds)
             ->values();
         $retainedMediaCount = $contribution->media->count() - $requestedRemovals->count();
-        $newFiles = $request->file('supporting_media', []);
-
-        if ($retainedMediaCount + count($newFiles) > 6) {
-            throw ValidationException::withMessages([
-                'supporting_media' => __('A contribution may contain no more than 6 media files.'),
-            ]);
-        }
 
         $storedMedia = [];
         $storedFoodItemImages = [];
         $oldStatus = $contribution->status;
+        $wasPreviouslyWithdrawn = $contribution->withdrawn_at !== null;
         $previousFoodItemImagePaths = $this->foodItemImagePaths($contribution->food_items);
 
         try {
@@ -160,7 +160,8 @@ class CommunityContributionController extends Controller
                 $retainedMediaCount,
                 &$storedMedia,
                 &$storedFoodItemImages,
-                $oldStatus
+                $oldStatus,
+                $wasPreviouslyWithdrawn
             ): void {
                 $action = $validated['submission_action'];
                 $isSubmitting = $action === 'submit';
@@ -175,12 +176,14 @@ class CommunityContributionController extends Controller
                     'submitted_at' => $isSubmitting
                         ? ($contribution->submitted_at ?? now())
                         : $contribution->submitted_at,
-                    'resubmitted_at' => $isSubmitting && $oldStatus === HeritageShopContribution::STATUS_REVISION_REQUIRED
+                    'resubmitted_at' => $isSubmitting && (
+                        $oldStatus === HeritageShopContribution::STATUS_REVISION_REQUIRED
+                        || $wasPreviouslyWithdrawn
+                    )
                         ? now()
                         : $contribution->resubmitted_at,
                     'reviewed_by_user_id' => $isSubmitting ? null : $contribution->reviewed_by_user_id,
                     'review_started_at' => $isSubmitting ? null : $contribution->review_started_at,
-                    'withdrawn_at' => null,
                 ])->save();
 
                 [$foodItems, $storedFoodItemImages] = $this->storeFoodItemImages($request, $contribution, $foodItems);
@@ -200,8 +203,16 @@ class CommunityContributionController extends Controller
                 $contribution->recordVersion(
                     $request->user(),
                     $isSubmitting
-                        ? ($oldStatus === HeritageShopContribution::STATUS_REVISION_REQUIRED ? 'resubmitted' : 'submitted')
-                        : ($oldStatus === HeritageShopContribution::STATUS_REVISION_REQUIRED ? 'revision_updated' : 'draft_updated')
+                        ? (
+                            $oldStatus === HeritageShopContribution::STATUS_REVISION_REQUIRED || $wasPreviouslyWithdrawn
+                                ? 'resubmitted'
+                                : 'submitted'
+                        )
+                        : (
+                            $oldStatus === HeritageShopContribution::STATUS_REVISION_REQUIRED
+                                ? 'revision_updated'
+                                : ($wasPreviouslyWithdrawn ? 'edited_after_withdrawal' : 'draft_updated')
+                        )
                 );
 
                 if ($isSubmitting && $oldStatus === HeritageShopContribution::STATUS_REVISION_REQUIRED) {
@@ -277,12 +288,13 @@ class CommunityContributionController extends Controller
         }
 
         DB::transaction(function () use ($request, $contribution): void {
+            $wasPreviouslyWithdrawn = $contribution->withdrawn_at !== null;
             $contribution->forceFill([
                 'status' => HeritageShopContribution::STATUS_PENDING_REVIEW,
-                'submitted_at' => now(),
-                'withdrawn_at' => null,
+                'submitted_at' => $contribution->submitted_at ?? now(),
+                'resubmitted_at' => $wasPreviouslyWithdrawn ? now() : $contribution->resubmitted_at,
             ])->save();
-            $contribution->recordVersion($request->user(), 'submitted');
+            $contribution->recordVersion($request->user(), $wasPreviouslyWithdrawn ? 'resubmitted' : 'submitted');
         });
 
         return redirect()->route('community-contribution.contributions.show', $contribution)
@@ -377,7 +389,31 @@ class CommunityContributionController extends Controller
             ->with('status', __('Contribution withdrawn successfully.'));
     }
 
-    private function validateContribution(Request $request): array
+    public function editResubmit(Request $request, HeritageShopContribution $contribution): RedirectResponse
+    {
+        Gate::authorize('editResubmit', $contribution);
+
+        DB::transaction(function () use ($request, $contribution): void {
+            $fromStatus = $contribution->status;
+            $contribution->forceFill([
+                'status' => HeritageShopContribution::STATUS_DRAFT,
+                'reviewed_by_user_id' => null,
+                'review_started_at' => null,
+            ])->save();
+            $contribution->moderationActivities()->create([
+                'actor_user_id' => $request->user()->id,
+                'action' => 'reopened_after_withdrawal',
+                'from_status' => $fromStatus,
+                'to_status' => HeritageShopContribution::STATUS_DRAFT,
+            ]);
+            $contribution->recordVersion($request->user(), 'reopened_after_withdrawal');
+        });
+
+        return redirect()->route('community-contribution.edit', $contribution)
+            ->with('status', __('You can now edit and resubmit this contribution.'));
+    }
+
+    private function validateContribution(Request $request, ?HeritageShopContribution $contribution = null): array
     {
         $validated = $request->validate([
             'submission_action' => ['required', Rule::in(['draft', 'submit'])],
@@ -410,20 +446,21 @@ class CommunityContributionController extends Controller
             'food_items.*.price' => ['nullable', 'numeric', 'min:0'],
             'food_items.*.image' => ['nullable', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:'.(int) config('heritage_shop.max_image_kb', 1024)],
             'food_items.*.image_path' => ['nullable', 'string', 'max:500', 'starts_with:contributions/'],
-            'contact_number' => ['nullable', 'string', 'max:30', 'regex:/^[0-9+()\-\s]*$/'],
+            'contact_number' => ['nullable', 'string', 'max:30', new MalaysianPhoneNumber],
             'address' => ['required_if:submission_action,submit', 'nullable', 'string', 'max:500'],
             'city' => ['nullable', 'string', 'max:100'],
             'state' => ['nullable', 'string', 'max:100'],
             'postal_code' => ['nullable', 'string', 'max:20'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
-            'supporting_media' => ['nullable', 'array', 'max:6'],
+            'supporting_media' => ['nullable', 'array'],
             'supporting_media.*' => ['file', 'mimes:jpg,jpeg,png,webp,mp4,mov,avi', 'max:20480'],
             'remove_media' => ['nullable', 'array'],
             'remove_media.*' => ['integer'],
         ]);
 
         $this->validateOperatingHoursPayload($validated['operating_hours'] ?? [], 'operating_hours');
+        $this->validateSupportingMediaTotal($request, $contribution);
 
         if (($validated['submission_action'] ?? null) === 'draft'
             && ! $this->hasMinimumDraftContent($validated)) {
@@ -433,6 +470,57 @@ class CommunityContributionController extends Controller
         }
 
         return $validated;
+    }
+
+    private function validateSupportingMediaTotal(Request $request, ?HeritageShopContribution $contribution = null): void
+    {
+        $newFiles = $request->file('supporting_media', []);
+        $newFileCount = is_array($newFiles)
+            ? count(array_filter($newFiles))
+            : (filled($newFiles) ? 1 : 0);
+        $existingMediaCount = 0;
+        $removalCount = 0;
+
+        if ($contribution !== null && $contribution->exists) {
+            $existingMediaCount = $contribution->media()->count();
+            $requestedRemovalIds = collect($request->input('remove_media', []))
+                ->map(fn ($id): int => (int) $id)
+                ->filter(fn (int $id): bool => $id > 0)
+                ->unique()
+                ->values();
+
+            if ($requestedRemovalIds->isNotEmpty()) {
+                $removalCount = $contribution->media()
+                    ->whereKey($requestedRemovalIds->all())
+                    ->count();
+            }
+        }
+
+        $retainedExistingCount = max(0, $existingMediaCount - $removalCount);
+        $finalMediaCount = $retainedExistingCount + $newFileCount;
+
+        if ($finalMediaCount <= self::MAX_SUPPORTING_MEDIA) {
+            return;
+        }
+
+        $availableSlots = max(0, self::MAX_SUPPORTING_MEDIA - $retainedExistingCount);
+        $message = $retainedExistingCount > 0
+            ? trans_choice(
+                'You can upload up to :max supporting media files in total. You already have :count saved file selected to keep, so you can add up to :available more.|You can upload up to :max supporting media files in total. You already have :count saved files selected to keep, so you can add up to :available more.',
+                $retainedExistingCount,
+                [
+                    'max' => self::MAX_SUPPORTING_MEDIA,
+                    'count' => $retainedExistingCount,
+                    'available' => $availableSlots,
+                ]
+            )
+            : __('You can upload up to :max supporting media files in total.', [
+                'max' => self::MAX_SUPPORTING_MEDIA,
+            ]);
+
+        throw ValidationException::withMessages([
+            'supporting_media' => $message.' '.__('Remove an existing file or select fewer new files.'),
+        ]);
     }
 
     private function validateOperatingHoursPayload(array $payload, string $fieldPrefix): void

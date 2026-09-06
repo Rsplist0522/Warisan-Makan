@@ -283,6 +283,232 @@ class CommunityContributionTest extends TestCase
         );
     }
 
+    public function test_new_contribution_can_upload_exactly_six_supporting_media_files(): void
+    {
+        Storage::fake(config('filesystems.media_disk'));
+        $user = User::factory()->create();
+        $data = $this->validContributionData();
+        $data['supporting_media'] = $this->fakeSupportingMediaFiles(6);
+
+        $this->actingAs($user)
+            ->post(route('community-contribution.store'), $data)
+            ->assertSessionHasNoErrors();
+
+        $contribution = HeritageShopContribution::firstOrFail();
+        $this->assertSame(6, $contribution->media()->count());
+    }
+
+    public function test_new_contribution_cannot_upload_more_than_six_supporting_media_files(): void
+    {
+        Storage::fake(config('filesystems.media_disk'));
+        $user = User::factory()->create();
+        $data = $this->validContributionData();
+        $data['supporting_media'] = $this->fakeSupportingMediaFiles(7);
+
+        $this->actingAs($user)
+            ->post(route('community-contribution.store'), $data)
+            ->assertSessionHasErrors('supporting_media');
+
+        $this->assertDatabaseCount('heritage_shop_contributions', 0);
+        $this->assertDatabaseCount('media', 0);
+    }
+
+    public function test_edit_contribution_with_two_existing_media_can_add_four_new_files(): void
+    {
+        Storage::fake(config('filesystems.media_disk'));
+        $user = User::factory()->create();
+        $draft = $this->draftContributionWithStoredMedia($user, 2);
+        $data = [
+            ...$this->validContributionData(),
+            'submission_action' => 'draft',
+            'supporting_media' => $this->fakeSupportingMediaFiles(4, 'new'),
+        ];
+
+        $this->actingAs($user)
+            ->put(route('community-contribution.update', $draft), $data)
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(6, $draft->fresh()->media()->count());
+    }
+
+    public function test_edit_contribution_with_two_existing_media_cannot_add_five_new_files(): void
+    {
+        Storage::fake(config('filesystems.media_disk'));
+        $user = User::factory()->create();
+        $draft = $this->draftContributionWithStoredMedia($user, 2);
+        $existingMedia = $draft->media()->pluck('r2_object_key')->all();
+        $data = [
+            ...$this->validContributionData(),
+            'submission_action' => 'draft',
+            'supporting_media' => $this->fakeSupportingMediaFiles(5, 'new'),
+        ];
+
+        $this->actingAs($user)
+            ->put(route('community-contribution.update', $draft), $data)
+            ->assertSessionHasErrors('supporting_media');
+
+        $this->assertSame(2, $draft->fresh()->media()->count());
+        foreach ($existingMedia as $path) {
+            $this->assertTrue(Storage::disk(config('filesystems.media_disk'))->exists($path));
+        }
+    }
+
+    public function test_edit_contribution_can_remove_one_existing_media_and_add_five_new_files(): void
+    {
+        Storage::fake(config('filesystems.media_disk'));
+        $user = User::factory()->create();
+        $draft = $this->draftContributionWithStoredMedia($user, 2);
+        $mediaToRemove = $draft->media()->firstOrFail();
+        $data = [
+            ...$this->validContributionData(),
+            'submission_action' => 'draft',
+            'remove_media' => [$mediaToRemove->id],
+            'supporting_media' => $this->fakeSupportingMediaFiles(5, 'new'),
+        ];
+
+        $this->actingAs($user)
+            ->put(route('community-contribution.update', $draft), $data)
+            ->assertSessionHasNoErrors();
+
+        $draft->refresh();
+        $this->assertSame(6, $draft->media()->count());
+        $this->assertSoftDeleted('media', ['id' => $mediaToRemove->id]);
+        $this->assertFalse(Storage::disk(config('filesystems.media_disk'))->exists($mediaToRemove->r2_object_key));
+    }
+
+    public function test_edit_contribution_can_remove_both_existing_media_and_add_six_new_files(): void
+    {
+        Storage::fake(config('filesystems.media_disk'));
+        $user = User::factory()->create();
+        $draft = $this->draftContributionWithStoredMedia($user, 2);
+        $removeIds = $draft->media()->pluck('id')->all();
+        $data = [
+            ...$this->validContributionData(),
+            'submission_action' => 'draft',
+            'remove_media' => $removeIds,
+            'supporting_media' => $this->fakeSupportingMediaFiles(6, 'new'),
+        ];
+
+        $this->actingAs($user)
+            ->put(route('community-contribution.update', $draft), $data)
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(6, $draft->fresh()->media()->count());
+        foreach ($removeIds as $id) {
+            $this->assertSoftDeleted('media', ['id' => $id]);
+        }
+    }
+
+    public function test_existing_retained_media_is_not_duplicated_after_save(): void
+    {
+        Storage::fake(config('filesystems.media_disk'));
+        $user = User::factory()->create();
+        $draft = $this->draftContributionWithStoredMedia($user, 2);
+        $existingIds = $draft->media()->pluck('id')->all();
+        $data = [
+            ...$this->validContributionData(),
+            'submission_action' => 'draft',
+            'supporting_media' => $this->fakeSupportingMediaFiles(1, 'new'),
+        ];
+
+        $this->actingAs($user)
+            ->put(route('community-contribution.update', $draft), $data)
+            ->assertSessionHasNoErrors();
+
+        $draft->refresh();
+        $this->assertSame(3, $draft->media()->count());
+        foreach ($existingIds as $id) {
+            $this->assertDatabaseHas('media', [
+                'id' => $id,
+                'deleted_at' => null,
+            ]);
+        }
+    }
+
+    public function test_save_draft_enforces_total_supporting_media_limit(): void
+    {
+        Storage::fake(config('filesystems.media_disk'));
+        $user = User::factory()->create();
+        $draft = $this->draftContributionWithStoredMedia($user, 2);
+
+        $this->actingAs($user)
+            ->put(route('community-contribution.update', $draft), [
+                ...$this->validContributionData(),
+                'submission_action' => 'draft',
+                'supporting_media' => $this->fakeSupportingMediaFiles(5, 'new'),
+            ])
+            ->assertSessionHasErrors('supporting_media');
+
+        $this->assertSame(HeritageShopContribution::STATUS_DRAFT, $draft->fresh()->status);
+        $this->assertSame(2, $draft->media()->count());
+    }
+
+    public function test_final_submit_enforces_total_supporting_media_limit(): void
+    {
+        Storage::fake(config('filesystems.media_disk'));
+        $user = User::factory()->create();
+        $draft = $this->draftContributionWithStoredMedia($user, 2);
+
+        $this->actingAs($user)
+            ->put(route('community-contribution.update', $draft), [
+                ...$this->validContributionData(),
+                'submission_action' => 'submit',
+                'supporting_media' => $this->fakeSupportingMediaFiles(5, 'new'),
+            ])
+            ->assertSessionHasErrors('supporting_media');
+
+        $this->assertSame(HeritageShopContribution::STATUS_DRAFT, $draft->fresh()->status);
+        $this->assertSame(2, $draft->media()->count());
+    }
+
+    public function test_revision_required_resubmission_enforces_total_supporting_media_limit(): void
+    {
+        Storage::fake(config('filesystems.media_disk'));
+        $user = User::factory()->create();
+        $revision = $this->draftContributionWithStoredMedia($user, 2);
+        $revision->forceFill([
+            'status' => HeritageShopContribution::STATUS_REVISION_REQUIRED,
+            'submitted_at' => now(),
+        ])->save();
+
+        $this->actingAs($user)
+            ->put(route('community-contribution.update', $revision), [
+                ...$this->validContributionData(),
+                'supporting_media' => $this->fakeSupportingMediaFiles(5, 'new'),
+            ])
+            ->assertSessionHasErrors('supporting_media');
+
+        $this->assertSame(HeritageShopContribution::STATUS_REVISION_REQUIRED, $revision->fresh()->status);
+        $this->assertSame(2, $revision->media()->count());
+    }
+
+    public function test_withdrawn_edit_resubmit_enforces_total_supporting_media_limit(): void
+    {
+        Storage::fake(config('filesystems.media_disk'));
+        $user = User::factory()->create();
+        $withdrawn = $this->draftContributionWithStoredMedia($user, 2);
+        $withdrawn->forceFill([
+            'status' => HeritageShopContribution::STATUS_WITHDRAWN,
+            'submitted_at' => now()->subDay(),
+            'withdrawn_at' => now(),
+        ])->save();
+
+        $this->actingAs($user)
+            ->post(route('community-contribution.contributions.edit-resubmit', $withdrawn))
+            ->assertRedirect(route('community-contribution.edit', $withdrawn));
+
+        $this->actingAs($user)
+            ->put(route('community-contribution.update', $withdrawn->fresh()), [
+                ...$this->validContributionData(),
+                'supporting_media' => $this->fakeSupportingMediaFiles(5, 'new'),
+            ])
+            ->assertSessionHasErrors('supporting_media');
+
+        $withdrawn->refresh();
+        $this->assertSame(HeritageShopContribution::STATUS_DRAFT, $withdrawn->status);
+        $this->assertSame(2, $withdrawn->media()->count());
+    }
+
     public function test_repeated_create_submission_with_same_token_does_not_duplicate_record(): void
     {
         $user = User::factory()->create();
@@ -741,6 +967,218 @@ class CommunityContributionTest extends TestCase
             'heritage_shop_contribution_id' => $contribution->id,
             'action' => 'withdrawn_by_user',
         ]);
+
+        $this->actingAs($user)
+            ->get(route('community-contribution.contributions'))
+            ->assertOk()
+            ->assertSee($contribution->contribution_title)
+            ->assertSee('Withdrawn')
+            ->assertSee('Edit &amp; Resubmit', false);
+    }
+
+    public function test_withdrawn_contribution_is_not_in_admin_queue_and_cannot_be_moderated(): void
+    {
+        $user = User::factory()->create();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $withdrawn = HeritageShopContribution::create([
+            ...$this->modelContributionData(),
+            'contribution_title' => 'Withdrawn heritage contribution',
+            'user_id' => $user->id,
+            'status' => HeritageShopContribution::STATUS_WITHDRAWN,
+            'submitted_at' => now(),
+            'withdrawn_at' => now(),
+        ]);
+        $pending = HeritageShopContribution::create([
+            ...$this->modelContributionData(),
+            'contribution_title' => 'Pending heritage contribution',
+            'user_id' => $user->id,
+            'status' => HeritageShopContribution::STATUS_PENDING_REVIEW,
+            'submitted_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.community-contributions.submissions'))
+            ->assertOk()
+            ->assertSee($pending->contribution_title)
+            ->assertDontSee($withdrawn->contribution_title);
+
+        $this->actingAs($admin)
+            ->post(route('admin.community-contributions.start-review', $withdrawn))
+            ->assertSessionHasErrors('review');
+
+        foreach (['approve', 'reject', 'request_revision'] as $action) {
+            $this->actingAs($admin)
+                ->post(route('admin.community-contributions.moderate', $withdrawn), [
+                    'moderation_action' => $action,
+                    'feedback' => 'This should not be accepted.',
+                ])
+                ->assertSessionHasErrors('moderation');
+        }
+
+        $this->assertSame(HeritageShopContribution::STATUS_WITHDRAWN, $withdrawn->fresh()->status);
+    }
+
+    public function test_owner_can_reopen_withdrawn_contribution_for_edit_and_other_users_cannot(): void
+    {
+        $owner = User::factory()->create();
+        $otherUser = User::factory()->create();
+        $contribution = HeritageShopContribution::create([
+            ...$this->modelContributionData(),
+            'user_id' => $owner->id,
+            'status' => HeritageShopContribution::STATUS_WITHDRAWN,
+            'submitted_at' => now(),
+            'withdrawn_at' => now(),
+        ]);
+
+        $this->actingAs($owner)
+            ->get(route('community-contribution.edit', $contribution))
+            ->assertForbidden();
+
+        $this->actingAs($otherUser)
+            ->post(route('community-contribution.contributions.edit-resubmit', $contribution))
+            ->assertForbidden();
+
+        $this->actingAs($owner)
+            ->post(route('community-contribution.contributions.edit-resubmit', $contribution))
+            ->assertRedirect(route('community-contribution.edit', $contribution));
+
+        $this->assertDatabaseHas('heritage_shop_contributions', [
+            'id' => $contribution->id,
+            'status' => HeritageShopContribution::STATUS_DRAFT,
+        ]);
+        $this->assertDatabaseHas('moderation_activities', [
+            'heritage_shop_contribution_id' => $contribution->id,
+            'action' => 'reopened_after_withdrawal',
+            'from_status' => HeritageShopContribution::STATUS_WITHDRAWN,
+            'to_status' => HeritageShopContribution::STATUS_DRAFT,
+        ]);
+        $this->assertDatabaseHas('contribution_versions', [
+            'heritage_shop_contribution_id' => $contribution->id,
+            'reason' => 'reopened_after_withdrawal',
+        ]);
+
+        $this->actingAs($owner)
+            ->get(route('community-contribution.edit', $contribution->fresh()))
+            ->assertOk()
+            ->assertSee('Edit &amp; Resubmit Heritage Shop', false);
+    }
+
+    public function test_withdrawn_contribution_data_and_media_survive_edit_resubmit_cycle(): void
+    {
+        Storage::fake(config('filesystems.media_disk'));
+
+        $user = User::factory()->create();
+        $contribution = HeritageShopContribution::create([
+            ...$this->modelContributionData(),
+            'current_owner_details' => 'The third generation keeps the original charcoal-fired method.',
+            'operating_hours' => [['day' => 'Monday', 'open' => '08:00', 'close' => '16:00', 'closed' => false]],
+            'user_id' => $user->id,
+            'status' => HeritageShopContribution::STATUS_PENDING_REVIEW,
+            'submitted_at' => now()->subDay(),
+        ]);
+        $foodImagePath = "contributions/{$contribution->id}/food-items/signature.jpg";
+        Storage::disk(config('filesystems.media_disk'))->put($foodImagePath, 'food-image-bytes');
+        $contribution->forceFill([
+            'food_items' => [[
+                'name' => 'Signature laksa',
+                'desc' => 'Original family recipe.',
+                'price' => 'RM 12.50',
+                'image_path' => $foodImagePath,
+            ]],
+        ])->save();
+        $media = $contribution->media()->create([
+            'uploaded_by_user_id' => $user->id,
+            'media_type' => 'image',
+            'r2_object_key' => "contributions/{$contribution->id}/shopfront.jpg",
+            'original_name' => 'shopfront.jpg',
+            'mime_type' => 'image/jpeg',
+            'file_size_bytes' => 1024,
+            'display_order' => 0,
+            'is_primary' => true,
+        ]);
+        Storage::disk(config('filesystems.media_disk'))->put($media->r2_object_key, 'media-bytes');
+
+        $this->actingAs($user)
+            ->post(route('community-contribution.contributions.withdraw', $contribution))
+            ->assertRedirect(route('community-contribution.contributions.show', $contribution));
+
+        $this->actingAs($user)
+            ->post(route('community-contribution.contributions.edit-resubmit', $contribution->fresh()))
+            ->assertRedirect(route('community-contribution.edit', $contribution));
+
+        $this->actingAs($user)
+            ->put(route('community-contribution.update', $contribution->fresh()), [
+                ...$this->validContributionData(),
+                'shop_name' => 'Updated heritage shop',
+                'current_owner_details' => 'The fourth generation now documents the same charcoal-fired method.',
+                'operating_hours' => [
+                    'Monday' => [
+                        'closed' => '0',
+                        'periods' => [['open' => '09:00', 'close' => '17:00']],
+                    ],
+                ],
+                'food_items' => [[
+                    'name' => 'Signature laksa',
+                    'desc' => 'Updated family recipe note.',
+                    'price' => '12.50',
+                    'image_path' => $foodImagePath,
+                ]],
+            ])
+            ->assertRedirect(route('community-contribution.contributions.show', $contribution));
+
+        $contribution->refresh();
+        $this->assertSame(HeritageShopContribution::STATUS_PENDING_REVIEW, $contribution->status);
+        $this->assertSame('Updated heritage shop', $contribution->shop_name);
+        $this->assertSame('The fourth generation now documents the same charcoal-fired method.', $contribution->current_owner_details);
+        $this->assertSame('Monday', $contribution->operating_hours[0]['day']);
+        $this->assertSame($foodImagePath, $contribution->food_items[0]['image_path']);
+        $this->assertNotNull($contribution->withdrawn_at);
+        $this->assertNotNull($contribution->resubmitted_at);
+        $this->assertDatabaseHas('media', [
+            'id' => $media->id,
+            'attachable_id' => $contribution->id,
+            'attachable_type' => 'heritage_shop_contribution',
+        ]);
+        $this->assertDatabaseHas('moderation_activities', [
+            'heritage_shop_contribution_id' => $contribution->id,
+            'action' => 'withdrawn_by_user',
+        ]);
+        $this->assertDatabaseHas('contribution_versions', [
+            'heritage_shop_contribution_id' => $contribution->id,
+            'reason' => 'resubmitted',
+        ]);
+        $this->assertTrue(Storage::disk(config('filesystems.media_disk'))->exists($foodImagePath));
+        $this->assertTrue(Storage::disk(config('filesystems.media_disk'))->exists($media->r2_object_key));
+    }
+
+    public function test_approved_and_rejected_contributions_cannot_be_withdrawn(): void
+    {
+        $user = User::factory()->create();
+        $approved = HeritageShopContribution::create([
+            ...$this->modelContributionData(),
+            'user_id' => $user->id,
+            'status' => HeritageShopContribution::STATUS_APPROVED,
+            'submitted_at' => now(),
+            'approved_at' => now(),
+        ]);
+        $rejected = HeritageShopContribution::create([
+            ...$this->modelContributionData(),
+            'user_id' => $user->id,
+            'status' => HeritageShopContribution::STATUS_REJECTED,
+            'submitted_at' => now(),
+            'rejection_reason' => 'Duplicate record.',
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('community-contribution.contributions.withdraw', $approved))
+            ->assertSessionHasErrors('withdraw');
+
+        $this->actingAs($user)
+            ->post(route('community-contribution.contributions.withdraw', $rejected))
+            ->assertSessionHasErrors('withdraw');
+
+        $this->assertSame(HeritageShopContribution::STATUS_APPROVED, $approved->fresh()->status);
+        $this->assertSame(HeritageShopContribution::STATUS_REJECTED, $rejected->fresh()->status);
     }
 
     public function test_administrator_can_request_revision_and_user_is_notified(): void
@@ -1811,6 +2249,26 @@ class CommunityContributionTest extends TestCase
         $this->assertDatabaseHas('notifications', [
             'notifiable_id' => $user->id,
         ]);
+    }
+
+    public function test_correction_request_contact_number_must_be_malaysian(): void
+    {
+        $user = User::factory()->create();
+        $shop = HeritageShop::create([
+            'shop_name' => 'Capital Cafe',
+            'contact_number' => '+60 3-1111 1111',
+            'publish_status' => HeritageShop::STATUS_PUBLISHED,
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('heritage-shops.correction-requests.store', $shop), [
+                'field_name' => 'contact_number',
+                'suggested_value' => '1212424568989242424',
+                'reason' => 'The shop published its updated phone number.',
+            ])
+            ->assertSessionHasErrors('suggested_value');
+
+        $this->assertDatabaseCount('correction_requests', 0);
     }
 
     public function test_correction_request_active_queue_only_shows_active_statuses(): void
@@ -3091,6 +3549,30 @@ class CommunityContributionTest extends TestCase
         $this->assertDatabaseCount('heritage_shop_contributions', 1);
     }
 
+    public function test_contribution_contact_number_must_be_malaysian(): void
+    {
+        $user = User::factory()->create();
+
+        foreach (['1212424568989242424', '+1 415 555 0100', '6012 345 6789', '+60 12 34'] as $contactNumber) {
+            $this->actingAs($user)
+                ->post(route('community-contribution.store'), [
+                    ...$this->validContributionData(),
+                    'contact_number' => $contactNumber,
+                ])
+                ->assertSessionHasErrors('contact_number');
+        }
+
+        foreach (['+60 3-1234 5678', '03-1234 5678', '+60 12-345 6789', '011-1234 5678'] as $contactNumber) {
+            $this->actingAs($user)
+                ->post(route('community-contribution.store'), [
+                    ...$this->validContributionData(),
+                    'submission_token' => (string) Str::uuid(),
+                    'contact_number' => $contactNumber,
+                ])
+                ->assertSessionHasNoErrors();
+        }
+    }
+
     private function fakeContributionAndShopImageDisks(): void
     {
         Storage::fake('media-test');
@@ -3434,6 +3916,38 @@ class CommunityContributionTest extends TestCase
         unset($data['submission_action']);
 
         return $data;
+    }
+
+    private function fakeSupportingMediaFiles(int $count, string $prefix = 'media'): array
+    {
+        return collect(range(1, $count))
+            ->map(fn (int $index): UploadedFile => UploadedFile::fake()->create(
+                "{$prefix}-{$index}.jpg",
+                64,
+                'image/jpeg'
+            ))
+            ->all();
+    }
+
+    private function draftContributionWithStoredMedia(User $user, int $mediaCount): HeritageShopContribution
+    {
+        $contribution = HeritageShopContribution::create([
+            ...$this->modelContributionData(),
+            'user_id' => $user->id,
+            'status' => HeritageShopContribution::STATUS_DRAFT,
+        ]);
+
+        foreach (range(1, $mediaCount) as $index) {
+            $this->storedContributionMedia(
+                $contribution,
+                'image',
+                "existing-{$index}.jpg",
+                'image/jpeg',
+                "existing-media-{$index}"
+            );
+        }
+
+        return $contribution;
     }
 
     private function requestRevision(User $admin, HeritageShopContribution $contribution): void

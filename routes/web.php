@@ -97,6 +97,8 @@ Route::middleware(['auth', 'active_user'])->group(function (): void {
         ->name('community-contribution.drafts.destroy');
     Route::post('/community-contributions/{contribution}/submit', [CommunityContributionController::class, 'submitDraft'])
         ->name('community-contribution.drafts.submit');
+    Route::post('/community-contributions/{contribution}/edit-resubmit', [CommunityContributionController::class, 'editResubmit'])
+        ->name('community-contribution.contributions.edit-resubmit');
 
     Route::get('/community-contributions', [CommunityContributionController::class, 'contributions'])
         ->name('community-contribution.contributions');
@@ -196,6 +198,12 @@ Route::get('/foodPassport/shop/{id}', [PassportController::class, 'showShop'])->
 // Public Food Passport page (no login required for viewing)
 Route::get('/foodPassport', [PassportController::class, 'index'])->middleware('auth')
     ->name('passport.index');
+Route::get('/foodPassport/history', [PassportController::class, 'history'])->middleware('auth')
+    ->name('passport.history');
+Route::get('/foodPassport/statistics', [PassportController::class, 'statistics'])->middleware('auth')
+    ->name('passport.statistics');
+Route::get('/foodPassport/leaderboard', [PassportController::class, 'leaderboard'])->middleware('auth')
+    ->name('passport.leaderboard');
 
 // Protected endpoints for authenticated users
 Route::middleware('auth')->group(function () {

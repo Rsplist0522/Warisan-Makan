@@ -4,6 +4,13 @@
 @section('page-title', 'Community Contribution')
 
 @section('content')
+    <div class="back-nav">
+        <a href="{{ route('admin.dashboard') }}" class="back-btn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            Back to Dashboard
+        </a>
+    </div>
+
     <header class="page-header">
         <div>
             <p class="eyebrow">Administrator function 1</p>

@@ -37,10 +37,6 @@
         .source-preview p { margin: 7px 0 0; color: var(--muted); line-height: 1.55; }
         .edit-form { display: grid; gap: 16px; }
         .read-only-note { padding: 12px 14px; border: 1px solid rgba(49, 93, 131, .18); border-radius: 10px; background: rgba(49, 93, 131, .07); color: #315d83; font-size: .84rem; line-height: 1.5; }
-        .check-row { display: flex; align-items: start; gap: 10px; padding: 13px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
-        .check-row input { margin-top: 4px; }
-        .check-row label { display: grid; gap: 3px; }
-        .check-row small { color: var(--muted); font-weight: 400; }
         @media (max-width: 800px) { .edit-layout { grid-template-columns: 1fr; } }
     </style>
 @endpush
@@ -64,22 +60,18 @@
             <div>
                 <p class="eyebrow">Blind Box shop settings</p>
                 <h1>{{ $shop['name'] }}</h1>
-                <p>Review the source record and control how it participates in recommendations.</p>
+                <p>Review the source record and update its Blind Box category.</p>
             </div>
         </div>
 
         <div class="edit-layout">
             <section class="panel">
                 <h2>Recommendation settings</h2>
-                <p class="read-only-note">Shop information is supplied by the source catalog. This page only changes the Blind Box category and whether this shop is included in blind box.</p>
+                <p class="read-only-note">Shop information is supplied by the source catalog. This page only changes the Blind Box category.</p>
                 <form class="edit-form" method="POST" action="{{ route('admin.blind-box-items.update', $shop['id']) }}">
                     @csrf
                     @method('PUT')
                     <div class="field"><label for="category">Blind Box category</label><select id="category" name="category" required>@foreach($categories as $option)<option value="{{ $option }}" @selected($shop['category'] === $option)>{{ $option }}</option>@endforeach</select></div>
-                    <div class="check-row">
-                        <input id="active" type="checkbox" name="active" value="1" @checked($shop['active'])>
-                        <label for="active">Include in Blind Box reveals <small>Uncheck this to keep the source shop visible in the catalog but exclude it from recommendations.</small></label>
-                    </div>
                     <div class="actions">
                         <button class="button primary" type="submit">Save changes</button>
                         <a class="button secondary" href="{{ route('admin.blind-box-items.index') }}">Cancel</a>
@@ -91,7 +83,6 @@
                 <img src="{{ $shop['image'] }}" alt="{{ $shop['name'] }}">
                 <div><h2>{{ $shop['name'] }}</h2><p>{{ $shop['description'] }}</p><p><strong>{{ $shop['state'] }}</strong> · {{ $shop['year'] }}@if($shop['address'])  
 {{ $shop['address'] }}@endif</p></div>
-                <span class="badge {{ $shop['active'] ? 'badge-approved' : 'badge-draft' }}">{{ $shop['active'] ? 'Active' : 'Inside but removed' }}</span>
             </aside>
         </div>
     @endif

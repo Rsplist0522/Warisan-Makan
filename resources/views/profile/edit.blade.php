@@ -205,6 +205,10 @@
             line-height: 1;
         }
 
+        .choose-file-button {
+            text-transform: none !important;
+        }
+
         .camera-button:hover,
         .camera-button:focus-visible {
             border-color: var(--wm-accent);
@@ -385,17 +389,6 @@
             </div>
         </header>
 
-        @if ($errors->any())
-            <div class="status-alert">
-                <strong>{{ __('There were some issues with your submission.') }}</strong>
-                <ul>
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
-
         @php
     $completionItems = [
         $user->name,
@@ -454,8 +447,8 @@
                     <label for="profile_photo">{{ __('Profile photo') }}</label>
                     <div class="photo-actions">
                         <input id="profile_photo" name="profile_photo" type="file" accept="image/*" hidden>
-                        <label class="camera-button" for="profile_photo" tabindex="0">{{ __('Choose File') }}</label>
-                        <button class="camera-button" id="openCamera" type="button">{{ __('Use camera') }}</button>
+                        <label class="camera-button choose-file-button" for="profile_photo" tabindex="0">{{ __('Choose File') }}</label>
+                        <button class="camera-button" id="openCamera" type="button">{{ __('Use Camera') }}</button>
                     </div>
                 </div>
             </div>
@@ -463,7 +456,7 @@
             <div class="form-fields">
                 <div class="field span-2">
                     <label for="name">{{ __('Name') }}</label>
-                    <input id="name" name="name" type="text" value="{{ old('name', $user->name) }}" required>
+                    <input id="name" name="name" type="text" value="{{ old('name', $user->name) }}" maxlength="40" required>
                 </div>
 
                 <div class="field span-2">
@@ -491,7 +484,7 @@
 
                 <div class="field">
                     <label for="city">{{ __('City') }}</label>
-                    <input id="city" name="city" type="text" value="{{ old('city', $user->city) }}">
+                    <input id="city" name="city" type="text" value="{{ old('city', $user->city) }}" maxlength="100">
                 </div>
 
                 <div class="field span-2">

@@ -9,7 +9,6 @@
 <a class="user-topbar-link" href="{{ url('/start_trail') }}">{{ __('Current Trail') }}</a>
 <a class="user-topbar-link" href="{{ route('passport.index') }}">{{ __('Food Passport') }}</a>
 @endsection
-
 @push('head-scripts')
 <script>
         const googleMapsErrorMessage = @json(__('Google Maps rejected this API key. Check that Maps JavaScript API is enabled, billing is active, and your key restrictions allow this site.'));
@@ -34,6 +33,12 @@
 
 @section('content')
 <div class="max-w-6xl mx-auto px-4 py-6 lg:px-8">
+        @if (request('trail') === 'empty')
+            <div class="mb-6 flex items-start gap-3 rounded-2xl border border-[#E5B8A5] bg-[#FFF2EA] px-5 py-4 text-sm text-[#7D2E1E] shadow-sm" role="alert">
+                <span class="mt-0.5 text-base" aria-hidden="true">!</span>
+                <p>{{ __('Your current trail is empty. Generate a trail and add at least one restaurant to continue.') }}</p>
+            </div>
+        @endif
         <header class="mb-8 rounded-[32px] bg-white p-6 shadow-[0_18px_40px_rgba(62,44,23,0.08)]">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
@@ -59,10 +64,10 @@
                         <p class="text-sm uppercase tracking-[0.35em] text-[#B8874A]">{{ __('Search your food trail') }}
                         </p>
                         <h2 class="mt-3 text-3xl font-semibold text-[#1F1B19]">
-                            {{ __('Start by searching your location') }}
+                            {{ __('Find restaurants and locations') }}
                         </h2>
                         <p class="mt-3 max-w-2xl text-sm leading-7 text-[#6B5B4B]">
-                            {{ __('Enter a city or heritage district, choose a category, and generate a curated food trail with restaurant recommendations.') }}
+                            {{ __('Search by restaurant name, location, or both, then choose a category to generate your food trail.') }}
                         </p>
                     </div>
                     <div class="flex gap-3"><button id="clearTrailSearchButton"
@@ -72,34 +77,31 @@
                     </div>
                 </div>
 
-                <div class="mt-6 grid gap-4 lg:grid-cols-[1.8fr_1fr]">
+                <form id="trailSearchForm" class="relative z-10 mt-6 grid gap-4 lg:grid-cols-[1.8fr_1fr]">
                     <div>
-                        <input id="locationInput" list="locations"
-                            class="w-full rounded-3xl border border-[#E6D8C4] bg-[#FFFBF6] px-4 py-4 text-sm text-[#1F1B19] shadow-sm outline-none"
-                            placeholder="{{ __('Search location') }}" />
+                        <input id="searchKeyword" type="search" list="locations"
+                            class="relative z-10 w-full cursor-text rounded-3xl border border-[#E6D8C4] bg-[#FFFBF6] px-4 py-4 text-sm text-[#1F1B19] shadow-sm outline-none"
+                            placeholder="{{ __('Search restaurant or location') }}" />
                         <datalist id="locations">
                             @foreach ($locations as $location)
                                 <option value="{{ $location }}"></option>
                             @endforeach
                         </datalist>
                     </div>
-                    <div class="grid gap-4 sm:grid-cols-2">
+                    <div>
                         <select id="categorySelect"
-                            class="rounded-3xl border border-[#E6D8C4] bg-[#FFFBF6] px-4 py-4 text-sm text-[#1F1B19] shadow-sm outline-none">
+                            class="relative z-10 w-full cursor-pointer rounded-3xl border border-[#E6D8C4] bg-[#FFFBF6] px-4 py-4 text-sm text-[#1F1B19] shadow-sm outline-none">
                             <option value="all">{{ __('All food categories') }}</option>
                             @foreach ($categories as $category)
                                 <option value="{{ $category }}">{{ $category }}</option>
                             @endforeach
                         </select>
-                        <input id="searchKeyword" type="search"
-                            class="rounded-3xl border border-[#E6D8C4] bg-[#FFFBF6] px-4 py-4 text-sm text-[#1F1B19] shadow-sm outline-none"
-                            placeholder="{{ __('Search restaurant') }}" />
                     </div>
-                </div>
+                </form>
 
                 <div class="mt-4 rounded-3xl border border-[#E6D8C4] bg-[#FBF6F1] p-4 text-sm text-[#6B5B4B]">
                     <p id="selectedTrailSummary">
-                        {{ __('Type a location and press Generate Trail to begin your food adventure.') }}
+                        {{ __('Search by restaurant name or location, then press Generate Trail to begin your food adventure.') }}
                     </p>
                 </div>
             </div>
@@ -125,6 +127,17 @@
                         </div>
                         <span
                             class="rounded-full bg-[#F7E4C1] px-3 py-1 text-sm font-semibold text-[#8A5A24]">{{ __('Recommended') }}</span>
+                    </div>
+                    <div id="continueTrailCard" class="mt-6 hidden rounded-[28px] border border-[#D7E8D0] bg-[#F5FCF5] p-5 shadow-sm">
+                        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <p class="text-sm uppercase tracking-[0.2em] text-[#4A6B31]">{{ __('Continue') }}</p>
+                                <h3 class="mt-2 text-lg font-semibold text-[#1F1B19]">{{ __('Continue food trail') }}</h3>
+                                <p class="mt-2 text-sm text-[#6B5B4E]">{{ __('You have stops left to visit in your current trail.') }}</p>
+                            </div>
+                            <button id="continueTrailButton"
+                                class="rounded-full bg-[#4A6B31] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#3C5928]">{{ __('Continue') }}</button>
+                        </div>
                     </div>
                     <div id="curatedTrailCards" class="mt-6 space-y-4"></div>
                 </div>
@@ -291,6 +304,7 @@
     'clearSavedTrails' => __('Clear all saved favourite trails?'),
     'mapNotConfigured' => __('Google Maps is not configured. Add GOOGLE_MAPS_API_KEY to your .env file and reload.'),
     'mapLoadFailed' => __('Google Maps could not be loaded.'),
+    'emptyCurrentTrail' => __('Your current trail is empty. Generate a trail and add at least one restaurant to continue.'),
 ]) }},
             locations: [
                 'Kuala Lumpur',
@@ -300,24 +314,24 @@
                 'Ipoh',
             ],
             categories: ['all', 'Street Food', 'Dessert', 'Seafood', 'Snacks'],
-            defaultFavorites: [ 
-                { 
-                id: 'fav-1', 
-                    title: @json(__('KL Heritage Walk')), 
-                    location: @json(__('Kuala Lumpur')), 
-                    description: @json(__('A classic route for local favorites and street food.')), 
-                    tags: [@json(__('Street Food')), @json(__('Local'))], 
-                    stops: 3 
-                }, 
-                { 
-                    id: 'fav-2', 
-                    title: @json(__('Penang Sweet Tour')), 
-                    location: @json(__('Penang')), 
-                    description: @json(__('A dessert-focused trail for local heritage sweets.')), 
-                    tags: [@json(__('Dessert')), @json(__('Heritage'))], 
-                    stops: 3 
-                }, 
-            ],  
+            defaultFavorites: [
+                {
+                    id: 'fav-1',
+                    title: @json(__('KL Heritage Walk')),
+                    location: @json(__('Kuala Lumpur')),
+                    description: @json(__('A classic route for local favorites and street food.')),
+                    tags: [@json(__('Street Food')), @json(__('Local'))],
+                    stops: 3,
+                },
+                {
+                    id: 'fav-2',
+                    title: @json(__('Penang Sweet Tour')),
+                    location: @json(__('Penang')),
+                    description: @json(__('A dessert-focused trail for local heritage sweets.')),
+                    tags: [@json(__('Dessert')), @json(__('Heritage'))],
+                    stops: 3,
+                },
+            ],
             curated: @json($curatedSuggestions),
             restaurants: @json($restaurants),
             favoritesKey: 'foodtrails-favorites',
@@ -325,5 +339,3 @@
         };
     </script>
 @endsection
-
-

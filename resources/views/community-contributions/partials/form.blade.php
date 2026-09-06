@@ -27,6 +27,10 @@
     $existingMedia = $contribution?->media ?? collect();
     $fieldValue = fn (string $name, mixed $fallback = null) => old($name, $contribution?->{$name} ?? $fallback);
     $submissionToken = old('submission_token', $contribution?->submission_token ?? $formToken ?? (string) \Illuminate\Support\Str::uuid());
+    $isWithdrawnResubmission = $contribution?->status === \App\Models\HeritageShopContribution::STATUS_DRAFT
+        && $contribution?->withdrawn_at !== null;
+    $maxSupportingMedia = $maxSupportingMedia ?? 6;
+    $existingMediaCount = $existingMedia->count();
     $isClosed = function (array $schedule): bool {
         $closed = filter_var($schedule['closed'] ?? false, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? false;
 
@@ -187,6 +191,75 @@
         display: none;
     }
 
+    .supporting-media-shell {
+        display: grid;
+        gap: 14px;
+    }
+
+    .media-count-panel {
+        display: grid;
+        gap: 5px;
+        padding: 12px 14px;
+        border: 1px solid var(--wm-border);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, .58);
+    }
+
+    .media-count-panel strong {
+        color: var(--wm-accent);
+    }
+
+    .media-count-panel p {
+        margin: 0;
+        color: var(--wm-muted);
+        font-size: .86rem;
+    }
+
+    .media-subheading {
+        margin: 0;
+        color: var(--wm-text);
+        font-size: .95rem;
+    }
+
+    .media-card.marked-for-removal {
+        border-color: rgba(180, 35, 24, .32);
+        background: rgba(180, 35, 24, .06);
+        opacity: .72;
+    }
+
+    .media-removal-status {
+        display: none;
+        margin: 0;
+        padding: 0 9px 9px;
+        color: var(--wm-danger);
+        font-size: .78rem;
+        font-weight: 800;
+    }
+
+    .media-card.marked-for-removal .media-removal-status {
+        display: block;
+    }
+
+    .new-media-card {
+        display: grid;
+        align-content: start;
+    }
+
+    .new-media-remove {
+        min-height: 40px;
+        border: 0;
+        border-top: 1px solid var(--wm-border);
+        background: rgba(180, 35, 24, .06);
+        color: var(--wm-danger);
+        font-weight: 800;
+        cursor: pointer;
+    }
+
+    .media-limit-error[hidden],
+    .new-media-title[hidden] {
+        display: none;
+    }
+
     @media (max-width: 760px) {
         .food-item-fields {
             grid-template-columns: 1fr;
@@ -240,7 +313,17 @@
             </div>
             <div class="field">
                 <label for="contact_number">{{ __('Contact number') }}</label>
-                <input id="contact_number" name="contact_number" value="{{ $fieldValue('contact_number') }}" placeholder="{{ __('Example: +60 3-1234 5678') }}">
+                <input
+                    id="contact_number"
+                    name="contact_number"
+                    type="tel"
+                    inputmode="tel"
+                    maxlength="30"
+                    pattern="(?:\+60|0)[0-9\s().-]{8,14}"
+                    value="{{ $fieldValue('contact_number') }}"
+                    placeholder="{{ __('Example: +60 3-1234 5678') }}"
+                    title="{{ __('Use a Malaysian number starting with +60 or 0.') }}"
+                >
                 @error('contact_number') <p class="field-error">{{ $message }}</p> @enderror
             </div>
         </div>
@@ -476,22 +559,41 @@
         <button type="button" id="add-food-item" class="link-button">+ {{ __('Add food item') }}</button>
     </section>
 
-    <section class="form-section">
+    <section
+        class="form-section supporting-media-shell"
+        data-supporting-media-panel
+        data-existing-media-count="{{ $existingMediaCount }}"
+        data-max-supporting-media="{{ $maxSupportingMedia }}"
+    >
         <h2 class="section-title">{{ __('Supporting media') }}</h2>
 
+        <div class="media-count-panel" aria-live="polite">
+            <strong id="media-slot-summary"></strong>
+            <p id="media-slot-detail"></p>
+        </div>
+
         @if ($existingMedia->isNotEmpty())
+            <h3 class="media-subheading">{{ __('Existing media (:count)', ['count' => $existingMediaCount]) }}</h3>
             <div class="media-grid" aria-label="{{ __('Existing media') }}">
                 @foreach ($existingMedia as $media)
-                    <div class="media-card">
+                    <div class="media-card" data-existing-media-card>
                         @if ($media->media_type === 'video')
                             <video controls preload="metadata"><source src="{{ $media->url }}"></video>
                         @else
                             <img src="{{ $media->url }}" alt="{{ __('Previously uploaded supporting media') }}">
                         @endif
                         <label class="remove-media">
-                            <input class="checkbox-input" type="checkbox" name="remove_media[]" value="{{ $media->id }}">
-                            {{ __('Remove this file') }}
+                            <input
+                                class="checkbox-input"
+                                type="checkbox"
+                                name="remove_media[]"
+                                value="{{ $media->id }}"
+                                data-remove-media
+                                @checked(in_array($media->id, array_map('intval', old('remove_media', [])), true))
+                            >
+                            <span data-remove-media-label>{{ __('Remove this file') }}</span>
                         </label>
+                        <p class="media-removal-status">{{ __('Marked for removal') }}</p>
                     </div>
                 @endforeach
             </div>
@@ -499,11 +601,13 @@
 
         <div class="field full">
             <label for="supporting_media">{{ __('Add images or videos') }}</label>
-            <input id="supporting_media" name="supporting_media[]" type="file" accept=".jpg,.jpeg,.png,.webp,.mp4,.mov,.avi" multiple>
+            <input id="supporting_media" name="supporting_media[]" type="file" accept=".jpg,.jpeg,.png,.webp,.mp4,.mov,.avi" multiple data-supporting-media-input>
             <p class="help-text">{{ __('Up to 6 files in total. JPG, JPEG, PNG, WEBP, MP4, MOV, or AVI; maximum 20 MB per file.') }}</p>
+            <p id="media-limit-error" class="field-error media-limit-error" hidden></p>
             @error('supporting_media') <p class="field-error">{{ $message }}</p> @enderror
             @error('supporting_media.*') <p class="field-error">{{ $message }}</p> @enderror
         </div>
+        <h3 id="new-media-title" class="media-subheading new-media-title" hidden>{{ __('New files selected') }}</h3>
         <div id="media-preview" class="media-grid" aria-live="polite"></div>
     </section>
 
@@ -512,7 +616,7 @@
             {{ $isEdit ? __('Save changes') : __('Save as draft') }}
         </button>
         <button class="button primary" type="submit" name="submission_action" value="submit">
-            {{ $contribution?->status === \App\Models\HeritageShopContribution::STATUS_REVISION_REQUIRED ? __('Resubmit revision') : __('Submit for review') }}
+            {{ $contribution?->status === \App\Models\HeritageShopContribution::STATUS_REVISION_REQUIRED || $isWithdrawnResubmission ? __('Resubmit for review') : __('Submit for review') }}
         </button>
         @if ($isEdit)
             <a class="button secondary" href="{{ $contribution->status === \App\Models\HeritageShopContribution::STATUS_DRAFT ? route('community-contribution.drafts') : route('community-contribution.contributions.show', $contribution) }}">Cancel</a>
@@ -566,6 +670,9 @@
     const newFilesSelectedMessage = @json(
         __(':count new file(s) selected. Files are uploaded only when you save or submit the form.')
     );
+
+    const mediaFilesSelectedMessage = @json(__(':count of :total files selected.'));
+const canAddMoreFilesMessage = @json(__('You can add up to :count more :files.'));
 
     (() => {
         const shell = document.getElementById('food-items-shell');
@@ -655,10 +762,156 @@
             bindRemove(row);
         });
 
+        const mediaPanel = document.querySelector('[data-supporting-media-panel]');
         const input = document.getElementById('supporting_media');
         const preview = document.getElementById('media-preview');
+        const mediaSlotSummary = document.getElementById('media-slot-summary');
+        const mediaSlotDetail = document.getElementById('media-slot-detail');
+        const mediaLimitError = document.getElementById('media-limit-error');
+        const newMediaTitle = document.getElementById('new-media-title');
+        const removeMediaInputs = [...document.querySelectorAll('[data-remove-media]')];
         const form = document.querySelector('form.form-grid');
         const hourRows = document.querySelectorAll('.soft-card-row');
+        const maxSupportingMedia = Number(mediaPanel?.dataset.maxSupportingMedia || 6);
+        const existingMediaCount = Number(mediaPanel?.dataset.existingMediaCount || 0);
+        let selectedSupportingFiles = [];
+
+        const pluralizeFile = (count) => count === 1 ? 'file' : 'files';
+        const retainedExistingMediaCount = () => existingMediaCount - removeMediaInputs.filter((checkbox) => checkbox.checked).length;
+        const usedSupportingMediaCount = () => retainedExistingMediaCount() + selectedSupportingFiles.length;
+        const availableNewMediaSlots = () => Math.max(0, maxSupportingMedia - retainedExistingMediaCount());
+        const remainingSupportingMediaSlots = () => Math.max(0, maxSupportingMedia - usedSupportingMediaCount());
+
+        const setMediaError = (message = '') => {
+            if (! mediaLimitError) {
+                return;
+            }
+
+            mediaLimitError.textContent = message;
+            mediaLimitError.hidden = message === '';
+        };
+
+        const syncSupportingMediaInput = () => {
+            if (! input) {
+                return true;
+            }
+
+            if (typeof DataTransfer === 'undefined') {
+                input.value = '';
+                selectedSupportingFiles = [];
+
+                return false;
+            }
+
+            const transfer = new DataTransfer();
+            selectedSupportingFiles.forEach((file) => transfer.items.add(file));
+            input.files = transfer.files;
+
+            return true;
+        };
+
+        const updateExistingMediaCards = () => {
+            removeMediaInputs.forEach((checkbox) => {
+                const card = checkbox.closest('[data-existing-media-card]');
+                const label = card?.querySelector('[data-remove-media-label]');
+
+                card?.classList.toggle('marked-for-removal', checkbox.checked);
+                if (label) {
+                    label.textContent = checkbox.checked
+                        ? @json(__('Undo removal'))
+                        : @json(__('Remove this file'));
+                }
+            });
+        };
+
+        const updateSupportingMediaCounts = () => {
+            const used = usedSupportingMediaCount();
+            const remaining = remainingSupportingMediaSlots();
+
+            if (mediaSlotSummary) {
+                mediaSlotSummary.textContent = mediaFilesSelectedMessage
+                    .replace(':count', used)
+                    .replace(':total', maxSupportingMedia);
+            }
+
+            if (mediaSlotDetail) {
+                mediaSlotDetail.textContent = remaining === 0
+                    ? @json(__('Maximum of 6 supporting media files reached.'))
+                    : canAddMoreFilesMessage
+                        .replace(':count', remaining)
+                        .replace(':files', pluralizeFile(remaining));
+            }
+
+            input?.toggleAttribute('data-maximum-reached', remaining === 0);
+        };
+
+        const renderSupportingMediaPreview = () => {
+            preview?.replaceChildren();
+            if (newMediaTitle) {
+                newMediaTitle.hidden = selectedSupportingFiles.length === 0;
+            }
+
+            selectedSupportingFiles.forEach((file, index) => {
+                const card = document.createElement('div');
+                card.className = 'media-card new-media-card';
+                const url = URL.createObjectURL(file);
+
+                if (file.type.startsWith('image/')) {
+                    const image = document.createElement('img');
+                    image.src = url;
+                    image.alt = file.name;
+                    image.onload = () => URL.revokeObjectURL(url);
+                    card.appendChild(image);
+                } else {
+                    const video = document.createElement('video');
+                    video.src = url;
+                    video.controls = true;
+                    video.onloadedmetadata = () => URL.revokeObjectURL(url);
+                    card.appendChild(video);
+                }
+
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'new-media-remove';
+                button.textContent = @json(__('Remove new file'));
+                button.addEventListener('click', () => {
+                    selectedSupportingFiles.splice(index, 1);
+                    const synced = syncSupportingMediaInput();
+                    setMediaError(synced ? '' : @json(__('Your browser cleared the selected files. Please choose them again.')));
+                    renderSupportingMediaPreview();
+                    updateSupportingMediaCounts();
+                });
+                card.appendChild(button);
+                preview?.appendChild(card);
+            });
+
+            if (selectedSupportingFiles.length) {
+                const note = document.createElement('p');
+                note.className = 'preview-note';
+                note.textContent = newFilesSelectedMessage.replace(
+                    ':count',
+                    selectedSupportingFiles.length
+                );
+                preview?.appendChild(note);
+            }
+        };
+
+        removeMediaInputs.forEach((checkbox) => {
+            checkbox.addEventListener('change', () => {
+                if (! checkbox.checked && usedSupportingMediaCount() > maxSupportingMedia) {
+                    checkbox.checked = true;
+                    setMediaError(@json(__('Remove a newly selected file before keeping this saved file.')));
+                } else {
+                    setMediaError('');
+                }
+
+                updateExistingMediaCards();
+                updateSupportingMediaCounts();
+            });
+        });
+
+        updateExistingMediaCards();
+        updateSupportingMediaCounts();
 
         const reindexHourRow = (row) => {
             const day = row.dataset.hoursDay;
@@ -749,17 +1002,17 @@
                 const newPeriod = document.createElement('div');
                 newPeriod.className = 'hours-period-row';
                 newPeriod.dataset.hoursPeriod = '';
-                newPeriod.innerHTML = `
-                    <label>
-                        <span>Open</span>
-                        <input name="operating_hours[${day}][periods][${rowIndex}][open]" type="time" value="">
-                    </label>
-                    <label>
-                        <span>Close</span>
-                        <input name="operating_hours[${day}][periods][${rowIndex}][close]" type="time" value="">
-                    </label>
-                    <button class="mini-button remove-hours-period" type="button">Remove</button>
-                `;
+                newPeriod.innerHTML = ` 
+                    <label> 
+                        <span>${@json(__('Open'))}</span> 
+                        <input name="operating_hours[${day}][periods][${rowIndex}][open]" type="time" value=""> 
+                    </label> 
+                    <label> 
+                        <span>${@json(__('Close'))}</span> 
+                        <input name="operating_hours[${day}][periods][${rowIndex}][close]" type="time" value=""> 
+                    </label> 
+                    <button class="mini-button remove-hours-period" type="button">${@json(__('Remove'))}</button> 
+             `;
                 periods.appendChild(newPeriod);
                 const removeButton = newPeriod.querySelector('.remove-hours-period');
                 removeButton?.addEventListener('click', () => {
@@ -830,35 +1083,29 @@
         });
 
         input?.addEventListener('change', () => {
-            preview.replaceChildren();
-            [...input.files].forEach((file) => {
-                const card = document.createElement('div');
-                card.className = 'media-card';
-                const url = URL.createObjectURL(file);
-                if (file.type.startsWith('image/')) {
-                    const image = document.createElement('img');
-                    image.src = url;
-                    image.alt = file.name;
-                    image.onload = () => URL.revokeObjectURL(url);
-                    card.appendChild(image);
-                } else {
-                    const video = document.createElement('video');
-                    video.src = url;
-                    video.controls = true;
-                    video.onloadedmetadata = () => URL.revokeObjectURL(url);
-                    card.appendChild(video);
-                }
-                preview.appendChild(card);
-            });
-            if (input.files.length) {
-                const note = document.createElement('p');
-                note.className = 'preview-note';
-                note.textContent = newFilesSelectedMessage.replace(
-                    ':count',
-                    input.files.length
-                );
-                preview.appendChild(note);
+            const incomingFiles = [...input.files];
+            const availableSlots = availableNewMediaSlots();
+
+            if (incomingFiles.length > availableSlots) {
+                const keptExisting = retainedExistingMediaCount();
+                const savedContext = keptExisting > 0
+                    ? `You already have ${keptExisting} saved ${pluralizeFile(keptExisting)} selected to keep. `
+                    : '';
+
+                setMediaError(`${savedContext}You can add up to ${availableSlots} more ${pluralizeFile(availableSlots)}.`);
+                syncSupportingMediaInput();
+                renderSupportingMediaPreview();
+                updateSupportingMediaCounts();
+                return;
             }
+
+            selectedSupportingFiles = incomingFiles;
+            setMediaError('');
+            if (typeof DataTransfer !== 'undefined') {
+                syncSupportingMediaInput();
+            }
+            renderSupportingMediaPreview();
+            updateSupportingMediaCounts();
         });
     })();
 </script>

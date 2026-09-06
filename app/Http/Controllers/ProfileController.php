@@ -37,13 +37,17 @@ class ProfileController extends Controller
         $user = auth()->user();
 
         $data = $request->validate([
-            'name' => 'required|string|max:255',
+            'name' => 'required|string|max:40',
             'email' => 'required|email|max:255|unique:users,email,' . $user->id,
             'phone' => ['nullable', 'regex:/^[0-9]{1,11}$/'],
-            'city' => 'nullable|string|max:80',
+            'city' => 'nullable|string|max:100',
             'bio' => 'nullable|string|max:700',
-            'profile_photo' => 'nullable|image|max:2048',
+            'profile_photo' => 'nullable|image|max:3072',
             'language' => 'nullable|in:en,ms,zh',
+        ], [
+            'name.max' => 'Name cannot exceed 40 characters.',
+            'city.max' => 'City cannot exceed 100 characters.',
+            'profile_photo.max' => 'Profile photo size cannot exceed 3 MB',
         ]);
 
         $data['language'] = $data['language'] ?? $user->language ?? 'en';
@@ -72,7 +76,7 @@ class ProfileController extends Controller
 
 
         if ($request->boolean('language_only')) {
-            return redirect()->route('home');
+            return redirect()->back();
         }
 
         return redirect()

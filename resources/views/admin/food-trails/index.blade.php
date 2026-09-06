@@ -4,6 +4,13 @@
 @section('page-title', 'Food Trails')
 
 @section('content')
+    <div class="back-nav">
+        <a href="{{ route('admin.dashboard') }}" class="back-btn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            Back to Dashboard
+        </a>
+    </div>
+
     <div class="page-header">
         <div><p class="eyebrow">User recommendations</p><h1>Food trail suggestions</h1><p>Create recommendations that users can try from the Food Trails page.</p></div>
         <a class="button primary" href="{{ route('admin.food-trails.create') }}">Add suggestion</a>

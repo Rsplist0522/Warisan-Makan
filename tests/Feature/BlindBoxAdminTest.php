@@ -79,9 +79,9 @@ class BlindBoxAdminTest extends TestCase
         $this->actingAs($this->admin)
             ->put(route('admin.blind-box-items.update', $shopId), [
                 'category' => 'Desserts',
-                'active' => '1',
             ])
-            ->assertRedirect(route('admin.blind-box-items.edit', $shopId));
+            ->assertRedirect(route('admin.blind-box-items.index'))
+            ->assertSessionHas('status', 'Blind Box shop settings saved.');
     }
 
     public function test_admin_can_open_a_shop_edit_page(): void
@@ -94,6 +94,7 @@ class BlindBoxAdminTest extends TestCase
             ->assertOk()
             ->assertSee('Recommendation settings')
             ->assertSee('Shop information is supplied by the source catalog')
+            ->assertDontSee('Include in Blind Box reveals')
             ->assertSee($shopName);
     }
 

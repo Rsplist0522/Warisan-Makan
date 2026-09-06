@@ -128,6 +128,17 @@
                         <span
                             class="rounded-full bg-[#F7E4C1] px-3 py-1 text-sm font-semibold text-[#8A5A24]">{{ __('Recommended') }}</span>
                     </div>
+                    <div id="continueTrailCard" class="mt-6 hidden rounded-[28px] border border-[#D7E8D0] bg-[#F5FCF5] p-5 shadow-sm">
+                        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <p class="text-sm uppercase tracking-[0.2em] text-[#4A6B31]">{{ __('Continue') }}</p>
+                                <h3 class="mt-2 text-lg font-semibold text-[#1F1B19]">{{ __('Continue food trail') }}</h3>
+                                <p class="mt-2 text-sm text-[#6B5B4E]">{{ __('You have stops left to visit in your current trail.') }}</p>
+                            </div>
+                            <button id="continueTrailButton"
+                                class="rounded-full bg-[#4A6B31] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#3C5928]">{{ __('Continue') }}</button>
+                        </div>
+                    </div>
                     <div id="curatedTrailCards" class="mt-6 space-y-4"></div>
                 </div>
             </div>

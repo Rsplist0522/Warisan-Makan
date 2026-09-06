@@ -200,10 +200,10 @@
         }
         .user-nav-child .user-nav-icon svg { width: 13px; height: 13px; }
         .user-nav-child.active {
-            color: #3b1b16;
-            background: var(--wm-highlight);
+            color: #fffaf4;
+            background: var(--wm-sidebar-soft);
         }
-        .user-nav-child.active .user-nav-icon { border-color: rgba(59, 27, 22, .18); background: rgba(59, 27, 22, .12); color: #3b1b16; }
+        .user-nav-child.active .user-nav-icon { border-color: rgba(200, 148, 50, .42); background: var(--wm-highlight); color: #3b1b16; }
 
         .user-sidebar-footer {
             margin-top: auto;
@@ -638,33 +638,6 @@
         sync();
     })();
 
-    (() => {
-        const hashLinks = document.querySelectorAll('.user-nav-item.user-nav-child[data-hash-target]');
-        if (!hashLinks.length) return;
-
-        const updateHashActiveState = () => {
-            const currentHash = window.location.hash.replace('#', '');
-            let matched = false;
-
-            hashLinks.forEach(link => {
-                const target = link.dataset.hashTarget;
-                const isActive = !currentHash && target === 'check-in'
-                    ? true
-                    : target === currentHash;
-
-                link.classList.toggle('active', isActive);
-                if (isActive) matched = true;
-            });
-
-            if (!matched && !currentHash) {
-                const defaultLink = document.querySelector('.user-nav-item.user-nav-child[data-hash-target="check-in"]');
-                defaultLink?.classList.add('active');
-            }
-        };
-
-        updateHashActiveState();
-        window.addEventListener('hashchange', updateHashActiveState, { passive: true });
-    })();
     </script>
 
     @include('partials.chatbox')

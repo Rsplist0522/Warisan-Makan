@@ -28,7 +28,7 @@
     <section class="food-catalog-summary" aria-label="Food catalog summary">
         <div><strong>{{ $foodItems->count() }}</strong><span>Total records</span></div>
         <div><strong>{{ $activeCount }}</strong><span>Visible to visitors</span></div>
-        <div><strong>{{ $hiddenCount }}</strong><span>Hidden / archived</span></div>
+        <div><strong>{{ $hiddenCount }}</strong><span>Hidden</span></div>
         <div class="food-catalog-note"><strong>Why this matters</strong><span>UNESCO describes food heritage as living practices transmitted across generations—not only a list of dishes. Add the story behind every signature item.</span></div>
     </section>
 
@@ -62,7 +62,7 @@
             <div>
                 <p class="eyebrow">Manage every dish</p>
                 <h2>Recorded food items</h2>
-                <p class="muted">Edit, hide, restore, or archive an item without changing the shop’s main profile.</p>
+                <p class="muted">Edit, hide, restore, or delete an item without changing the shop’s main profile.</p>
             </div>
         </div>
         @if ($foodItems->isEmpty())
@@ -82,7 +82,7 @@
                             </div>
                             <div class="food-item-admin-actions">
                                 <form method="POST" action="{{ route('admin.heritage-shops.food-items.toggle', [$shop, $item]) }}">@csrf @method('PATCH')<button class="button secondary small" type="submit">{{ $item->is_active ? 'Hide' : 'Show' }}</button></form>
-                                <form method="POST" action="{{ route('admin.heritage-shops.food-items.destroy', [$shop, $item]) }}" onsubmit="return confirm('Archive this food item from the catalog?');">@csrf @method('DELETE')<button class="button danger small" type="submit">Archive</button></form>
+                                <form method="POST" action="{{ route('admin.heritage-shops.food-items.destroy', [$shop, $item]) }}" onsubmit="return confirm('Delete this food item from the catalog? This action cannot be undone.');">@csrf @method('DELETE')<button class="button danger small" type="submit">Delete</button></form>
                             </div>
                         </div>
                         <form method="POST" action="{{ route('admin.heritage-shops.food-items.update', [$shop, $item]) }}" enctype="multipart/form-data">

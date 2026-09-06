@@ -563,7 +563,7 @@
                                         </div>
                                         <div class="card-support">
                                             @if ($shop->activeFoodItems->isNotEmpty())
-                                                <span class="food-coverage">{{ $shop->activeFoodItems->count() }} verified food item{{ $shop->activeFoodItems->count() === 1 ? '' : 's' }}</span>
+                                                <span class="food-coverage">{{ $shop->activeFoodItems->count() }} {{ __('verified food item') }}{{ $shop->activeFoodItems->count() === 1 ? '' : 's' }}</span>
                                             @else
                                                 <span class="food-coverage empty">{{ __('Menu being documented') }}</span>
                                             @endif

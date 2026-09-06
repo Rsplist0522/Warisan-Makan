@@ -389,17 +389,6 @@
             </div>
         </header>
 
-        @if ($errors->any())
-            <div class="status-alert">
-                <strong>{{ __('There were some issues with your submission.') }}</strong>
-                <ul>
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
-
         @php
     $completionItems = [
         $user->name,
@@ -467,7 +456,7 @@
             <div class="form-fields">
                 <div class="field span-2">
                     <label for="name">{{ __('Name') }}</label>
-                    <input id="name" name="name" type="text" value="{{ old('name', $user->name) }}" required>
+                    <input id="name" name="name" type="text" value="{{ old('name', $user->name) }}" maxlength="40" required>
                 </div>
 
                 <div class="field span-2">
@@ -495,7 +484,7 @@
 
                 <div class="field">
                     <label for="city">{{ __('City') }}</label>
-                    <input id="city" name="city" type="text" value="{{ old('city', $user->city) }}">
+                    <input id="city" name="city" type="text" value="{{ old('city', $user->city) }}" maxlength="100">
                 </div>
 
                 <div class="field span-2">

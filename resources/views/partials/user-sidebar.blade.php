@@ -117,6 +117,10 @@
             <span class="user-nav-icon" aria-hidden="true">@include('partials.module-icon', ['icon' => 'box'])</span>
             <span class="user-nav-text">{{ __('Blind Box') }}</span>
         </a>
+        <a class="user-nav-item {{ request()->routeIs('blind-box.favourites') ? 'active' : '' }}" data-label="{{ __('Blind Box Favourites') }}" title="{{ __('Blind Box Favourites') }}" href="{{ route('blind-box.favourites') }}">
+            <span class="user-nav-icon" aria-hidden="true">&#9825;</span>
+            <span class="user-nav-text">{{ __('My Favourites') }}</span>
+        </a>
     </nav>
 
     @auth

@@ -40,6 +40,7 @@ class BlindBoxDraw extends Model
     public function toDrawArray(): array
     {
         return [
+            'draw_id' => $this->id,
             'period' => $this->period,
             'name' => $this->shop_name,
             'shop_name' => $this->shop_name,

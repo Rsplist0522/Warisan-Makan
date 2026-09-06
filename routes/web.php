@@ -188,6 +188,9 @@ Route::prefix('admin')
 // Blind Box routes
 Route::get('/blind-box', [BlindBoxController::class, 'index'])->middleware('auth')->name('blind-box.index');
 Route::post('/blind-box/draw', [BlindBoxController::class, 'draw'])->middleware('auth')->name('blind-box.draw');
+Route::get('/blind-box/favourites', [BlindBoxController::class, 'favourites'])->middleware('auth')->name('blind-box.favourites');
+Route::post('/blind-box/favourites', [BlindBoxController::class, 'saveFavourite'])->middleware('auth')->name('blind-box.favourites.store');
+Route::delete('/blind-box/favourites/{favourite}', [BlindBoxController::class, 'removeFavourite'])->middleware('auth')->name('blind-box.favourites.destroy');
 Route::post('/chat', [ChatController::class, 'respond'])->name('chat.respond');
 
 // Module-only shop check-in page (public for development)

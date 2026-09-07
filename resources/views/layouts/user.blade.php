@@ -636,6 +636,7 @@
     </div>
 
     @include('partials.login-required-modal')
+    @include('partials.session-expired-modal', ['loginUrl' => route('login')])
 
     <script>
     (() => {

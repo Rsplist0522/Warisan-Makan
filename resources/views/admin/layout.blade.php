@@ -284,6 +284,7 @@
             </main>
         </section>
     </div>
+    @include('partials.session-expired-modal', ['loginUrl' => route('admin.login')])
     <script>
         (() => {
             const shell = document.querySelector('.shell');

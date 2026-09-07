@@ -23,6 +23,7 @@ Route::view('/login', 'auth.login')->middleware('guest')->name('login');
 Route::get('/auth/google', [AuthController::class, 'redirect'])->middleware('guest')->name('auth.google');
 Route::get('/auth/google/callback', [AuthController::class, 'callback'])->middleware('guest');
 Route::get('/guest', function (\Illuminate\Http\Request $request) {
+    $request->session()->regenerate();
     $request->session()->put('guest_mode', true);
 
     return redirect()->route('user.dashboard');
@@ -74,8 +75,8 @@ $userDashboard = function (\Illuminate\Http\Request $request) {
     ]);
 };
 
-Route::get('/', $userDashboard)->name('home');
-Route::get('/dashboard', $userDashboard)->name('user.dashboard');
+Route::get('/', $userDashboard)->middleware('system.access')->name('home');
+Route::get('/dashboard', $userDashboard)->middleware('system.access')->name('user.dashboard');
 
 Route::middleware(['auth', 'active_user'])->group(function (): void {
     Route::get('/profile', [App\Http\Controllers\ProfileController::class, 'show'])->name('profile.show');
@@ -214,31 +215,39 @@ Route::middleware('auth')->group(function () {
 
 
 // Food trails page
-Route::get('/foodtrails', [FoodTrailController::class, 'index'])->name('foodtrails.index');
+Route::get('/foodtrails', [FoodTrailController::class, 'index'])->middleware('auth')->name('foodtrails.index');
 
 // Start trail page
 Route::get('/start_trail', function () {
     return view('start_trail');
 })->middleware('auth');
 
-Route::get('/heritage-shops', [HeritageShopController::class, 'index'])->name('heritage-shops.index');
+Route::get('/heritage-shops', [HeritageShopController::class, 'index'])->middleware('system.access')->name('heritage-shops.index');
 Route::get('/heritage-shops/{heritageShop}/menu', [HeritageShopController::class, 'menu'])
     ->whereNumber('heritageShop')
+    ->middleware('auth')
     ->name('heritage-shops.menu');
 Route::get('/heritage-shops/{heritageShop}/images/{image}', [HeritageShopController::class, 'image'])
     ->whereNumber('heritageShop')
     ->whereNumber('image')
+    ->middleware('auth')
     ->name('heritage-shops.images.show');
 Route::get('/heritage-shops/{heritageShop}/food-items/{foodItem}', [HeritageShopController::class, 'foodItem'])
     ->whereNumber('heritageShop')
     ->whereNumber('foodItem')
+    ->middleware('auth')
     ->name('heritage-shops.food-items.show');
 Route::get('/heritage-shops/{heritageShop}/food-items/{foodItem}/image', [HeritageShopController::class, 'foodImage'])
     ->whereNumber('heritageShop')
     ->whereNumber('foodItem')
+    ->middleware('auth')
     ->name('heritage-shops.food-images.show');
 Route::post('/heritage-shops/{heritageShop}/ai-guide', [HeritageShopController::class, 'aiGuide'])
     ->middleware('throttle:30,1')
+    ->middleware('auth')
     ->whereNumber('heritageShop')
     ->name('heritage-shops.ai-guide');
-Route::get('/heritage-shops/{id}', [HeritageShopController::class, 'show'])->whereNumber('id')->name('heritage-shops.show');
+Route::get('/heritage-shops/{id}', [HeritageShopController::class, 'show'])
+    ->whereNumber('id')
+    ->middleware('auth')
+    ->name('heritage-shops.show');

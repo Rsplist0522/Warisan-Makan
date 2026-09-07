@@ -42,6 +42,7 @@ class AuthController extends Controller
             ]);
         }
 
+        $request->session()->forget('guest_mode');
         $request->session()->regenerate();
 
         $user = $request->user();
@@ -104,6 +105,7 @@ class AuthController extends Controller
         }
 
         Auth::login($user);
+        request()->session()->forget('guest_mode');
         request()->session()->regenerate();
 
         if ($user->isAdmin()) {
@@ -118,6 +120,7 @@ class AuthController extends Controller
         $wasAdmin = $request->user()?->isAdmin();
 
         Auth::logout();
+        $request->session()->forget('guest_mode');
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 

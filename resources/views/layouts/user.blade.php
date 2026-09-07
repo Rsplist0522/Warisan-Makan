@@ -635,6 +635,8 @@
         </section>
     </div>
 
+    @include('partials.login-required-modal')
+
     <script>
     (() => {
         const shell = document.querySelector('[data-user-nav]');

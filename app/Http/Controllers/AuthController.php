@@ -42,6 +42,7 @@ class AuthController extends Controller
             ]);
         }
 
+        $request->session()->forget(['guest_mode', 'admin_last_activity']);
         $request->session()->regenerate();
 
         $user = $request->user();
@@ -54,6 +55,14 @@ class AuthController extends Controller
             throw ValidationException::withMessages([
                 'username' => 'This account does not have administrator access.',
             ]);
+        }
+
+        if ($request->boolean('remember')) {
+            $request->session()->put('admin_remember', true);
+            $request->session()->forget('admin_last_activity');
+        } else {
+            $request->session()->forget('admin_remember');
+            $request->session()->put('admin_last_activity', now()->timestamp);
         }
 
         if ($user->isBlocked()) {
@@ -104,7 +113,15 @@ class AuthController extends Controller
         }
 
         Auth::login($user);
+        request()->session()->forget('guest_mode');
         request()->session()->regenerate();
+        if ($user->isAdmin()) {
+            request()->session()->forget('admin_last_activity');
+            request()->session()->put('admin_remember', false);
+            request()->session()->put('admin_last_activity', now()->timestamp);
+        } else {
+            request()->session()->put('user_last_activity', now()->timestamp);
+        }
 
         if ($user->isAdmin()) {
             return redirect()->intended(route('admin.dashboard'));
@@ -118,6 +135,7 @@ class AuthController extends Controller
         $wasAdmin = $request->user()?->isAdmin();
 
         Auth::logout();
+        $request->session()->forget(['guest_mode', 'user_last_activity', 'admin_last_activity', 'admin_remember']);
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 

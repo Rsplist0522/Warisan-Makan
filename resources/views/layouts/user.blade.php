@@ -635,6 +635,10 @@
         </section>
     </div>
 
+    @include('partials.login-required-modal')
+    @include('partials.session-expired-modal', ['sessionExpiredLoginUrl' => route('login')])
+    @include('partials.session-activity-heartbeat')
+
     <script>
     (() => {
         const shell = document.querySelector('[data-user-nav]');

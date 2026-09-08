@@ -23,6 +23,7 @@ Route::view('/login', 'auth.login')->middleware('guest')->name('login');
 Route::get('/auth/google', [AuthController::class, 'redirect'])->middleware('guest')->name('auth.google');
 Route::get('/auth/google/callback', [AuthController::class, 'callback'])->middleware('guest');
 Route::get('/guest', function (\Illuminate\Http\Request $request) {
+    $request->session()->regenerate();
     $request->session()->put('guest_mode', true);
 
     return redirect()->route('user.dashboard');
@@ -33,6 +34,10 @@ Route::post('/admin-login', [AuthController::class, 'adminLogin'])
     ->middleware('throttle:6,1')
     ->name('admin.login.submit');
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
+
+Route::post('/session/activity', function () {
+    return response()->noContent();
+})->middleware(['auth', 'user.inactivity'])->name('session.activity');
 
 Route::get('/brand-logo', function () {
     $branding = SiteBranding::current();
@@ -74,10 +79,10 @@ $userDashboard = function (\Illuminate\Http\Request $request) {
     ]);
 };
 
-Route::get('/', $userDashboard)->name('home');
-Route::get('/dashboard', $userDashboard)->name('user.dashboard');
+Route::get('/', $userDashboard)->middleware(['system.access', 'user.inactivity'])->name('home');
+Route::get('/dashboard', $userDashboard)->middleware(['system.access', 'user.inactivity'])->name('user.dashboard');
 
-Route::middleware(['auth', 'active_user'])->group(function (): void {
+Route::middleware(['auth', 'active_user', 'user.inactivity'])->group(function (): void {
     Route::get('/profile', [App\Http\Controllers\ProfileController::class, 'show'])->name('profile.show');
     Route::get('/profile/edit', [App\Http\Controllers\ProfileController::class, 'edit'])->name('profile.edit');
     Route::post('/profile', [App\Http\Controllers\ProfileController::class, 'update'])->name('profile.update');
@@ -134,7 +139,7 @@ Route::middleware(['auth', 'active_user'])->group(function (): void {
 
 Route::prefix('admin')
     ->name('admin.')
-    ->middleware('admin')
+    ->middleware(['admin', 'user.inactivity'])
     ->group(function () {
         Route::view('/', 'admin.dashboard')->name('dashboard');
 
@@ -186,30 +191,30 @@ Route::prefix('admin')
     });
 
 // Blind Box routes
-Route::get('/blind-box', [BlindBoxController::class, 'index'])->middleware('auth')->name('blind-box.index');
-Route::post('/blind-box/draw', [BlindBoxController::class, 'draw'])->middleware('auth')->name('blind-box.draw');
-Route::get('/blind-box/favourites', [BlindBoxController::class, 'favourites'])->middleware('auth')->name('blind-box.favourites');
-Route::post('/blind-box/favourites', [BlindBoxController::class, 'saveFavourite'])->middleware('auth')->name('blind-box.favourites.store');
-Route::delete('/blind-box/favourites/{favourite}', [BlindBoxController::class, 'removeFavourite'])->middleware('auth')->name('blind-box.favourites.destroy');
+Route::get('/blind-box', [BlindBoxController::class, 'index'])->middleware(['auth', 'user.inactivity'])->name('blind-box.index');
+Route::post('/blind-box/draw', [BlindBoxController::class, 'draw'])->middleware(['auth', 'user.inactivity'])->name('blind-box.draw');
+Route::get('/blind-box/favourites', [BlindBoxController::class, 'favourites'])->middleware(['auth', 'user.inactivity'])->name('blind-box.favourites');
+Route::post('/blind-box/favourites', [BlindBoxController::class, 'saveFavourite'])->middleware(['auth', 'user.inactivity'])->name('blind-box.favourites.store');
+Route::delete('/blind-box/favourites/{favourite}', [BlindBoxController::class, 'removeFavourite'])->middleware(['auth', 'user.inactivity'])->name('blind-box.favourites.destroy');
 Route::post('/chat', [ChatController::class, 'respond'])->name('chat.respond');
 
 // Module-only shop check-in page (public for development)
-Route::get('/foodPassport/shop/{id}', [PassportController::class, 'showShop'])->middleware('auth')
+Route::get('/foodPassport/shop/{id}', [PassportController::class, 'showShop'])->middleware(['auth', 'user.inactivity'])
     ->name('passport.shop');
 
 // Food Passport 
 // Public Food Passport page (no login required for viewing)
-Route::get('/foodPassport', [PassportController::class, 'index'])->middleware('auth')
+Route::get('/foodPassport', [PassportController::class, 'index'])->middleware(['auth', 'user.inactivity'])
     ->name('passport.index');
-Route::get('/foodPassport/history', [PassportController::class, 'history'])->middleware('auth')
+Route::get('/foodPassport/history', [PassportController::class, 'history'])->middleware(['auth', 'user.inactivity'])
     ->name('passport.history');
-Route::get('/foodPassport/statistics', [PassportController::class, 'statistics'])->middleware('auth')
+Route::get('/foodPassport/statistics', [PassportController::class, 'statistics'])->middleware(['auth', 'user.inactivity'])
     ->name('passport.statistics');
-Route::get('/foodPassport/leaderboard', [PassportController::class, 'leaderboard'])->middleware('auth')
+Route::get('/foodPassport/leaderboard', [PassportController::class, 'leaderboard'])->middleware(['auth', 'user.inactivity'])
     ->name('passport.leaderboard');
 
 // Protected endpoints for authenticated users
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'user.inactivity'])->group(function () {
 
     Route::post('/passport/check-in', [PassportController::class, 'checkIn'])
         ->name('passport.checkin');
@@ -217,31 +222,41 @@ Route::middleware('auth')->group(function () {
 
 
 // Food trails page
-Route::get('/foodtrails', [FoodTrailController::class, 'index'])->name('foodtrails.index');
+Route::get('/foodtrails', [FoodTrailController::class, 'index'])->middleware(['auth', 'user.inactivity'])->name('foodtrails.index');
 
 // Start trail page
 Route::get('/start_trail', function () {
     return view('start_trail');
-})->middleware('auth');
+})->middleware(['auth', 'user.inactivity']);
 
-Route::get('/heritage-shops', [HeritageShopController::class, 'index'])->name('heritage-shops.index');
+Route::get('/heritage-shops', [HeritageShopController::class, 'index'])
+    ->middleware(['system.access', 'user.inactivity'])
+    ->name('heritage-shops.index');
 Route::get('/heritage-shops/{heritageShop}/menu', [HeritageShopController::class, 'menu'])
     ->whereNumber('heritageShop')
+    ->middleware(['auth', 'user.inactivity'])
     ->name('heritage-shops.menu');
 Route::get('/heritage-shops/{heritageShop}/images/{image}', [HeritageShopController::class, 'image'])
     ->whereNumber('heritageShop')
     ->whereNumber('image')
+    ->middleware(['auth', 'user.inactivity'])
     ->name('heritage-shops.images.show');
 Route::get('/heritage-shops/{heritageShop}/food-items/{foodItem}', [HeritageShopController::class, 'foodItem'])
     ->whereNumber('heritageShop')
     ->whereNumber('foodItem')
+    ->middleware(['auth', 'user.inactivity'])
     ->name('heritage-shops.food-items.show');
 Route::get('/heritage-shops/{heritageShop}/food-items/{foodItem}/image', [HeritageShopController::class, 'foodImage'])
     ->whereNumber('heritageShop')
     ->whereNumber('foodItem')
+    ->middleware(['auth', 'user.inactivity'])
     ->name('heritage-shops.food-images.show');
 Route::post('/heritage-shops/{heritageShop}/ai-guide', [HeritageShopController::class, 'aiGuide'])
     ->middleware('throttle:30,1')
+    ->middleware(['auth', 'user.inactivity'])
     ->whereNumber('heritageShop')
     ->name('heritage-shops.ai-guide');
-Route::get('/heritage-shops/{id}', [HeritageShopController::class, 'show'])->whereNumber('id')->name('heritage-shops.show');
+Route::get('/heritage-shops/{id}', [HeritageShopController::class, 'show'])
+    ->whereNumber('id')
+    ->middleware(['auth', 'user.inactivity'])
+    ->name('heritage-shops.show');

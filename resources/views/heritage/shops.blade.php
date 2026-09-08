@@ -594,7 +594,6 @@
                             @endforeach
                         </section>
                         @guest
-                            @include('partials.login-required-modal')
                         @endguest
                         <nav class="pagination" aria-label="Heritage shop pages">{{ $shops->onEachSide(1)->links() }}</nav>
                     @endif

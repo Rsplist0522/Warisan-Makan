@@ -46,19 +46,19 @@
                 <span class="user-nav-chevron" aria-hidden="true">&rsaquo;</span>
             </summary>
             <div class="user-nav-submenu" aria-label="{{ __('Food passport navigation') }}">
-                <a class="user-nav-item user-nav-child {{ request()->routeIs('passport.index') ? 'active' : '' }}" data-label="{{ __('Check In') }}" title="{{ __('Check In') }}" href="{{ route('passport.index') }}#check-in">
+                <a class="user-nav-item user-nav-child {{ request()->routeIs('passport.index') ? 'active' : '' }}" data-label="{{ __('Check In') }}" title="{{ __('Check In') }}" href="{{ route('passport.index') }}#check-in" @guest data-login-required="true" @endguest>
                     <span class="user-nav-icon" aria-hidden="true">@include('partials.module-icon', ['icon' => 'passport'])</span>
                     <span class="user-nav-text">{{ __('Check In') }}</span>
                 </a>
-                <a class="user-nav-item user-nav-child {{ request()->routeIs('passport.history') ? 'active' : '' }}" data-label="{{ __('View Visit History') }}" title="{{ __('View Visit History') }}" href="{{ route('passport.history') }}">
+                <a class="user-nav-item user-nav-child {{ request()->routeIs('passport.history') ? 'active' : '' }}" data-label="{{ __('View Visit History') }}" title="{{ __('View Visit History') }}" href="{{ route('passport.history') }}" @guest data-login-required="true" @endguest>
                     <span class="user-nav-icon" aria-hidden="true">@include('partials.module-icon', ['icon' => 'history-list'])</span>
                     <span class="user-nav-text">{{ __('View Visit History') }}</span>
                 </a>
-                <a class="user-nav-item user-nav-child {{ request()->routeIs('passport.statistics') ? 'active' : '' }}" data-label="{{ __('Passport Statistics') }}" title="{{ __('Passport Statistics') }}" href="{{ route('passport.statistics') }}">
+                <a class="user-nav-item user-nav-child {{ request()->routeIs('passport.statistics') ? 'active' : '' }}" data-label="{{ __('Passport Statistics') }}" title="{{ __('Passport Statistics') }}" href="{{ route('passport.statistics') }}" @guest data-login-required="true" @endguest>
                     <span class="user-nav-icon" aria-hidden="true">@include('partials.module-icon', ['icon' => 'award'])</span>
                     <span class="user-nav-text">{{ __('Passport Statistics') }}</span>
                 </a>
-                <a class="user-nav-item user-nav-child {{ request()->routeIs('passport.leaderboard') ? 'active' : '' }}" data-label="{{ __('Leaderboard') }}" title="{{ __('Leaderboard') }}" href="{{ route('passport.leaderboard') }}">
+                <a class="user-nav-item user-nav-child {{ request()->routeIs('passport.leaderboard') ? 'active' : '' }}" data-label="{{ __('Leaderboard') }}" title="{{ __('Leaderboard') }}" href="{{ route('passport.leaderboard') }}" @guest data-login-required="true" @endguest>
                     <span class="user-nav-icon" aria-hidden="true">@include('partials.module-icon', ['icon' => 'ranking'])</span>
                     <span class="user-nav-text">{{ __('Leaderboard') }}</span>
                 </a>
@@ -72,15 +72,15 @@
                 <span class="user-nav-chevron" aria-hidden="true">&rsaquo;</span>
             </summary>
             <div class="user-nav-submenu" aria-label="{{ __('Food trail navigation') }}">
-                <a class="user-nav-item user-nav-child {{ request()->routeIs('foodtrails.index') ? 'active' : '' }}" data-label="{{ __('Generate Trail') }}" title="{{ __('Generate Trail') }}" href="{{ route('foodtrails.index') }}">
+                <a class="user-nav-item user-nav-child {{ request()->routeIs('foodtrails.index') ? 'active' : '' }}" data-label="{{ __('Generate Trail') }}" title="{{ __('Generate Trail') }}" href="{{ route('foodtrails.index') }}" @guest data-login-required="true" @endguest>
                     <span class="user-nav-icon" aria-hidden="true">@include('partials.module-icon', ['icon' => 'map'])</span>
                     <span class="user-nav-text">{{ __('Generate Trail') }}</span>
                 </a>
-                <a class="user-nav-item user-nav-child {{ request()->is('start_trail') ? 'active' : '' }}" data-label="{{ __('Current Trail') }}" title="{{ __('Current Trail') }}" href="{{ url('/start_trail') }}">
+                <a class="user-nav-item user-nav-child {{ request()->is('start_trail') ? 'active' : '' }}" data-label="{{ __('Current Trail') }}" title="{{ __('Current Trail') }}" href="{{ url('/start_trail') }}" @guest data-login-required="true" @endguest>
                     <span class="user-nav-icon" aria-hidden="true">@include('partials.module-icon', ['icon' => 'route'])</span>
                     <span class="user-nav-text">{{ __('Current Trail') }}</span>
                 </a>
-                <a class="user-nav-item user-nav-child" data-label="{{ __('Saved Trails') }}" title="{{ __('Saved Trails') }}" href="{{ route('foodtrails.index') }}#initialPanel">
+                <a class="user-nav-item user-nav-child" data-label="{{ __('Saved Trails') }}" title="{{ __('Saved Trails') }}" href="{{ route('foodtrails.index') }}#initialPanel" @guest data-login-required="true" @endguest>
                     <span class="user-nav-icon" aria-hidden="true">@include('partials.module-icon', ['icon' => 'bookmark'])</span>
                     <span class="user-nav-text">{{ __('Saved Trails') }}</span>
                 </a>
@@ -94,26 +94,26 @@
                 <span class="user-nav-chevron" aria-hidden="true">&rsaquo;</span>
             </summary>
             <div class="user-nav-submenu" aria-label="{{ __('Community contribution navigation') }}">
-                <a class="user-nav-item user-nav-child {{ request()->routeIs('community-contribution.create', 'community-contribution.edit') || request()->routeIs('heritage-shops.correction-requests.*') ? 'active' : '' }}" data-label="{{ __('Submit shop') }}" title="{{ __('Submit shop') }}" href="{{ route('community-contribution.create') }}">
+                <a class="user-nav-item user-nav-child {{ request()->routeIs('community-contribution.create', 'community-contribution.edit') || request()->routeIs('heritage-shops.correction-requests.*') ? 'active' : '' }}" data-label="{{ __('Submit shop') }}" title="{{ __('Submit shop') }}" href="{{ route('community-contribution.create') }}" @guest data-login-required="true" @endguest>
                     <span class="user-nav-icon" aria-hidden="true">@include('partials.module-icon', ['icon' => 'shop-plus'])</span>
                     <span class="user-nav-text">{{ __('Submit shop') }}</span>
                 </a>
-                <a class="user-nav-item user-nav-child {{ request()->routeIs('community-contribution.drafts*') ? 'active' : '' }}" data-label="{{ __('Drafts') }}" title="{{ __('Drafts') }}" href="{{ route('community-contribution.drafts') }}">
+                <a class="user-nav-item user-nav-child {{ request()->routeIs('community-contribution.drafts*') ? 'active' : '' }}" data-label="{{ __('Drafts') }}" title="{{ __('Drafts') }}" href="{{ route('community-contribution.drafts') }}" @guest data-login-required="true" @endguest>
                     <span class="user-nav-icon" aria-hidden="true">@include('partials.module-icon', ['icon' => 'file-edit'])</span>
                     <span class="user-nav-text">{{ __('Drafts') }}</span>
                 </a>
-                <a class="user-nav-item user-nav-child {{ request()->routeIs('community-contribution.contributions*') ? 'active' : '' }}" data-label="{{ __('My contributions') }}" title="{{ __('My contributions') }}" href="{{ route('community-contribution.contributions') }}">
+                <a class="user-nav-item user-nav-child {{ request()->routeIs('community-contribution.contributions*') ? 'active' : '' }}" data-label="{{ __('My contributions') }}" title="{{ __('My contributions') }}" href="{{ route('community-contribution.contributions') }}" @guest data-login-required="true" @endguest>
                     <span class="user-nav-icon" aria-hidden="true">@include('partials.module-icon', ['icon' => 'history-list'])</span>
                     <span class="user-nav-text">{{ __('My contributions') }}</span>
                 </a>
-                <a class="user-nav-item user-nav-child {{ request()->routeIs('community-contribution.correction-requests*') ? 'active' : '' }}" data-label="{{ __('Correction Requests') }}" title="{{ __('Correction Requests') }}" href="{{ route('community-contribution.correction-requests') }}">
+                <a class="user-nav-item user-nav-child {{ request()->routeIs('community-contribution.correction-requests*') ? 'active' : '' }}" data-label="{{ __('Correction Requests') }}" title="{{ __('Correction Requests') }}" href="{{ route('community-contribution.correction-requests') }}" @guest data-login-required="true" @endguest>
                     <span class="user-nav-icon" aria-hidden="true">@include('partials.module-icon', ['icon' => 'alert'])</span>
                     <span class="user-nav-text">{{ __('Correction Requests') }}</span>
                 </a>
             </div>
         </details>
 
-        <a class="user-nav-item {{ $blindBoxActive ? 'active' : '' }}" data-label="{{ __('Blind Box') }}" title="{{ __('Blind Box') }}" href="{{ route('blind-box.index') }}">
+        <a class="user-nav-item {{ $blindBoxActive ? 'active' : '' }}" data-label="{{ __('Blind Box') }}" title="{{ __('Blind Box') }}" href="{{ route('blind-box.index') }}" @guest data-login-required="true" @endguest>
             <span class="user-nav-icon" aria-hidden="true">@include('partials.module-icon', ['icon' => 'box'])</span>
             <span class="user-nav-text">{{ __('Blind Box') }}</span>
         </a>
@@ -137,7 +137,7 @@
             <p class="user-sidebar-role">{{ __('WarisanMakan member') }}</p>
             <form method="POST" action="{{ route('logout') }}">
                 @csrf
-                <button class="user-logout" type="submit">{{ __('Log out') }}</button>
+                <button class="user-logout" type="submit">{{ __('Sign out') }}</button>
             </form>
         </div>
     @endauth

@@ -27,6 +27,12 @@ class HeritageShopVisibilityTest extends TestCase
             'publish_status' => HeritageShop::STATUS_ARCHIVED,
         ]);
 
+        $this->get(route('guest.continue'))
+            ->assertRedirect(route('user.dashboard'));
+
+        $this->get(route('guest.continue'))
+            ->assertRedirect(route('user.dashboard'));
+
         $this->get(route('heritage-shops.index'))
             ->assertOk()
             ->assertSee($published->shop_name)
@@ -34,18 +40,19 @@ class HeritageShopVisibilityTest extends TestCase
             ->assertDontSee($archived->shop_name);
 
         $this->get(route('heritage-shops.show', ['id' => $published->id]))
-            ->assertOk()
-            ->assertSee($published->shop_name);
+            ->assertRedirect(route('login'));
 
         $this->actingAs(User::factory()->create())
             ->get(route('heritage-shops.show', ['id' => $published->id]))
             ->assertOk()
             ->assertSee($published->shop_name);
 
-        $this->get(route('heritage-shops.show', ['id' => $draft->id]))
+        $this->actingAs(User::factory()->create())
+            ->get(route('heritage-shops.show', ['id' => $draft->id]))
             ->assertNotFound();
 
-        $this->get(route('heritage-shops.show', ['id' => $archived->id]))
+        $this->actingAs(User::factory()->create())
+            ->get(route('heritage-shops.show', ['id' => $archived->id]))
             ->assertNotFound();
     }
 
@@ -64,7 +71,13 @@ class HeritageShopVisibilityTest extends TestCase
         $this->get(route('heritage-shops.images.show', [
             'heritageShop' => $draft->id,
             'image' => $image->id,
-        ]))->assertNotFound();
+        ]))->assertRedirect(route('login'));
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('heritage-shops.images.show', [
+                'heritageShop' => $draft->id,
+                'image' => $image->id,
+            ]))->assertNotFound();
     }
 
     public function test_public_listing_formats_mixed_operating_hours_shapes(): void
@@ -92,6 +105,9 @@ class HeritageShopVisibilityTest extends TestCase
             'publish_status' => HeritageShop::STATUS_PUBLISHED,
             'operating_hours' => null,
         ]);
+
+        $this->get(route('guest.continue'))
+            ->assertRedirect(route('user.dashboard'));
 
         $this->get(route('heritage-shops.index'))
             ->assertOk()

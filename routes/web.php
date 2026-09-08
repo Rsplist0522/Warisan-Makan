@@ -35,6 +35,10 @@ Route::post('/admin-login', [AuthController::class, 'adminLogin'])
     ->name('admin.login.submit');
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
 
+Route::post('/session/activity', function () {
+    return response()->noContent();
+})->middleware(['auth', 'user.inactivity'])->name('session.activity');
+
 Route::get('/brand-logo', function () {
     $branding = SiteBranding::current();
 

@@ -1,5 +1,5 @@
 @php
-    $sessionExpiredLoginUrl = $loginUrl ?? route('login');
+    $sessionExpiredLoginUrl = $sessionExpiredLoginUrl ?? $loginUrl ?? route('login');
     $sessionExpiredVisible = $visible ?? false;
 @endphp
 
@@ -28,12 +28,16 @@
         if (!modal || !okButton) return;
 
         const showSessionExpired = (loginUrl) => {
+            if (modal.dataset.sessionExpiredShown === 'true') return;
+            modal.dataset.sessionExpiredShown = 'true';
             modal.dataset.loginUrl = loginUrl || @json($sessionExpiredLoginUrl);
             modal.hidden = false;
             okButton.focus();
         };
 
         okButton.addEventListener('click', () => {
+            if (modal.dataset.sessionExpiredRedirecting === 'true') return;
+            modal.dataset.sessionExpiredRedirecting = 'true';
             window.location.assign(modal.dataset.loginUrl || @json($sessionExpiredLoginUrl));
         });
 
@@ -49,7 +53,7 @@
                 if (response.status === 401) {
                     try {
                         const payload = await response.clone().json();
-                        if (payload.session_expired) showSessionExpired(payload.login_url);
+                        if (payload.session_expired) showSessionExpired(@json($sessionExpiredLoginUrl));
                     } catch {
                         // Leave non-session-expiry 401 responses unchanged.
                     }

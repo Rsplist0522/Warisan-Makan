@@ -43,6 +43,8 @@ class UserInactivityTimeoutTest extends TestCase
         $response->assertStatus(401)
             ->assertSee('Session Expired')
             ->assertSee('Your session has expired due to inactivity. Please sign in again to continue.')
+            ->assertSee('/login', false)
+            ->assertDontSee('/admin-login', false)
             ->assertSee('data-session-expired-ok', false);
         $this->assertGuest();
     }
@@ -115,6 +117,45 @@ class UserInactivityTimeoutTest extends TestCase
         $this->assertGuest();
     }
 
+    public function test_activity_heartbeat_refreshes_an_active_user_session(): void
+    {
+        $user = User::factory()->create(['role' => 'user']);
+        $activeAt = now()->subMinutes(4)->timestamp;
+
+        $response = $this->actingAs($user)
+            ->withSession(['user_last_activity' => $activeAt])
+            ->postJson(route('session.activity'));
+
+        $response->assertNoContent();
+        $this->assertAuthenticatedAs($user);
+        $this->assertGreaterThan($activeAt, session('user_last_activity'));
+    }
+
+    public function test_activity_heartbeat_cannot_revive_an_expired_user_session(): void
+    {
+        $user = User::factory()->create(['role' => 'user']);
+
+        $response = $this->actingAs($user)
+            ->withSession(['user_last_activity' => now()->subMinutes(5)->timestamp])
+            ->postJson(route('session.activity'));
+
+        $response->assertUnauthorized()
+            ->assertJsonPath('session_expired', true)
+            ->assertJsonPath('login_url', route('login'));
+        $this->assertGuest();
+    }
+
+    public function test_guest_mode_cannot_use_the_authenticated_activity_heartbeat(): void
+    {
+        $this->get(route('guest.continue'));
+
+        $response = $this->postJson(route('session.activity'));
+
+        $response->assertRedirect(route('login'));
+        $this->assertGuest();
+        $this->assertTrue((bool) session('guest_mode'));
+    }
+
     public function test_admin_activity_uses_a_separate_timestamp_and_resets_it(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
@@ -144,7 +185,22 @@ class UserInactivityTimeoutTest extends TestCase
 
         $response->assertStatus(401)
             ->assertSee('Session Expired')
-            ->assertSee('/admin-login', false);
+            ->assertSee('/admin-login', false)
+            ->assertDontSee('/login', false);
+        $this->assertGuest();
+    }
+
+    public function test_expired_admin_heartbeat_returns_the_admin_login_url(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $response = $this->actingAs($admin)
+            ->withSession(['admin_last_activity' => now()->subMinutes(5)->timestamp])
+            ->postJson(route('session.activity'));
+
+        $response->assertUnauthorized()
+            ->assertJsonPath('session_expired', true)
+            ->assertJsonPath('login_url', route('admin.login'));
         $this->assertGuest();
     }
 
@@ -160,6 +216,22 @@ class UserInactivityTimeoutTest extends TestCase
             ->get(route('admin.dashboard'));
 
         $response->assertOk();
+        $this->assertAuthenticatedAs($admin);
+        $this->assertNull(session('admin_last_activity'));
+    }
+
+    public function test_remembered_admin_heartbeat_keeps_the_existing_bypass(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $response = $this->actingAs($admin)
+            ->withSession([
+                'admin_remember' => true,
+                'admin_last_activity' => now()->subMinutes(10)->timestamp,
+            ])
+            ->postJson(route('session.activity'));
+
+        $response->assertNoContent();
         $this->assertAuthenticatedAs($admin);
         $this->assertNull(session('admin_last_activity'));
     }

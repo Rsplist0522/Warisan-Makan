@@ -52,6 +52,21 @@ class CommunityContributionTest extends TestCase
         $response->assertSee('<style>', false);
     }
 
+    public function test_supporting_media_picker_accumulates_separate_file_selections_and_initializes_counter(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->get(route('community-contribution.create'));
+
+        $response->assertOk()
+            ->assertSee('let selectedSupportingFiles = [];', false)
+            ->assertSee('const transfer = new DataTransfer();', false)
+            ->assertSee('selectedSupportingFiles = [...selectedSupportingFiles, ...uniqueIncomingFiles];', false)
+            ->assertSee('updateSupportingMediaCounts();', false)
+            ->assertSee('id="media-slot-summary"', false)
+            ->assertSee('id="media-slot-detail"', false);
+    }
+
     public function test_food_item_optional_wording_is_not_shown_on_food_item_labels(): void
     {
         $user = User::factory()->create();

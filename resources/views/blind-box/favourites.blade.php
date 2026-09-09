@@ -37,6 +37,7 @@
     .fav-page {
         display: grid;
         gap: 24px;
+        width: 100%;
         max-width: 1200px;
         margin: 0 auto;
         padding-bottom: 48px;
@@ -176,21 +177,24 @@
     .fav-search-wrapper {
         position: relative;
         flex: 1;
-        min-width: 240px;
+        min-width: 0;
     }
 
     .fav-search-wrapper i {
         position: absolute;
+        z-index: 1;
         left: 14px;
         top: 50%;
         transform: translateY(-50%);
         color: var(--bb-muted);
         font-size: 0.95rem;
+        pointer-events: none;
     }
 
-    .fav-search-input {
+    /* Override the shared form-input rule so text always clears the icon. */
+    .fav-page .fav-toolbar .fav-search-wrapper > input.fav-search-input {
         width: 100%;
-        padding: 10px 16px 10px 40px;
+        padding: 10px 16px 10px 56px;
         border: 1px solid rgba(140, 31, 31, 0.15);
         border-radius: 999px;
         font-size: 0.92rem;
@@ -211,6 +215,25 @@
         align-items: center;
         gap: 8px;
         flex-wrap: wrap;
+    }
+
+    .fav-category-select {
+        min-width: 210px;
+        padding: 9px 34px 9px 14px;
+        border: 1px solid rgba(140, 31, 31, 0.15);
+        border-radius: 999px;
+        color: var(--bb-muted);
+        background: #fff;
+        font: inherit;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .fav-category-select:focus {
+        border-color: var(--bb-gold);
+        outline: 0;
+        box-shadow: 0 0 0 3px rgba(201, 139, 22, 0.15);
     }
 
     .fav-pill {
@@ -547,6 +570,11 @@
     }
 
     @media (max-width: 768px) {
+        .fav-page {
+            gap: 18px;
+            padding-bottom: 28px;
+        }
+
         .fav-hero {
             padding: 26px 20px;
             flex-direction: column;
@@ -560,10 +588,66 @@
         .fav-toolbar {
             flex-direction: column;
             align-items: stretch;
+            padding: 14px;
+        }
+
+        .fav-search-wrapper,
+        .fav-filter-pills,
+        .fav-category-select {
+            width: 100%;
         }
 
         .fav-grid {
             grid-template-columns: 1fr;
+        }
+
+        .fav-card-actions {
+            flex-wrap: wrap;
+        }
+
+        .fav-card-actions .fav-action-btn.primary,
+        .fav-card-actions .fav-action-btn.secondary {
+            flex: 1 1 0;
+        }
+    }
+
+    @media (max-width: 420px) {
+        .fav-hero {
+            padding: 22px 16px;
+            border-radius: 18px;
+        }
+
+        .fav-hero-stats {
+            display: grid;
+            grid-template-columns: 1fr;
+            width: 100%;
+        }
+
+        .fav-stat-box,
+        .fav-hero-cta,
+        .fav-category-select {
+            width: 100%;
+        }
+
+        .fav-toolbar {
+            border-radius: 14px;
+        }
+
+        .fav-card {
+            border-radius: 16px;
+        }
+
+        .fav-card-image-wrap {
+            height: 180px;
+        }
+
+        .fav-card-body {
+            padding: 16px;
+        }
+
+        .fav-card-actions .fav-action-btn.primary,
+        .fav-card-actions .fav-action-btn.secondary {
+            flex-basis: 100%;
         }
     }
 </style>
@@ -621,18 +705,17 @@
                 >
             </div>
 
-            <div class="fav-filter-pills" id="favFilterPills">
-                <button type="button" class="fav-pill active" data-filter="all">
-                    {{ __('All') }} ({{ $favourites->count() }})
-                </button>
+            <div class="fav-filter-pills">
+                <label class="sr-only" for="favCategoryFilter">{{ __('Filter by category') }}</label>
+                <select id="favCategoryFilter" class="fav-category-select" aria-label="{{ __('Filter by category') }}">
+                    <option value="all">{{ __('All categories') }} ({{ $favourites->count() }})</option>
                 @php
                     $categories = $favourites->pluck('category')->filter()->unique()->values();
                 @endphp
                 @foreach($categories as $category)
-                    <button type="button" class="fav-pill" data-filter="{{ Str::slug($category) }}">
-                        {{ $category }}
-                    </button>
+                    <option value="{{ Str::slug($category) }}">{{ $category }}</option>
                 @endforeach
+                </select>
             </div>
         </div>
 
@@ -747,7 +830,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const searchInput = document.getElementById('favSearchInput');
-    const filterPills = document.querySelectorAll('#favFilterPills .fav-pill');
+    const categoryFilter = document.getElementById('favCategoryFilter');
     const cards = document.querySelectorAll('#favCardsGrid .fav-card');
     const noResults = document.getElementById('favNoResults');
 
@@ -787,14 +870,12 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    filterPills.forEach(pill => {
-        pill.addEventListener('click', function () {
-            filterPills.forEach(p => p.classList.remove('active'));
-            this.classList.add('active');
-            activeFilter = this.getAttribute('data-filter');
+    if (categoryFilter) {
+        categoryFilter.addEventListener('change', function () {
+            activeFilter = this.value;
             filterCards();
         });
-    });
+    }
 });
 </script>
 @endpush

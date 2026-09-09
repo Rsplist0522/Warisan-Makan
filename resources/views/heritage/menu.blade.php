@@ -138,8 +138,8 @@
             @endif
         </section>
 
-        @if ($shop->source_url)
-            <div class="panel source">{{ __('This menu page is based on the registered HeritageShop source.') }}<a href="{{ $shop->source_url }}" target="_blank" rel="noopener noreferrer">{{ __('View source') }} ↗</a></div>
+        @if ($safeSourceUrl = $shop->safeSourceUrl())
+            <div class="panel source">{{ __('This menu page is based on the registered HeritageShop source.') }}<a href="{{ $safeSourceUrl }}" target="_blank" rel="noopener noreferrer">{{ __('View source') }} ↗</a></div>
         @endif
         <div class="footer-actions">
             <a class="button" href="{{ route('heritage-shops.show', ['id' => $shop->id]) }}">{{ __('View full profile') }}</a>

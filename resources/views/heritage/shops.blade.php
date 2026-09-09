@@ -459,10 +459,10 @@
                             @endif
                         </section>
 
-                        @if ($shop->source_url)
+                        @if ($safeSourceUrl = $shop->safeSourceUrl())
                             <section class="info-section" style="margin-top:12px;">
                                 <h2>{{ __('Related information') }}</h2>
-                                <p class="description">{{ __('The profile was prepared from the registered source information.') }}<a href="{{ $shop->source_url }}" target="_blank" rel="noopener noreferrer" style="color:var(--wm-accent);font-weight:800;">{{ __('View source') }}</a></p>
+                                <p class="description">{{ __('The profile was prepared from the registered source information.') }}<a href="{{ $safeSourceUrl }}" target="_blank" rel="noopener noreferrer" style="color:var(--wm-accent);font-weight:800;">{{ __('View source') }}</a></p>
                             </section>
                         @endif
 

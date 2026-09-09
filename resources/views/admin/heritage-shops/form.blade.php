@@ -14,9 +14,23 @@
         $shopDescription = old('heritage_story', $shop->heritage_story ?? '');
         $shopContact = old('contact_number', $shop->contact_number ?? '');
         $shopHours = old('operating_hours', $shop->exists ? $shop->operatingHoursText() : '');
-        $shopStatus = old('publish_status', $shop->publish_status ?? 'draft');
+        $storedStatus = in_array($shop->publish_status, \App\Models\HeritageShop::ADMIN_STATUSES, true)
+            ? $shop->publish_status
+            : \App\Models\HeritageShop::STATUS_DRAFT;
+        $shopStatus = old('publish_status', $storedStatus);
         $shopSourceUrl = old('source_url', $shop->source_url ?? '');
-        $shopFoodItems = old('food_items', $shop->food_items ?? [['name' => '', 'price' => '', 'desc' => '']]);
+        $normalizedQuickItems = $shop->relationLoaded('foodItems')
+            ? $shop->foodItems->where('is_active', true)->map(fn ($item) => [
+                'id' => $item->id,
+                'name' => $item->name,
+                'price' => $item->price,
+                'desc' => $item->description,
+            ])->values()->all()
+            : [];
+        $quickItemFallback = $normalizedQuickItems !== []
+            ? $normalizedQuickItems
+            : ($shop->exists ? [] : [['name' => '', 'price' => '', 'desc' => '']]);
+        $shopFoodItems = old('food_items', $quickItemFallback);
     @endphp
 
     <header class="page-header">
@@ -50,8 +64,12 @@
 
     <form method="POST" action="{{ $mode === 'create' ? route('admin.heritage-shops.store') : route('admin.heritage-shops.update', $shop) }}" enctype="multipart/form-data">
         @csrf
+        @foreach ((array) old('crawler_images', []) as $crawlerImage)
+            <input type="hidden" name="crawler_images[]" value="{{ $crawlerImage }}">
+        @endforeach
         @if ($mode === 'edit')
             @method('PUT')
+            <input type="hidden" name="version" value="{{ $shop->version }}">
         @endif
 
         <section class="panel" style="margin-bottom:18px;">
@@ -85,7 +103,7 @@
                         </div>
                         <div class="field">
                             <label for="primary_food_category">Primary category</label>
-                            <input id="primary_food_category" name="primary_food_category" type="text" value="{{ $shopCategory }}">
+                            <input id="primary_food_category" name="primary_food_category" type="text" value="{{ $shopCategory }}" maxlength="255">
                         </div>
                         <div class="field">
                             <label for="establishment_year">Established year</label>
@@ -93,22 +111,22 @@
                         </div>
                         <div class="field">
                             <label for="contact_number">Contact number</label>
-                            <input id="contact_number" name="contact_number" type="text" value="{{ $shopContact }}">
+                            <input id="contact_number" name="contact_number" type="tel" value="{{ $shopContact }}" maxlength="30">
                         </div>
                         <div class="field" style="grid-column:1 / -1;">
                             <label for="source_url">Source URL</label>
-                            <input id="source_url" name="source_url" type="url" value="{{ $shopSourceUrl }}">
+                            <input id="source_url" name="source_url" type="url" value="{{ $shopSourceUrl }}" maxlength="500">
                         </div>
                         <div class="field" style="grid-column:1 / -1;">
                             <label for="heritage_story">Heritage story <span class="required-marker" data-required-marker="published" @if ($shopStatus !== 'published') hidden @endif aria-hidden="true">*</span></label>
-                            <textarea id="heritage_story" name="heritage_story" aria-describedby="shop-profile-requirements" @if ($errors->has('heritage_story')) aria-invalid="true" @endif>{{ $shopDescription }}</textarea>
+                            <textarea id="heritage_story" name="heritage_story" maxlength="10000" aria-describedby="shop-profile-requirements" @if ($errors->has('heritage_story')) aria-invalid="true" @endif>{{ $shopDescription }}</textarea>
                             @error('heritage_story')
                                 <p class="field-error" role="alert">{{ $message }}</p>
                             @enderror
                         </div>
                         <div class="field" style="grid-column:1 / -1;">
                             <label for="operating_hours">Operating hours</label>
-                            <textarea id="operating_hours" name="operating_hours" aria-describedby="operating-hours-help" @if ($errors->has('operating_hours')) aria-invalid="true" @endif>{{ $shopHours }}</textarea>
+                            <textarea id="operating_hours" name="operating_hours" maxlength="2000" aria-describedby="operating-hours-help" @if ($errors->has('operating_hours')) aria-invalid="true" @endif>{{ $shopHours }}</textarea>
                             <p class="help-text field-guidance" id="operating-hours-help">Enter one day or schedule per line, for example: Monday: 11:30–14:30; 17:30–22:30.</p>
                             @error('operating_hours')
                                 <p class="field-error" role="alert">{{ $message }}</p>
@@ -123,25 +141,25 @@
                     <div class="filters four location-grid" style="margin-top:16px;">
                         <div class="field location-address" style="grid-column:1 / -1;">
                             <label for="address">Address <span class="required-marker" data-required-marker="published" @if ($shopStatus !== 'published') hidden @endif aria-hidden="true">*</span></label>
-                            <input id="address" name="address" type="text" value="{{ $shopAddress }}" aria-describedby="location-requirements" @if ($errors->has('address')) aria-invalid="true" @endif>
+                            <input id="address" name="address" type="text" value="{{ $shopAddress }}" maxlength="500" aria-describedby="location-requirements" @if ($errors->has('address')) aria-invalid="true" @endif>
                             @error('address')
                                 <p class="field-error" role="alert">{{ $message }}</p>
                             @enderror
                         </div>
                         <div class="field location-city">
                             <label for="city">City <span class="required-marker" data-required-marker="published" @if ($shopStatus !== 'published') hidden @endif aria-hidden="true">*</span></label>
-                            <input id="city" name="city" type="text" value="{{ $shopCity }}" aria-describedby="location-requirements" @if ($errors->has('city')) aria-invalid="true" @endif>
+                            <input id="city" name="city" type="text" value="{{ $shopCity }}" maxlength="100" aria-describedby="location-requirements" @if ($errors->has('city')) aria-invalid="true" @endif>
                             @error('city')
                                 <p class="field-error" role="alert">{{ $message }}</p>
                             @enderror
                         </div>
                         <div class="field location-state">
                             <label for="state">State</label>
-                            <input id="state" name="state" type="text" value="{{ $shopState }}">
+                            <input id="state" name="state" type="text" value="{{ $shopState }}" maxlength="100">
                         </div>
                         <div class="field location-postal">
                             <label for="postal_code">Postal code</label>
-                            <input id="postal_code" name="postal_code" type="text" value="{{ $shopPostal }}">
+                            <input id="postal_code" name="postal_code" type="text" inputmode="numeric" pattern="[0-9]{5}" maxlength="5" value="{{ $shopPostal }}">
                         </div>
                         <div class="field location-latitude">
                             <label for="latitude">Latitude</label>
@@ -153,19 +171,19 @@
                         </div>
                         <div class="field">
                             <label for="founder_name">Founder</label>
-                            <input id="founder_name" name="founder_name" type="text" value="{{ old('founder_name', $shop->founder_name ?? '') }}">
+                            <input id="founder_name" name="founder_name" type="text" value="{{ old('founder_name', $shop->founder_name ?? '') }}" maxlength="255">
                         </div>
                         <div class="field">
                             <label for="current_owner_name">Current owner</label>
-                            <input id="current_owner_name" name="current_owner_name" type="text" value="{{ old('current_owner_name', $shop->current_owner_name ?? '') }}">
+                            <input id="current_owner_name" name="current_owner_name" type="text" value="{{ old('current_owner_name', $shop->current_owner_name ?? '') }}" maxlength="255">
                         </div>
                         <div class="field" style="grid-column:1 / -1;">
                             <label for="founder_background">Founder background</label>
-                            <textarea id="founder_background" name="founder_background">{{ old('founder_background', $shop->founder_background ?? '') }}</textarea>
+                            <textarea id="founder_background" name="founder_background" maxlength="5000">{{ old('founder_background', $shop->founder_background ?? '') }}</textarea>
                         </div>
                         <div class="field" style="grid-column:1 / -1;">
                             <label for="current_owner_details">Current owner details</label>
-                            <textarea id="current_owner_details" name="current_owner_details">{{ old('current_owner_details', $shop->current_owner_details ?? '') }}</textarea>
+                            <textarea id="current_owner_details" name="current_owner_details" maxlength="5000">{{ old('current_owner_details', $shop->current_owner_details ?? '') }}</textarea>
                         </div>
                     </div>
                 </section>
@@ -195,6 +213,9 @@
 
                             <input id="images" name="images[]" type="file" accept="image/jpeg,image/png,image/webp" multiple data-max-bytes="{{ config('heritage_shop.max_image_bytes', 1048576) }}">
                             <p class="help-text" id="image-upload-help">JPG, PNG, or WebP only. Each new image must be no larger than {{ number_format(config('heritage_shop.max_image_kb', 1024) / 1024, 2) }} MB ({{ config('heritage_shop.max_image_kb', 1024) }} KB).</p>
+                            @error('images')
+                                <p class="field-error" role="alert">{{ $message }}</p>
+                            @enderror
                             <div id="image-upload-error" class="status-banner error" style="display:none; margin:0; padding:10px 12px;"></div>
 
                     </div>
@@ -210,7 +231,7 @@
 
                                         <div class="actions" style="margin-top:8px;">
                                             <label class="button secondary small" style="cursor:pointer;">
-                                                <input type="checkbox" name="remove_images[]" value="{{ $image->id }}" style="margin-right:6px;"> Remove
+                                                <input type="checkbox" name="remove_images[]" value="{{ $image->id }}" style="margin-right:6px;" @checked(in_array($image->id, (array) old('remove_images', [])))> Remove
                                             </label>
                                             <label class="button small" style="border:1px solid var(--line); background:#fff; cursor:pointer;">
                                                 Replace
@@ -233,13 +254,9 @@
                             <option value="draft" @selected($selectedStatus === 'draft')>Draft</option>
                             <option value="published" @selected($selectedStatus === 'published')>Published</option>
                             <option value="archived" @selected($selectedStatus === 'archived')>Archived</option>
-                            @if ($selectedStatus === 'approved')
-                                <option value="approved" selected>Approved (legacy)</option>
-                            @endif
-
                         </select>
                                         </div>
-                    <p class="help-text field-guidance" id="publish-status-help" style="margin-top:10px;">Only <strong>Published</strong> records appear in public discovery. Draft and Archived records remain admin-only. When Published is selected, the Heritage story, Address, and City fields become required.</p>
+                    <p class="help-text field-guidance" id="publish-status-help" style="margin-top:10px;">Only <strong>Published</strong> records appear in public discovery. Draft and Archived records remain admin-only. Published records require a Heritage story, Address, City, and at least one valid gallery image.</p>
                     <div class="actions" style="margin-top:16px;">
 
                         <button class="button primary" type="submit">{{ $mode === 'create' ? 'Save shop' : 'Update shop' }}</button>
@@ -363,6 +380,25 @@
         const addMenuItemButton = document.getElementById('add-menu-item');
         const initialMenuItems = @json($shopFoodItems ?? [['name' => '', 'price' => '', 'desc' => '']]);
 
+        function reindexMenuRows() {
+            menuItemsContainer.querySelectorAll('.menu-item-row').forEach((row, index) => {
+                row.querySelector('.menu-item-number').textContent = 'Food ' + (index + 1);
+                row.querySelectorAll('[name^="food_items["]').forEach((field) => {
+                    field.name = field.name.replace(/food_items\[\d+]/, 'food_items[' + index + ']');
+                });
+            });
+        }
+
+        function createMenuField(labelText, control) {
+            const field = document.createElement('div');
+            field.className = 'field';
+            const label = document.createElement('label');
+            label.textContent = labelText;
+            field.appendChild(label);
+            field.appendChild(control);
+            return field;
+        }
+
         function buildMenuRow(item = { name: '', price: '', desc: '' }, index = 0) {
             const row = document.createElement('div');
             row.className = 'menu-item-row';
@@ -380,6 +416,9 @@
                 const rows = menuItemsContainer.querySelectorAll('.menu-item-row');
                 if (rows.length > 1) {
                     row.remove();
+                    reindexMenuRows();
+                } else {
+                    row.querySelectorAll('input:not([type="hidden"]), textarea').forEach((field) => field.value = '');
                 }
             });
             header.appendChild(label);
@@ -388,18 +427,37 @@
             const fields = document.createElement('div');
             fields.className = 'menu-item-fields';
 
-            const nameField = document.createElement('div');
-            nameField.className = 'field';
-            nameField.innerHTML = '<label>Food name</label><input type="text" name="food_items[' + index + '][name]" value="' + (item.name || '').replace(/"/g, '&quot;') + '" placeholder="Example: Nasi Kandar">';
+            const nameInput = document.createElement('input');
+            nameInput.type = 'text';
+            nameInput.name = 'food_items[' + index + '][name]';
+            nameInput.value = String(item.name || '');
+            nameInput.placeholder = 'Example: Nasi Kandar';
+            nameInput.maxLength = 255;
+            const nameField = createMenuField('Food name', nameInput);
 
-            const priceField = document.createElement('div');
-            priceField.className = 'field';
-            priceField.innerHTML = '<label>Price</label><input type="text" name="food_items[' + index + '][price]" value="' + (item.price || '').replace(/"/g, '&quot;') + '" placeholder="RM 18.00">';
+            const priceInput = document.createElement('input');
+            priceInput.type = 'text';
+            priceInput.name = 'food_items[' + index + '][price]';
+            priceInput.value = String(item.price || '');
+            priceInput.placeholder = 'RM 18.00';
+            priceInput.maxLength = 80;
+            const priceField = createMenuField('Price', priceInput);
 
-            const descField = document.createElement('div');
-            descField.className = 'field';
+            const descriptionInput = document.createElement('textarea');
+            descriptionInput.name = 'food_items[' + index + '][desc]';
+            descriptionInput.value = String(item.desc || item.description || '');
+            descriptionInput.placeholder = 'Short description for this dish';
+            descriptionInput.maxLength = 1000;
+            const descField = createMenuField('Description', descriptionInput);
             descField.style.gridColumn = '1 / -1';
-            descField.innerHTML = '<label>Description</label><textarea name="food_items[' + index + '][desc]" placeholder="Short description for this dish">' + (item.desc || '').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</textarea>';
+
+            if (item.id) {
+                const idInput = document.createElement('input');
+                idInput.type = 'hidden';
+                idInput.name = 'food_items[' + index + '][id]';
+                idInput.value = String(item.id);
+                fields.appendChild(idInput);
+            }
 
             fields.appendChild(nameField);
             fields.appendChild(priceField);
@@ -417,7 +475,7 @@
 
         function renderMenuItems(items) {
             const safeItems = Array.isArray(items) && items.length ? items : [{ name: '', price: '', desc: '' }];
-            menuItemsContainer.innerHTML = '';
+            menuItemsContainer.replaceChildren();
             safeItems.forEach((item, index) => {
                 menuItemsContainer.appendChild(buildMenuRow(item, index));
             });
@@ -470,8 +528,15 @@
             heading.textContent = 'Web research sources — review before publishing: ';
             container.appendChild(heading);
             sources.forEach((source, index) => {
+                let url;
+                try {
+                    url = new URL(String(source.url || ''));
+                } catch (error) {
+                    return;
+                }
+                if (!['http:', 'https:'].includes(url.protocol)) return;
                 const link = document.createElement('a');
-                link.href = source.url;
+                link.href = url.href;
                 link.target = '_blank';
                 link.rel = 'noopener noreferrer';
                 link.textContent = source.title || source.url;
@@ -597,7 +662,7 @@
                 if (uploadInput) {
             uploadInput.addEventListener('change', () => {
                 const preview = document.getElementById('upload-preview');
-                preview.innerHTML = '';
+                preview.replaceChildren();
                 imageUploadError.style.display = 'none';
                 const oversizedFiles = Array.from(uploadInput.files).filter((file) => file.size > maxImageBytes);
 

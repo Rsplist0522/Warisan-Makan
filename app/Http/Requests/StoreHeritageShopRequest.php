@@ -2,10 +2,14 @@
 
 namespace App\Http\Requests;
 
+use App\Models\HeritageFoodItem;
 use App\Models\HeritageShop;
+use App\Services\HeritageShopImageService;
+use App\Services\HeritageShopValidationRules;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Fluent;
-use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class StoreHeritageShopRequest extends FormRequest
 {
@@ -16,17 +20,38 @@ class StoreHeritageShopRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        $singleLineFields = [
+            'shop_name',
+            'primary_food_category',
+            'founder_name',
+            'current_owner_name',
+            'contact_number',
+            'address',
+            'city',
+            'state',
+            'postal_code',
+        ];
+        $normalized = [];
+        foreach ($singleLineFields as $field) {
+            if (is_string($this->input($field))) {
+                $normalized[$field] = trim(preg_replace('/\s+/u', ' ', $this->input($field)) ?? $this->input($field));
+            }
+        }
+
         $url = trim((string) $this->input('source_url', ''));
         if ($url !== '') {
+            $normalized['source_url'] = $url;
             $parts = parse_url($url);
             if (is_array($parts) && ! empty($parts['host'])) {
                 $url = strtolower((string) ($parts['scheme'] ?? 'https')).'://'.strtolower((string) $parts['host'])
                     .(isset($parts['port']) ? ':'.(int) $parts['port'] : '')
                     .rtrim((string) ($parts['path'] ?? ''), '/')
                     .(isset($parts['query']) && $parts['query'] !== '' ? '?'.$parts['query'] : '');
-                $this->merge(['source_url' => $url]);
+                $normalized['source_url'] = $url;
             }
         }
+
+        $this->merge($normalized);
     }
 
     public function withValidator($validator): void
@@ -36,40 +61,25 @@ class StoreHeritageShopRequest extends FormRequest
             ['required', 'string'],
             fn (Fluent $input): bool => $input->publish_status === HeritageShop::STATUS_PUBLISHED,
         );
+
+        $validator->after(function (Validator $validator): void {
+            $this->validateDuplicateIdentity($validator);
+            $this->validateQuickFoodItemNames($validator);
+
+            if ($this->input('publish_status') === HeritageShop::STATUS_PUBLISHED) {
+                $this->validatePublishedImage($validator);
+            }
+        });
     }
 
     public function rules(): array
     {
 
-        return [
-            'shop_name' => ['required', 'string', 'max:255'],
-            'primary_food_category' => ['nullable', 'string', 'max:255'],
-            'establishment_year' => ['nullable', 'integer', 'min:1000', 'max:'.now()->year],
-            'founder_name' => ['nullable', 'string', 'max:255'],
-            'founder_background' => ['nullable', 'string', 'max:5000'],
-            'current_owner_name' => ['nullable', 'string', 'max:255'],
-            'current_owner_details' => ['nullable', 'string', 'max:5000'],
-            'heritage_story' => ['nullable', 'string', 'max:10000'],
-            'operating_hours' => ['nullable', 'string', 'max:2000'],
-            'food_items' => ['nullable', 'array', 'max:50'],
+        $shop = $this->route('heritageShop');
 
-            'food_items.*.name' => ['nullable', 'string', 'max:255'],
-            'food_items.*.price' => ['nullable', 'string', 'max:255'],
-            'food_items.*.desc' => ['nullable', 'string', 'max:1000'],
-            'contact_number' => ['nullable', 'string', 'max:30', 'regex:/^[0-9+()\-\s]*$/'],
-            'address' => ['nullable', 'string', 'max:500'],
-            'city' => ['nullable', 'string', 'max:100'],
-            'state' => ['nullable', 'string', 'max:100'],
-            'postal_code' => ['nullable', 'string', 'max:20'],
-            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
-            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
-            'source_url' => [
-                'nullable',
-                'url',
-                'max:500',
-                Rule::unique('heritage_shops', 'source_url')->ignore($this->route('heritageShop') instanceof HeritageShop ? $this->route('heritageShop')->getKey() : null),
-            ],
-            'publish_status' => ['nullable', Rule::in(HeritageShop::ADMIN_STATUSES)],
+        return [
+            ...HeritageShopValidationRules::fields($shop instanceof HeritageShop ? $shop->getKey() : null),
+            'version' => [$shop instanceof HeritageShop ? 'required' : 'nullable', 'integer', 'min:1'],
 
             'images' => ['nullable', 'array', 'max:10'],
             'images.*' => ['file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:'.(int) config('heritage_shop.max_image_kb', 1024)],
@@ -80,14 +90,120 @@ class StoreHeritageShopRequest extends FormRequest
             'existing_images.*' => ['integer'],
             'remove_images' => ['nullable', 'array'],
             'remove_images.*' => ['integer'],
-            'menu_items_json' => ['nullable', 'string'],
+            'menu_items_json' => ['nullable', 'json', 'max:50000'],
             'crawler_images' => ['nullable', 'array'],
             'crawler_images.*' => [
                 'string',
                 'max:500',
                 'starts_with:heritage-shops/',
             ],
-
         ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'postal_code.regex' => 'The postal code must contain exactly 5 digits.',
+            'publish_status.in' => 'The selected publication status must be Draft, Published, or Archived.',
+        ];
+    }
+
+    private function validateDuplicateIdentity(Validator $validator): void
+    {
+        if ($validator->errors()->hasAny(['shop_name', 'address', 'city', 'state'])) {
+            return;
+        }
+
+        $shop = $this->route('heritageShop');
+        $duplicateKey = HeritageShop::duplicateKeyFor(
+            $this->input('shop_name'),
+            $this->input('address'),
+            $this->input('city'),
+            $this->input('state'),
+        );
+        $duplicate = HeritageShop::query()
+            ->where('duplicate_key', $duplicateKey)
+            ->when($shop instanceof HeritageShop, fn ($query) => $query->whereKeyNot($shop->getKey()))
+            ->exists();
+
+        $isUnchangedLegacyIdentity = $shop instanceof HeritageShop
+            && $shop->duplicate_key === null
+            && HeritageShop::duplicateKeyFor(
+                $shop->getOriginal('shop_name'),
+                $shop->getOriginal('address'),
+                $shop->getOriginal('city'),
+                $shop->getOriginal('state'),
+            ) === $duplicateKey;
+
+        if ($duplicate && ! $isUnchangedLegacyIdentity) {
+            $validator->errors()->add('shop_name', 'A heritage shop with the same name and location already exists.');
+        }
+    }
+
+    private function validateQuickFoodItemNames(Validator $validator): void
+    {
+        $seen = [];
+        $shop = $this->route('heritageShop');
+        foreach ((array) $this->input('food_items', []) as $index => $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+
+            if (blank($item['name'] ?? null)) {
+                if (filled($item['price'] ?? null) || filled($item['desc'] ?? null) || filled($item['description'] ?? null)) {
+                    $validator->errors()->add("food_items.{$index}.name", 'The food item name is required when other item details are provided.');
+                }
+
+                continue;
+            }
+
+            $normalized = HeritageFoodItem::normalizeName($item['name']);
+            if (isset($seen[$normalized])) {
+                $validator->errors()->add("food_items.{$index}.name", 'A food item with the same name already exists for this shop.');
+            }
+
+            if ($shop instanceof HeritageShop) {
+                $conflict = $shop->foodItems()
+                    ->where('normalized_name', $normalized)
+                    ->when(is_numeric($item['id'] ?? null), fn ($query) => $query->whereKeyNot((int) $item['id']))
+                    ->where('is_active', true)
+                    ->exists();
+                if ($conflict) {
+                    $validator->errors()->add("food_items.{$index}.name", 'A food item with the same name already exists for this shop.');
+                }
+            }
+            $seen[$normalized] = true;
+        }
+    }
+
+    private function validatePublishedImage(Validator $validator): void
+    {
+        $imageService = app(HeritageShopImageService::class);
+        $shop = $this->route('heritageShop');
+        $currentImages = $shop instanceof HeritageShop
+            ? $shop->images()->get()->filter(fn ($image): bool => $imageService->exists($image->path))->keyBy('id')
+            : collect();
+        $removeIds = collect((array) $this->input('remove_images', []))->map(fn ($id): int => (int) $id);
+        $replacementFiles = collect((array) $this->file('replace_images', []))
+            ->filter(fn ($file, $id): bool => is_numeric($id) && $file instanceof UploadedFile && $file->isValid() && $currentImages->has((int) $id));
+        $replacedIds = $replacementFiles->keys()->map(fn ($id): int => (int) $id);
+        $retainedCount = $currentImages->keys()
+            ->diff($removeIds)
+            ->diff($replacedIds)
+            ->count();
+        $uploadedCount = collect((array) $this->file('images', []))
+            ->filter(fn ($file): bool => $file instanceof UploadedFile && $file->isValid())
+            ->count();
+        $crawlerCount = collect((array) $this->input('crawler_images', []))
+            ->unique()
+            ->filter(fn ($path): bool => is_string($path)
+                && str_starts_with($path, $imageService->directory().'/crawler/')
+                && ! str_contains($path, '..')
+                && $imageService->exists($path))
+            ->count();
+
+        if ($retainedCount + $replacementFiles->count() + $uploadedCount + $crawlerCount < 1) {
+            $validator->errors()->add('images', 'A published heritage shop must have at least one valid shop image.');
+        }
     }
 }

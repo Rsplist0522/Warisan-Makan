@@ -10,6 +10,21 @@ class HeritageFoodItem extends Model
 {
     use HasFactory, SoftDeletes;
 
+    protected static function booted(): void
+    {
+        static::saving(function (HeritageFoodItem $item): void {
+            $item->normalized_name = self::normalizeName($item->name);
+        });
+
+        static::deleting(function (HeritageFoodItem $item): void {
+            if (! $item->isForceDeleting()) {
+                $item->forceFill([
+                    'normalized_name' => '__deleted__'.$item->getKey().'_'.hash('sha256', self::normalizeName($item->name)),
+                ])->saveQuietly();
+            }
+        });
+    }
+
     protected $table = 'heritage_food_items';
 
     protected $fillable = [
@@ -29,6 +44,11 @@ class HeritageFoodItem extends Model
         'is_active' => 'boolean',
         'display_order' => 'integer',
     ];
+
+    public static function normalizeName(mixed $name): string
+    {
+        return mb_strtolower(trim(preg_replace('/\s+/u', ' ', (string) $name) ?? (string) $name));
+    }
 
     public function shop()
     {

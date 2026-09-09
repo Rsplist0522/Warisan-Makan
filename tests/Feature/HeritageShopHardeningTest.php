@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\HeritageShop;
-use App\Models\ShopImage;
 use App\Models\User;
 use App\Services\HeritageShopImageService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -131,6 +130,7 @@ class HeritageShopHardeningTest extends TestCase
 
         $this->withCsrf()->put(route('admin.heritage-shops.update', $firstShop), [
             ...$this->publishedShopPayload('First Gallery Shop'),
+            'version' => $firstShop->version,
             'remove_images' => [$secondImage->id],
         ])->assertRedirect();
 
@@ -152,6 +152,7 @@ class HeritageShopHardeningTest extends TestCase
 
         $this->withCsrf()->put(route('admin.heritage-shops.update', $shop), [
             ...$this->publishedShopPayload('Replacement Gallery Shop'),
+            'version' => $shop->version,
             'replace_images' => [
                 $oldImage->id => UploadedFile::fake()->image('new-front.jpg', 140, 140),
             ],
@@ -200,7 +201,7 @@ class HeritageShopHardeningTest extends TestCase
         Http::assertNotSent(fn ($request): bool => str_contains($request->url(), '127.0.0.1'));
     }
 
-        public function test_crawler_rejects_remote_images_over_the_shared_one_mb_limit(): void
+    public function test_crawler_rejects_remote_images_over_the_shared_one_mb_limit(): void
     {
         Storage::fake('public');
         $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', true);
@@ -224,7 +225,6 @@ class HeritageShopHardeningTest extends TestCase
     }
 
     public function test_crawler_accepts_valid_image_bytes_with_mime_parameters_and_persists_them(): void
-
     {
         Storage::fake('public');
         $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', true);

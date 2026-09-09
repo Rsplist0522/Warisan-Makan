@@ -4,13 +4,12 @@ namespace Tests\Feature;
 
 use App\Models\HeritageShop;
 use App\Models\PassportStamp;
-
 use App\Models\User;
+use App\Services\ShopCrawlerService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
-
 use Tests\TestCase;
 
 class HeritageShopAdminTest extends TestCase
@@ -122,7 +121,7 @@ class HeritageShopAdminTest extends TestCase
         </html>
         HTML;
 
-        $service = new \App\Services\ShopCrawlerService();
+        $service = new ShopCrawlerService;
         $data = $service->extractFromHtml('https://example.com/restaurant', $html);
 
         $this->assertSame('Warong Nasi Lemak Kampung', $data['name']);
@@ -134,7 +133,7 @@ class HeritageShopAdminTest extends TestCase
 
     public function test_crawler_leaves_unknown_values_empty_instead_of_using_fake_defaults(): void
     {
-        $service = new \App\Services\ShopCrawlerService();
+        $service = new ShopCrawlerService;
         $data = $service->extractFromHtml('https://example.com/restaurant', '<html><head><title>Warisan Cafe</title></head><body></body></html>');
 
         $this->assertSame('Warisan Cafe', $data['name']);
@@ -172,7 +171,7 @@ class HeritageShopAdminTest extends TestCase
             ]),
         ]);
 
-        $data = (new \App\Services\ShopCrawlerService())->crawl('https://example.com/warisan-cafe');
+        $data = (new ShopCrawlerService)->crawl('https://example.com/warisan-cafe');
 
         $this->assertSame('8 Jalan Makan, 50000 Kuala Lumpur', $data['address']);
         $this->assertSame('+603-2222 3333', $data['contact_number']);
@@ -196,7 +195,7 @@ class HeritageShopAdminTest extends TestCase
         </head><body><h1>Kedai Warisan</h1></body></html>
         HTML;
 
-        $data = (new \App\Services\ShopCrawlerService())->extractFromHtml('https://example.com/shop', $html);
+        $data = (new ShopCrawlerService)->extractFromHtml('https://example.com/shop', $html);
 
         $this->assertSame('Kedai Warisan', $data['name']);
         $this->assertSame('+604-123 4567', $data['contact_number']);
@@ -204,7 +203,7 @@ class HeritageShopAdminTest extends TestCase
         $this->assertSame('Monday, Tuesday 09:00–17:00', $data['operating_hours']);
     }
 
-    public function test_shop_detail_prefers_live_crawled_menu_over_generic_fallbacks(): void
+    public function test_shop_detail_uses_only_saved_food_items_and_never_crawls_live(): void
     {
         Http::fake([
             'https://example.com/heritage-shop' => Http::response(<<<'HTML'
@@ -240,9 +239,11 @@ class HeritageShopAdminTest extends TestCase
         $this->actingAs(User::factory()->create())
             ->get(route('heritage-shops.show', ['id' => $shop->id]))
             ->assertOk()
-            ->assertSee('Nasi Lemak')
-            ->assertSee('Ayam Goreng')
-            ->assertDontSee('Signature Heritage Dish');
+            ->assertDontSee('Nasi Lemak')
+            ->assertDontSee('Ayam Goreng')
+            ->assertSee('The menu is still being documented');
+
+        Http::assertNothingSent();
     }
 
     public function test_crawl_rejects_canonical_duplicate_source_before_fetching(): void
@@ -316,7 +317,7 @@ class HeritageShopAdminTest extends TestCase
         $this->assertDatabaseMissing('heritage_food_items', ['heritage_shop_id' => $shop->id]);
         $this->assertFalse(Storage::disk('public')->exists('heritage-shops/gallery.jpg'));
         $this->assertFalse(Storage::disk('public')->exists('heritage-shops/food.jpg'));
-}
+    }
 
     public function test_admin_delete_is_blocked_when_passport_history_exists(): void
     {
@@ -478,12 +479,12 @@ class HeritageShopAdminTest extends TestCase
         $response = $this->actingAs($admin)->withSession(['_token' => $csrfToken])
             ->withHeader('X-CSRF-TOKEN', $csrfToken)
             ->post(route('admin.heritage-shops.discover.import'), [
-            'list_url' => 'https://authorized.example/directory',
-            'items' => [
-                ['name' => 'Duplicate Result', 'source_url' => 'https://AUTHORIZED.example/shops/one/'],
-                ['name' => 'New Heritage Kitchen', 'source_url' => 'https://authorized.example/shops/two/', 'food_items' => json_encode([['name' => 'Old Recipe']])],
-            ],
-        ]);
+                'list_url' => 'https://authorized.example/directory',
+                'items' => [
+                    ['name' => 'Duplicate Result', 'source_url' => 'https://AUTHORIZED.example/shops/one/'],
+                    ['name' => 'New Heritage Kitchen', 'source_url' => 'https://authorized.example/shops/two/', 'food_items' => json_encode([['name' => 'Old Recipe']])],
+                ],
+            ]);
 
         $response->assertRedirect(route('admin.heritage-shops.index'))
             ->assertSessionHas('success');

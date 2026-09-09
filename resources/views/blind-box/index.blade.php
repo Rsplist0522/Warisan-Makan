@@ -24,6 +24,9 @@
     $currentDraw = $currentDraw ?? null;
     $totalInCatalog = $totalInCatalog ?? 0;
     $mysteryShops = $mysteryShops ?? [];
+    $discoveryMode = $discoveryMode ?? 'shops';
+    $discoveryItems = $discoveryItems ?? $shops;
+    $discoveryShop = $discoveryShop ?? null;
 @endphp
 
 @push('styles')
@@ -249,6 +252,16 @@
         .item-media img{width:100%;height:100%;object-fit:cover;transition:transform 0.5s ease}
         .item-card:hover .item-media img { transform: scale(1.1); }
         .item-body{padding:24px}
+        .discovery-description {
+            display: -webkit-box;
+            min-height: 4.5em;
+            margin: 0 0 20px;
+            overflow: hidden;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 3;
+            line-height: 1.5;
+        }
+        .food-card .item-media { height: 210px; }
         
         .pagination-container { 
             margin-top: 45px; 
@@ -409,6 +422,14 @@
         .error-action:hover { background: #9b2c2c; transform: scale(1.05); }
 
         @media(max-width:800px){
+            .page {
+                width: 100%;
+                padding: 16px 12px 32px;
+            }
+            .hero,
+            .section {
+                border-radius: 18px;
+            }
             .hero-grid {
                 grid-template-columns: 1fr;
             }
@@ -449,7 +470,22 @@
             }
             .result > div > div:last-child {
                 min-width: auto !important;
+                width: 100%;
                 text-align: center;
+            }
+            .result .cta-row,
+            .result .favourite-action-row {
+                width: 100%;
+            }
+            .result .cta-row a,
+            .result .favourite-action-row button {
+                width: 100%;
+                min-width: 0;
+                margin: 0;
+            }
+            .result .meta-chip {
+                max-width: 100%;
+                overflow-wrap: anywhere;
             }
             .period-banner {
                 flex-wrap: wrap;
@@ -464,6 +500,61 @@
             }
             .illustration-card .carousel-desc {
                 font-size: 0.75rem !important;
+            }
+        }
+
+        @media(max-width:420px){
+            .hero,
+            .section {
+                padding: 18px 14px;
+            }
+            h1 { font-size: 1.85rem; }
+            .hero .button-row,
+            .hero .button-row .btn {
+                width: 100%;
+            }
+            .hero .button-row .btn {
+                min-height: 44px;
+            }
+            .mystery-guide {
+                padding: 14px;
+            }
+            .blind-box-card {
+                padding: 32px 10px;
+                border-radius: 24px;
+            }
+            .box-stage {
+                width: 220px;
+                height: 240px;
+            }
+            .box {
+                width: 170px;
+                height: 170px;
+            }
+            .box-body {
+                height: 140px;
+            }
+            .box-body > div:first-child {
+                font-size: 4rem !important;
+            }
+            .box-body > div:last-child {
+                padding: 5px 14px !important;
+                font-size: .72rem !important;
+            }
+            .result {
+                padding: 20px 12px;
+                border-radius: 22px;
+            }
+            .result > div > div:first-child {
+                width: min(100%, 200px) !important;
+                height: auto !important;
+                aspect-ratio: 1;
+            }
+            .result h3 {
+                font-size: 1.7rem !important;
+            }
+            .result p {
+                font-size: 1rem !important;
             }
         }
     </style>
@@ -481,7 +572,6 @@
                 <div class="button-row">
                     <a class="btn btn-primary" href="#blind-box">✨ {{ __('Try Blind Box') }}</a>
                     <a class="btn btn-secondary" href="{{ route('blind-box.favourites') }}" title="{{ __('View Favourites') }}" aria-label="{{ __('View Favourites') }}">&#9825; {{ __('View Favourites') }}</a>
-                    <a class="btn btn-secondary" href="/">{{ __('Go to main page') }}</a>
                 </div>
             </div>
             <div class="illustration">
@@ -594,23 +684,54 @@
     </section>
 
     <section id="discover" class="section">
-        <h2 style="font-family: Georgia, serif;">🏮 {{ __('Heritage Shop Discovery') }}</h2>
-        <p class="lead">{{ __("Explore the full collection of Malaysia's culinary gems.") }}</p>
+        <h2 style="font-family: Georgia, serif;">
+            🏮 {{ $discoveryMode === 'foods' ? __('Recommended Food Discoveries') : __('Heritage Shop Discovery') }}
+        </h2>
+        <p class="lead">
+            @if($discoveryMode === 'foods')
+                {{ __('Recommended foods from your latest Blind Box discovery at :shop.', ['shop' => $discoveryShop->shop_name]) }}
+            @else
+                {{ __("Explore the full collection of Malaysia's culinary gems.") }}
+            @endif
+        </p>
 
-        @if($shops->isEmpty())
+        @if($discoveryItems->isEmpty())
             <div class="empty-message">
-                <p><strong>{{ __('Catalog is currently empty.') }}</strong></p>
-                <p>{{ __('We are gathering more heritage stories. Please check back later!') }}</p>
+                <p><strong>{{ $discoveryMode === 'foods' ? __('No recommended foods found for this shop.') : __('Catalog is currently empty.') }}</strong></p>
+                <p>{{ $discoveryMode === 'foods' ? __('Please check the shop details for more heritage information.') : __('We are gathering more heritage stories. Please check back later!') }}</p>
             </div>
         @else
             <div class="shop-grid">
-                @foreach($shops as $shop)
-                    <article class="item-card">
+                @foreach($discoveryItems as $item)
+                    @if($discoveryMode === 'foods')
+                        <article class="item-card food-card">
+                            <div class="item-media">
+                                @if($item->image_path)
+                                    <img src="{{ route('heritage-shops.food-images.show', [$discoveryShop, $item]) }}" alt="{{ $item->name }}" loading="lazy">
+                                @else
+                                    <div class="image-placeholder">{{ __('No image available') }}</div>
+                                @endif
+                            </div>
+                            <div class="item-body">
+                                <span class="tag">{{ $item->category ?: __('Heritage Food') }}</span>
+                                <h3 style="font-size: 1.4rem; color: var(--red-dark); margin-bottom: 12px;">{{ $item->name }}</h3>
+                                <p class="muted discovery-description" style="font-size: 0.95rem;">{{ $item->description ?: __('A heritage food recommendation from your Blind Box discovery.') }}</p>
+                                <div class="item-meta">
+                                    @if($item->availability)
+                                        <span class="state-chip">{{ $item->availability }}</span>
+                                    @endif
+                                    <a class="btn btn-secondary" href="{{ route('heritage-shops.food-items.show', [$discoveryShop, $item]) }}">{{ __('View Food Details') }}</a>
+                                </div>
+                            </div>
+                        </article>
+                    @else
+                        @php($shop = $item)
+                        <article class="item-card">
                         <div class="item-media">
                             @if(!empty($shop['image']))
                                 <img src="{{ $shop['image'] }}" alt="{{ $shop['name'] ?? 'Heritage Shop' }}" loading="lazy">
                             @else
-                                <div class="image-placeholder">No image available</div>
+                                <div class="image-placeholder">{{ __('No image available') }}</div>
                             @endif
                             @if(!empty($shop['year']) && $shop['year'] !== 'Heritage')
                                 <span class="year-badge" style="font-size: 0.9rem; padding: 8px 15px; position: absolute; bottom: 15px; right: 15px; background: var(--red-dark); color: white; border-radius: 50px;">Est. {{ $shop['year'] }}</span>
@@ -619,7 +740,7 @@
                         <div class="item-body">
                             <span class="tag">{{ $shop['category'] ?? __('Heritage') }}</span>
                             <h3 style="font-size: 1.4rem; color: var(--red-dark); margin-bottom: 12px;">{{ $shop['name'] ?? '' }}</h3>
-                            <p class="muted" style="font-size: 0.95rem; line-height: 1.5; margin-bottom: 20px;">{{ $shop['description'] ?? '' }}</p>
+                            <p class="muted discovery-description" style="font-size: 0.95rem;">{{ $shop['description'] ?? '' }}</p>
                             <div class="item-meta">
                                 <span class="state-chip" style="background: var(--bg-start); border: 1px solid rgba(140,31,31,0.15);">📍 {{ $shop['state'] ?? __('Malaysia') }}</span>
                                 <span style="font-weight: 600; color: var(--muted);">
@@ -628,12 +749,13 @@
                             </div>
                         </div>
                     </article>
+                    @endif
                 @endforeach
             </div>
 
-            @if($shops->hasPages())
+            @if($discoveryItems->hasPages())
                 <div class="pagination-container">
-                    {{ $shops->links('pagination::bootstrap-4') }}
+                    {{ $discoveryItems->onEachSide(2)->links('pagination::bootstrap-4') }}
                 </div>
             @endif
         @endif
@@ -876,6 +998,7 @@ const mysteryShops = @json(array_map(function($shop) {
         function renderResult(shop, periodKey, { animateIn = false } = {}) {
             result.className = 'result show';
             const shopName = shop.name || shop.shop_name || 'Heritage Shop';
+            const foodTrailUrl = `${BLIND_BOX_CONFIG.foodtrailUrl}?search=${encodeURIComponent(shopName)}`;
 
             // CHANGED: Resolve the actual revealed shop's detail page URL.
             // shop.shop_source_id comes from BlindBoxDraw::toDrawArray() (persisted
@@ -909,13 +1032,13 @@ const mysteryShops = @json(array_map(function($shop) {
                             <span class="meta-chip">📍 ${shop.state || BLIND_BOX_TEXT.malaysia}</span>
                         </div>
                         <div class="cta-row" style="display: flex; gap: 15px; flex-wrap: wrap;">
-                            <a class="cta-btn cta-primary" style="padding: 16px 30px; font-size: 1.1rem; border-radius: 15px; background: var(--red-dark); color: white; font-weight: 700;" href="${BLIND_BOX_CONFIG.foodtrailUrl}">${BLIND_BOX_TEXT.exploreTrails}</a>
+                            <a class="cta-btn cta-primary" style="padding: 16px 30px; font-size: 1.1rem; border-radius: 15px; background: var(--red-dark); color: white; font-weight: 700;" href="${foodTrailUrl}">${BLIND_BOX_TEXT.exploreTrails}</a>
                             <a class="cta-btn cta-outline" style="padding: 16px 30px; font-size: 1.1rem; border-radius: 15px; border: 2px solid var(--red-dark); color: var(--red-dark); font-weight: 700;" href="${detailUrl}">${BLIND_BOX_TEXT.viewDetails}</a>
                         </div>
                         ${shop.draw_id ? `
                             <div class="favourite-action-row" style="margin-top: 14px;">
-                                <button type="button" class="cta-btn cta-outline favourite-toggle" data-draw-id="${shop.draw_id}" data-favourited="${shop.is_favourited ? '1' : '0'}" style="padding: 12px 20px; font-size: 1rem; border-radius: 15px; border: 2px solid var(--red-dark); color: var(--red-dark); font-weight: 700;">
-                                    ${shop.is_favourited ? '&#9829;' : '&#9825;'} <span class="favourite-label">${shop.is_favourited ? BLIND_BOX_TEXT.savedFavourite : BLIND_BOX_TEXT.saveFavourite}</span>
+                                <button type="button" class="cta-btn cta-outline favourite-toggle" data-draw-id="${shop.draw_id}" data-favourited="${shop.is_favourited ? '1' : '0'}" style="padding: 12px 20px; font-size: 1rem; border-radius: 15px; border: 2px solid var(--red-dark); color: var(--red-dark); font-weight: 700; cursor: pointer;">
+                                    ${shop.is_favourited ? '&#9829;' : '&#9825;'} <span class="favourite-label">${shop.is_favourited ? BLIND_BOX_TEXT.removeFavourite : BLIND_BOX_TEXT.saveFavourite}</span>
                                 </button>
                             </div>
                         ` : ''}

@@ -93,6 +93,32 @@ class BlindBoxController extends Controller
             ['path' => $request->url(), 'query' => $request->query()]
         );
 
+        $discoveryMode = 'shops';
+        $discoveryItems = $paginatedShops;
+        $discoveryShop = null;
+        $latestDraw = BlindBoxDraw::query()
+            ->where('user_id', $request->user()->id)
+            ->latest('drawn_at')
+            ->latest('id')
+            ->first();
+
+        if ($latestDraw !== null) {
+            $discoveryShop = HeritageShop::query()
+                ->published()
+                ->with('activeFoodItems')
+                ->when($latestDraw->shop_source_id, fn ($query) => $query->whereKey($latestDraw->shop_source_id))
+                ->when(! $latestDraw->shop_source_id, fn ($query) => $query->where('shop_name', $latestDraw->shop_name))
+                ->first();
+
+            if ($discoveryShop?->activeFoodItems->isNotEmpty()) {
+                $discoveryMode = 'foods';
+                $discoveryItems = $discoveryShop->activeFoodItems()
+                    ->paginate($perPage, ['*'], 'discovery_page')
+                    ->withQueryString()
+                    ->onEachSide(2);
+            }
+        }
+
         $existingDraw = $this->findExistingDraw($request, $period);
         $alreadyDrew = $existingDraw !== null;
         $currentDraw = $existingDraw?->toDrawArray();
@@ -134,6 +160,9 @@ class BlindBoxController extends Controller
             'alreadyDrew' => $alreadyDrew,
             'currentDraw' => $currentDraw,
             'mysteryShops' => $mysteryShops,
+            'discoveryMode' => $discoveryMode,
+            'discoveryItems' => $discoveryItems,
+            'discoveryShop' => $discoveryShop,
         ]);
     }
 

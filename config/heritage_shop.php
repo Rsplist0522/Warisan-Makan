@@ -10,5 +10,5 @@ return [
     'max_list_discovery_items' => 10,
 
     // Real-world passport check-in radius used for every shop.
-    'checkin_radius_meters' => (int) env('HERITAGE_CHECKIN_RADIUS_METERS', 150),
+    'checkin_radius_meters' => (int) env('HERITAGE_CHECKIN_RADIUS_METERS', 1500),
 ];

@@ -61,6 +61,8 @@
     "Discover forgotten food stories, celebrate traditional vendors, and let every visit feel like a small cultural expedition.": "Discover forgotten food stories, celebrate traditional vendors, and let every visit feel like a small cultural expedition.",
     "Explore Blind Box": "Explore Blind Box",
     "Go to main page": "Go to main page",
+    "Filter by category": "Filter by category",
+    "All categories": "All categories",
     "View draw history": "View draw history",
     "Heritage Shop Discovery": "Heritage Shop Discovery",
     "Browse featured vendors with founder stories and generations of flavour.": "Browse featured vendors with founder stories and generations of flavour.",
@@ -375,6 +377,14 @@
     "markVisited": "Mark visited",
     "love": "♡ Love",
     "visited": "Visited",
-    "liked": "♥ Liked"
+    "liked": "♥ Liked",
+    "Recommended Food Discoveries": "Recommended Food Discoveries",
+    "Recommended foods from your latest Blind Box discovery at :shop.": "Recommended foods from your latest Blind Box discovery at :shop.",
+    "No recommended foods found for this shop.": "No recommended foods found for this shop.",
+    "Please check the shop details for more heritage information.": "Please check the shop details for more heritage information.",
+    "Heritage Food": "Heritage Food",
+    "A heritage food recommendation from your Blind Box discovery.": "A heritage food recommendation from your Blind Box discovery.",
+    "View Food Details": "View Food Details",
+    "No image available": "No image available"
 
 }

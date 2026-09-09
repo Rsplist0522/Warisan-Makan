@@ -30,8 +30,51 @@ class HeritageShop extends Model
         self::STATUS_DRAFT,
         self::STATUS_PUBLISHED,
         self::STATUS_ARCHIVED,
-        self::STATUS_APPROVED_LEGACY,
     ];
+
+    protected static function booted(): void
+    {
+        static::saving(function (HeritageShop $shop): void {
+            if (! $shop->exists && blank($shop->version)) {
+                $shop->version = 1;
+            }
+
+            $identityChanged = ! $shop->exists || $shop->isDirty([
+                'shop_name',
+                'address',
+                'city',
+                'state',
+            ]);
+
+            if ($identityChanged) {
+                $newDuplicateKey = self::duplicateKeyFor(
+                    $shop->shop_name,
+                    $shop->address,
+                    $shop->city,
+                    $shop->state,
+                );
+                $originalDuplicateKey = $shop->exists ? self::duplicateKeyFor(
+                    $shop->getOriginal('shop_name'),
+                    $shop->getOriginal('address'),
+                    $shop->getOriginal('city'),
+                    $shop->getOriginal('state'),
+                ) : null;
+
+                // A safely preserved legacy duplicate has a NULL key. Permit
+                // non-identifying or normalization-only edits without trying
+                // to claim the canonical row's unique key.
+                if (! ($shop->exists
+                    && $shop->getOriginal('duplicate_key') === null
+                    && $newDuplicateKey === $originalDuplicateKey)) {
+                    $shop->duplicate_key = $newDuplicateKey;
+                }
+            }
+
+            if ($shop->exists && $shop->isDirty()) {
+                $shop->version = max(1, (int) $shop->getOriginal('version')) + 1;
+            }
+        });
+    }
 
     public function scopePublished($query)
     {
@@ -78,7 +121,39 @@ class HeritageShop extends Model
         'establishment_year' => 'integer',
         'latitude' => 'float',
         'longitude' => 'float',
+        'version' => 'integer',
     ];
+
+    public static function duplicateKeyFor(mixed $shopName, mixed $address, mixed $city, mixed $state): string
+    {
+        return hash('sha256', json_encode([
+            self::normalizeIdentityPart($shopName),
+            self::normalizeIdentityPart($address),
+            self::normalizeIdentityPart($city),
+            self::normalizeIdentityPart($state),
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+    }
+
+    public static function normalizeIdentityPart(mixed $value): string
+    {
+        return mb_strtolower(trim(preg_replace('/\s+/u', ' ', (string) $value) ?? (string) $value));
+    }
+
+    public function safeSourceUrl(): ?string
+    {
+        $url = trim((string) $this->source_url);
+        $parts = parse_url($url);
+
+        if (! is_array($parts)
+            || ! in_array(strtolower((string) ($parts['scheme'] ?? '')), ['http', 'https'], true)
+            || blank($parts['host'] ?? null)
+            || isset($parts['user'])
+            || isset($parts['pass'])) {
+            return null;
+        }
+
+        return $url;
+    }
 
     public function sourceContribution()
     {
@@ -178,6 +253,7 @@ class HeritageShop extends Model
                 foreach ($this->parseOperatingHoursText($text) as $parsedRow) {
                     $rows[] = $parsedRow;
                 }
+
                 continue;
             }
 

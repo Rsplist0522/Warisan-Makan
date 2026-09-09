@@ -3816,28 +3816,35 @@ class CommunityContributionTest extends TestCase
         $this->assertDatabaseCount('heritage_shop_contributions', 1);
     }
 
-    public function test_contribution_contact_number_must_be_malaysian(): void
+    public function test_postal_code_only_accepts_digits(): void
     {
         $user = User::factory()->create();
 
-        foreach (['1212424568989242424', '+1 415 555 0100', '6012 345 6789', '+60 12 34'] as $contactNumber) {
-            $this->actingAs($user)
-                ->post(route('community-contribution.store'), [
-                    ...$this->validContributionData(),
-                    'contact_number' => $contactNumber,
-                ])
-                ->assertSessionHasErrors('contact_number');
-        }
+        $this->actingAs($user)
+            ->get(route('community-contribution.create'))
+            ->assertOk()
+            ->assertSee('inputmode="numeric"', false)
+            ->assertSee('pattern="[0-9]*"', false);
 
-        foreach (['+60 3-1234 5678', '03-1234 5678', '+60 12-345 6789', '011-1234 5678'] as $contactNumber) {
-            $this->actingAs($user)
-                ->post(route('community-contribution.store'), [
-                    ...$this->validContributionData(),
-                    'submission_token' => (string) Str::uuid(),
-                    'contact_number' => $contactNumber,
-                ])
-                ->assertSessionHasNoErrors();
-        }
+        $this->actingAs($user)
+            ->post(route('community-contribution.store'), [
+                ...$this->validContributionData(),
+                'postal_code' => 'five-zero-one-zero-zero',
+            ])
+            ->assertSessionHasErrors('postal_code');
+
+        $this->assertDatabaseCount('heritage_shop_contributions', 0);
+
+        $this->actingAs($user)
+            ->post(route('community-contribution.store'), [
+                ...$this->validContributionData(),
+                'postal_code' => '05000',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('heritage_shop_contributions', [
+            'postal_code' => '05000',
+        ]);
     }
 
     private function fakeContributionAndShopImageDisks(): void

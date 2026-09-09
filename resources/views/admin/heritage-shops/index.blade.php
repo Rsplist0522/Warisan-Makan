@@ -158,7 +158,11 @@
                             </div>
                         </div>
                         <div class="record-actions">
-                                                        <a class="button secondary small" href="{{ route('heritage-shops.show', $shop) }}" target="_blank" rel="noopener noreferrer">View</a>
+                            @if ($shop->isPubliclyVisible())
+                                <a class="button secondary small" href="{{ route('heritage-shops.show', $shop) }}" target="_blank" rel="noopener noreferrer">View</a>
+                            @else
+                                <a class="button secondary small" href="{{ route('admin.heritage-shops.preview', $shop) }}" target="_blank" rel="noopener noreferrer">Preview</a>
+                            @endif
                             <a class="button secondary small" href="{{ route('admin.heritage-shops.food-items.index', $shop) }}">Manage food</a>
                                                         <a class="button primary small" href="{{ route('admin.heritage-shops.edit', $shop) }}">Edit</a>
                             <form method="POST" action="{{ route('admin.heritage-shops.destroy', $shop) }}" onsubmit="return confirm('Delete {{ addslashes($shop->shop_name) }} permanently? This removes its HeritageShop gallery and food catalog. If visitor passport history is linked, the system will safely block deletion.');" style="display:inline;">

@@ -778,6 +778,7 @@
         alreadyDrew: @json($alreadyDrew),
         periodKey: @json($periodInfo['key']),
         favouritesStoreUrl: '{{ route('blind-box.favourites.store') }}',
+        foodDetailUrlTemplate: '{{ route('heritage-shops.food-items.show', ['heritageShop' => '__SHOP_ID__', 'foodItem' => '__FOOD_ID__']) }}',
     };
 
     const BLIND_BOX_TEXT = {
@@ -811,6 +812,13 @@
         saveFavourite: @json(__('Save to favourites')),
         savedFavourite: @json(__('Saved to favourites')),
         removeFavourite: @json(__('Remove from favourites')),
+        recommendedFoodDiscoveries: @json(__('Recommended Food Discoveries')),
+        recommendedFoodsAt: @json(__('Recommended foods from your latest Blind Box discovery at :shop.')),
+        noRecommendedFoods: @json(__('No recommended foods found for this shop.')),
+        heritageFood: @json(__('Heritage Food')),
+        foodRecommendation: @json(__('A heritage food recommendation from your Blind Box discovery.')),
+        viewFoodDetails: @json(__('View Food Details')),
+        noImageAvailable: @json(__('No image available')),
     };
 
     const BLIND_BOX_PERIODS = {
@@ -1071,6 +1079,49 @@ const mysteryShops = @json(array_map(function($shop) {
             });
         }
 
+        function escapeHtml(value) {
+            const element = document.createElement('div');
+            element.textContent = value ?? '';
+            return element.innerHTML;
+        }
+
+        function updateDiscovery(discovery) {
+            if (!discovery || discovery.mode !== 'foods' || !discovery.foods?.length) return;
+
+            const section = document.getElementById('discover');
+            if (!section) return;
+
+            const shopName = escapeHtml(discovery.shop_name);
+            const foods = discovery.foods.map((food) => {
+                const name = escapeHtml(food.name);
+                const category = escapeHtml(food.category || BLIND_BOX_TEXT.heritageFood);
+                const description = escapeHtml(food.description || BLIND_BOX_TEXT.foodRecommendation);
+                const availability = food.availability
+                    ? `<span class="state-chip">${escapeHtml(food.availability)}</span>`
+                    : '';
+                const image = food.image_url
+                    ? `<img src="${escapeHtml(food.image_url)}" alt="${name}" loading="lazy">`
+                    : `<div class="image-placeholder">${BLIND_BOX_TEXT.noImageAvailable}</div>`;
+
+                return `<article class="item-card food-card">
+                    <div class="item-media">${image}</div>
+                    <div class="item-body">
+                        <span class="tag">${category}</span>
+                        <h3 style="font-size: 1.4rem; color: var(--red-dark); margin-bottom: 12px;">${name}</h3>
+                        <p class="muted discovery-description" style="font-size: 0.95rem;">${description}</p>
+                        <div class="item-meta">${availability}
+                            <a class="btn btn-secondary" href="${escapeHtml(food.detail_url)}">${BLIND_BOX_TEXT.viewFoodDetails}</a>
+                        </div>
+                    </div>
+                </article>`;
+            }).join('');
+
+            section.innerHTML = `<h2 style="font-family: Georgia, serif;">🏮 ${BLIND_BOX_TEXT.recommendedFoodDiscoveries}</h2>
+                <p class="lead">${BLIND_BOX_TEXT.recommendedFoodsAt.replace(':shop', shopName)}</p>
+                <div class="shop-grid">${foods}</div>`;
+            section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
         if (BLIND_BOX_CONFIG.alreadyDrew && BLIND_BOX_CONFIG.initialDraw) {
             boxContainer.style.display = 'none';
             renderResult(BLIND_BOX_CONFIG.initialDraw, BLIND_BOX_CONFIG.periodKey);
@@ -1109,6 +1160,7 @@ const mysteryShops = @json(array_map(function($shop) {
                     setTimeout(() => {
                         boxContainer.style.display = 'none';
                         renderResult(data.shop, data.period, { animateIn: true });
+                        updateDiscovery(data.discovery);
                     }, 400);
                 }, 900);
 

@@ -3,6 +3,9 @@ WORKDIR /var/www/html
 RUN apt-get update && apt-get install -y libonig-dev libzip-dev unzip git curl
 RUN docker-php-ext-install mbstring zip pdo pdo_mysql
 
+RUN printf "upload_max_filesize=4M\npost_max_size=32M\nmax_file_uploads=20\n" \
+    > /usr/local/etc/php/conf.d/uploads.ini
+
 # Enable OPcache for performance
 RUN docker-php-ext-install opcache
 RUN echo "opcache.enable=1" >> /usr/local/etc/php/conf.d/opcache.ini

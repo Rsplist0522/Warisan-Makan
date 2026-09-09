@@ -17,7 +17,7 @@
         </div>
         <div class="actions">
             <a class="button secondary small" href="{{ route('admin.heritage-shops.edit', $shop) }}">Back to shop</a>
-            <a class="button primary small" href="{{ route('heritage-shops.show', ['id' => $shop->id]) }}" target="_blank" rel="noopener noreferrer">Preview public page ↗</a>
+            <a class="button primary small" href="{{ $shop->isPubliclyVisible() ? route('heritage-shops.show', ['id' => $shop->id]) : route('admin.heritage-shops.preview', $shop) }}" target="_blank" rel="noopener noreferrer">{{ $shop->isPubliclyVisible() ? 'View public page' : 'Preview draft' }} ↗</a>
         </div>
     </header>
 
@@ -75,9 +75,11 @@
                             <div>
                                 <span class="food-item-order">#{{ $loop->iteration }}</span>
                                 <h3>{{ $item->name }}</h3>
-                                <span class="badge {{ $item->is_active ? 'badge-approved' : 'badge-draft' }}">{{ $item->is_active ? 'Visible' : 'Hidden' }}</span>
+                                <span class="badge {{ $item->is_active ? 'badge-approved' : 'badge-draft' }}">{{ $item->is_active ? 'Visible publicly' : 'Hidden from visitors' }}</span>
                                 @if ($item->image_path)
                                     <img class="food-item-thumb" src="{{ route('admin.heritage-shops.food-items.image', [$shop, $item]) }}" alt="{{ $item->name }} food photo" loading="lazy" onerror="this.style.display='none'">
+                                @else
+                                    <div class="food-item-thumb food-item-thumb-empty">No photo</div>
                                 @endif
                             </div>
                             <div class="food-item-admin-actions">
@@ -131,6 +133,7 @@
     .food-item-admin-header h3 { display:inline-block; margin:0 8px 7px 5px; color:var(--accent); font-family:Georgia,serif; font-size:1.2rem; }
     .food-item-order { color:var(--gold); font-size:.75rem; font-weight:900; }
     .food-item-thumb { display:block; width:100px; height:72px; margin-top:10px; border-radius:10px; object-fit:cover; border:1px solid var(--line); background:#f1e5d7; }
+    .food-item-thumb-empty { display:grid; place-items:center; color:var(--muted); font-size:.72rem; }
     .food-item-admin-actions { display:flex; flex-wrap:wrap; justify-content:end; gap:7px; }
     .food-item-admin-actions form { margin:0; }
     .help-text { color:var(--muted); font-size:.74rem; line-height:1.4; }

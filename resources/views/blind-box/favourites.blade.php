@@ -792,7 +792,7 @@
                                 <span>{{ __('View Details') }}</span>
                             </a>
 
-                            <a class="fav-action-btn secondary" href="{{ route('foodtrails.index') }}" title="{{ __('Find in Food Trails') }}">
+                            <a class="fav-action-btn secondary" href="{{ route('foodtrails.index', ['search' => $favourite->shop_name]) }}" title="{{ __('Find in Food Trails') }}">
                                 <i class="fa-solid fa-route"></i>
                                 <span>{{ __('Explore Trails') }}</span>
                             </a>

@@ -192,30 +192,29 @@ Route::prefix('admin')
     });
 
 // Blind Box routes
-Route::get('/blind-box', [BlindBoxController::class, 'index'])->middleware(['auth', 'user.inactivity'])->name('blind-box.index');
-Route::post('/blind-box/draw', [BlindBoxController::class, 'draw'])->middleware(['auth', 'user.inactivity'])->name('blind-box.draw');
-Route::get('/blind-box/favourites', [BlindBoxController::class, 'favourites'])->middleware(['auth', 'user.inactivity'])->name('blind-box.favourites');
-Route::post('/blind-box/favourites', [BlindBoxController::class, 'saveFavourite'])->middleware(['auth', 'user.inactivity'])->name('blind-box.favourites.store');
-Route::delete('/blind-box/favourites/{favourite}', [BlindBoxController::class, 'removeFavourite'])->middleware(['auth', 'user.inactivity'])->name('blind-box.favourites.destroy');
+Route::get('/blind-box', [BlindBoxController::class, 'index'])->middleware(['auth', 'active_user', 'user.inactivity'])->name('blind-box.index');
+Route::post('/blind-box/draw', [BlindBoxController::class, 'draw'])->middleware(['auth', 'active_user', 'user.inactivity'])->name('blind-box.draw');
+Route::get('/blind-box/favourites', [BlindBoxController::class, 'favourites'])->middleware(['auth', 'active_user', 'user.inactivity'])->name('blind-box.favourites');
+Route::post('/blind-box/favourites', [BlindBoxController::class, 'saveFavourite'])->middleware(['auth', 'active_user', 'user.inactivity'])->name('blind-box.favourites.store');
+Route::delete('/blind-box/favourites/{favourite}', [BlindBoxController::class, 'removeFavourite'])->middleware(['auth', 'active_user', 'user.inactivity'])->name('blind-box.favourites.destroy');
 Route::post('/chat', [ChatController::class, 'respond'])->name('chat.respond');
 
-// Module-only shop check-in page (public for development)
-Route::get('/foodPassport/shop/{id}', [PassportController::class, 'showShop'])->middleware(['auth', 'user.inactivity'])
+// Module-only authenticated shop check-in page
+Route::get('/foodPassport/shop/{id}', [PassportController::class, 'showShop'])->middleware(['auth', 'active_user', 'user.inactivity'])
     ->name('passport.shop');
 
-// Food Passport 
-// Public Food Passport page (no login required for viewing)
-Route::get('/foodPassport', [PassportController::class, 'index'])->middleware(['auth', 'user.inactivity'])
+// Food Passport
+Route::get('/foodPassport', [PassportController::class, 'index'])->middleware(['auth', 'active_user', 'user.inactivity'])
     ->name('passport.index');
-Route::get('/foodPassport/history', [PassportController::class, 'history'])->middleware(['auth', 'user.inactivity'])
+Route::get('/foodPassport/history', [PassportController::class, 'history'])->middleware(['auth', 'active_user', 'user.inactivity'])
     ->name('passport.history');
-Route::get('/foodPassport/statistics', [PassportController::class, 'statistics'])->middleware(['auth', 'user.inactivity'])
+Route::get('/foodPassport/statistics', [PassportController::class, 'statistics'])->middleware(['auth', 'active_user', 'user.inactivity'])
     ->name('passport.statistics');
-Route::get('/foodPassport/leaderboard', [PassportController::class, 'leaderboard'])->middleware(['auth', 'user.inactivity'])
+Route::get('/foodPassport/leaderboard', [PassportController::class, 'leaderboard'])->middleware(['auth', 'active_user', 'user.inactivity'])
     ->name('passport.leaderboard');
 
 // Protected endpoints for authenticated users
-Route::middleware(['auth', 'user.inactivity'])->group(function () {
+Route::middleware(['auth', 'active_user', 'user.inactivity'])->group(function () {
 
     Route::post('/passport/check-in', [PassportController::class, 'checkIn'])
         ->name('passport.checkin');
@@ -223,19 +222,19 @@ Route::middleware(['auth', 'user.inactivity'])->group(function () {
 
 
 // Food trails page
-Route::get('/foodtrails', [FoodTrailController::class, 'index'])->middleware(['auth', 'user.inactivity'])->name('foodtrails.index');
+Route::get('/foodtrails', [FoodTrailController::class, 'index'])->middleware(['auth', 'active_user', 'user.inactivity'])->name('foodtrails.index');
 
 // Start trail page
 Route::get('/start_trail', function () {
     return view('start_trail');
-})->middleware(['auth', 'user.inactivity']);
+})->middleware(['auth', 'active_user', 'user.inactivity']);
 
 Route::get('/heritage-shops', [HeritageShopController::class, 'index'])
     ->middleware('user.inactivity')
     ->name('heritage-shops.index');
 Route::get('/heritage-shops/{heritageShop}/menu', [HeritageShopController::class, 'menu'])
     ->whereNumber('heritageShop')
-    ->middleware(['auth', 'user.inactivity'])
+    ->middleware(['auth', 'active_user', 'user.inactivity'])
     ->name('heritage-shops.menu');
 Route::get('/heritage-shops/{heritageShop}/images/{image}', [HeritageShopController::class, 'image'])
     ->whereNumber('heritageShop')
@@ -245,19 +244,19 @@ Route::get('/heritage-shops/{heritageShop}/images/{image}', [HeritageShopControl
 Route::get('/heritage-shops/{heritageShop}/food-items/{foodItem}', [HeritageShopController::class, 'foodItem'])
     ->whereNumber('heritageShop')
     ->whereNumber('foodItem')
-    ->middleware(['auth', 'user.inactivity'])
+    ->middleware(['auth', 'active_user', 'user.inactivity'])
     ->name('heritage-shops.food-items.show');
 Route::get('/heritage-shops/{heritageShop}/food-items/{foodItem}/image', [HeritageShopController::class, 'foodImage'])
     ->whereNumber('heritageShop')
     ->whereNumber('foodItem')
-    ->middleware(['auth', 'user.inactivity'])
+    ->middleware(['auth', 'active_user', 'user.inactivity'])
     ->name('heritage-shops.food-images.show');
 Route::post('/heritage-shops/{heritageShop}/ai-guide', [HeritageShopController::class, 'aiGuide'])
     ->middleware('throttle:30,1')
-    ->middleware(['auth', 'user.inactivity'])
+    ->middleware(['auth', 'active_user', 'user.inactivity'])
     ->whereNumber('heritageShop')
     ->name('heritage-shops.ai-guide');
 Route::get('/heritage-shops/{id}', [HeritageShopController::class, 'show'])
     ->whereNumber('id')
-    ->middleware(['auth', 'user.inactivity'])
+    ->middleware(['auth', 'active_user', 'user.inactivity'])
     ->name('heritage-shops.show');

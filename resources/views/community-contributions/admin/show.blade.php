@@ -41,12 +41,14 @@
                     <h2>Supporting media</h2>
                     @if ($contribution->media->isNotEmpty())
                         @if ($contribution->status === \App\Models\HeritageShopContribution::STATUS_UNDER_REVIEW)
-                            <p class="muted">Select suitable submitted images to include in the public Heritage Shop gallery after approval.</p>
+                            <p class="muted">Select at least one suitable image to publish. The Heritage Shop gallery allows up to {{ config('heritage_shop.max_gallery_images', 10) }} JPG, JPEG, PNG, or WebP images, each no larger than {{ round(config('heritage_shop.max_image_kb', 2048) / 1024, 1) }} MB.</p>
                         @endif
                         <div class="media-grid" style="margin-top:14px">
                             @foreach ($contribution->media as $media)
                                 @php
-                                    $isPublishableImage = $media->media_type === 'image' && in_array(strtolower((string) $media->mime_type), ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'], true);
+                                    $isSupportedGalleryImage = $media->media_type === 'image' && in_array(strtolower((string) $media->mime_type), ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'], true);
+                                    $isWithinGallerySize = ! $media->file_size_bytes || $media->file_size_bytes <= config('heritage_shop.max_image_bytes', 2 * 1024 * 1024);
+                                    $isPublishableImage = $isSupportedGalleryImage && $isWithinGallerySize;
                                 @endphp
                                 <article class="media-card review-media-card">
                                     <a class="review-media-preview" href="{{ $media->url }}" target="_blank" rel="noopener">
@@ -62,7 +64,9 @@
                                             <span>Publish to Heritage Shop</span>
                                         </label>
                                     @else
-                                        <p class="review-only-label">Review evidence only</p>
+                                        <p class="review-only-label">
+                                            {{ $isSupportedGalleryImage && ! $isWithinGallerySize ? 'Evidence only — exceeds the gallery image limit' : 'Review evidence only' }}
+                                        </p>
                                     @endif
                                 </article>
                             @endforeach

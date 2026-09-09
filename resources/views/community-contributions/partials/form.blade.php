@@ -684,7 +684,7 @@
     );
 
     const mediaFilesSelectedMessage = @json(__(':count of :total files selected.'));
-const canAddMoreFilesMessage = @json(__('You can add up to :count more :files.'));
+    const canAddMoreFilesMessage = @json(__('You can add up to :count more :files.'));
 
     (() => {
         const shell = document.getElementById('food-items-shell');
@@ -785,6 +785,202 @@ const canAddMoreFilesMessage = @json(__('You can add up to :count more :files.')
         const form = document.querySelector('form.form-grid');
         const hourRows = document.querySelectorAll('.soft-card-row');
         const postalCodeInput = document.getElementById('postal_code');
+        const maxSupportingMedia = Number(mediaPanel?.dataset.maxSupportingMedia || 6);
+        const existingMediaCount = Number(mediaPanel?.dataset.existingMediaCount || 0);
+        let selectedSupportingFiles = [];
+
+        const pluralizeFile = (count) => count === 1 ? 'file' : 'files';
+        const supportingFileKey = (file) => [
+            file.name,
+            file.size,
+            file.type,
+            file.lastModified,
+        ].join('::');
+        const retainedExistingMediaCount = () => existingMediaCount - removeMediaInputs.filter((checkbox) => checkbox.checked).length;
+        const usedSupportingMediaCount = () => retainedExistingMediaCount() + selectedSupportingFiles.length;
+        const remainingSupportingMediaSlots = () => Math.max(0, maxSupportingMedia - usedSupportingMediaCount());
+
+        const setMediaError = (message = '') => {
+            if (! mediaLimitError) {
+                return;
+            }
+
+            mediaLimitError.textContent = message;
+            mediaLimitError.hidden = message === '';
+        };
+
+        const syncSupportingMediaInput = () => {
+            if (! input) {
+                return true;
+            }
+
+            if (typeof DataTransfer === 'undefined') {
+                input.value = '';
+                selectedSupportingFiles = [];
+
+                return false;
+            }
+
+            const transfer = new DataTransfer();
+            selectedSupportingFiles.forEach((file) => transfer.items.add(file));
+            input.files = transfer.files;
+
+            return true;
+        };
+
+        const updateExistingMediaCards = () => {
+            removeMediaInputs.forEach((checkbox) => {
+                const card = checkbox.closest('[data-existing-media-card]');
+                const label = card?.querySelector('[data-remove-media-label]');
+
+                card?.classList.toggle('marked-for-removal', checkbox.checked);
+                if (label) {
+                    label.textContent = checkbox.checked
+                        ? @json(__('Undo removal'))
+                        : @json(__('Remove this file'));
+                }
+            });
+        };
+
+        const updateSupportingMediaCounts = () => {
+            const used = usedSupportingMediaCount();
+            const remaining = remainingSupportingMediaSlots();
+
+            if (mediaSlotSummary) {
+                mediaSlotSummary.textContent = mediaFilesSelectedMessage
+                    .replace(':count', used)
+                    .replace(':total', maxSupportingMedia);
+            }
+
+            if (mediaSlotDetail) {
+                mediaSlotDetail.textContent = remaining === 0
+                    ? @json(__('Maximum supporting media files reached.'))
+                    : canAddMoreFilesMessage
+                        .replace(':count', remaining)
+                        .replace(':files', pluralizeFile(remaining));
+            }
+
+            input?.toggleAttribute('data-maximum-reached', remaining === 0);
+        };
+
+        const renderSupportingMediaPreview = () => {
+            preview?.replaceChildren();
+            if (newMediaTitle) {
+                newMediaTitle.hidden = selectedSupportingFiles.length === 0;
+            }
+
+            selectedSupportingFiles.forEach((file, index) => {
+                const card = document.createElement('div');
+                card.className = 'media-card new-media-card';
+                const url = URL.createObjectURL(file);
+
+                if (file.type.startsWith('image/')) {
+                    const image = document.createElement('img');
+                    image.src = url;
+                    image.alt = file.name;
+                    image.onload = () => URL.revokeObjectURL(url);
+                    card.appendChild(image);
+                } else {
+                    const video = document.createElement('video');
+                    video.src = url;
+                    video.controls = true;
+                    video.onloadedmetadata = () => URL.revokeObjectURL(url);
+                    card.appendChild(video);
+                }
+
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'new-media-remove';
+                button.textContent = @json(__('Remove new file'));
+                button.addEventListener('click', () => {
+                    selectedSupportingFiles.splice(index, 1);
+                    const synced = syncSupportingMediaInput();
+                    setMediaError(synced ? '' : @json(__('Your browser cleared the selected files. Please choose them again.')));
+                    renderSupportingMediaPreview();
+                    updateSupportingMediaCounts();
+                });
+                card.appendChild(button);
+                preview?.appendChild(card);
+            });
+
+            if (selectedSupportingFiles.length) {
+                const note = document.createElement('p');
+                note.className = 'preview-note';
+                note.textContent = newFilesSelectedMessage.replace(':count', selectedSupportingFiles.length);
+                preview?.appendChild(note);
+            }
+        };
+
+        removeMediaInputs.forEach((checkbox) => {
+            checkbox.addEventListener('change', () => {
+                if (! checkbox.checked && usedSupportingMediaCount() > maxSupportingMedia) {
+                    checkbox.checked = true;
+                    setMediaError(@json(__('Remove a newly selected file before keeping this saved file.')));
+                } else {
+                    setMediaError('');
+                }
+
+                updateExistingMediaCards();
+                updateSupportingMediaCounts();
+            });
+        });
+
+        updateExistingMediaCards();
+        updateSupportingMediaCounts();
+
+        const reindexHourRow = (row) => {
+            const day = row.dataset.hoursDay;
+            row.querySelectorAll('[data-hours-period]').forEach((periodRow, index) => {
+                periodRow.querySelectorAll('input[type="time"]').forEach((timeInput) => {
+                    const part = timeInput.name.endsWith('[close]') ? 'close' : 'open';
+                    timeInput.name = `operating_hours[${day}][periods][${index}][${part}]`;
+                });
+                const removeButton = periodRow.querySelector('.remove-hours-period');
+                if (removeButton && index === 0) {
+                    removeButton.remove();
+                }
+                if (index > 0 && ! removeButton) {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = 'mini-button remove-hours-period';
+                    button.textContent = @json(__('Remove'));
+                    periodRow.appendChild(button);
+                    button.addEventListener('click', () => {
+                        const rows = Array.from(row.querySelectorAll('[data-hours-period]'));
+                        if (rows.length <= 1) {
+                            return;
+                        }
+                        periodRow.remove();
+                        reindexHourRow(row);
+                        syncHourRow(row);
+                    });
+                }
+            });
+        };
+
+        const syncHourRow = (row) => {
+            const day = row.dataset.hoursDay;
+            const closedInput = row.querySelector('.operating-hours-closed');
+            const timeInputs = row.querySelectorAll('input[type="time"]');
+            const addPeriodButton = row.querySelector('.add-hours-period');
+            const removeButtons = row.querySelectorAll('.remove-hours-period');
+            const closed = Boolean(closedInput?.checked);
+
+            timeInputs.forEach((timeInput) => {
+                timeInput.disabled = closed;
+            });
+            removeButtons.forEach((button) => {
+                button.disabled = closed;
+            });
+            if (addPeriodButton) {
+                addPeriodButton.disabled = closed;
+            }
+
+            const hidden = row.querySelector('input[type="hidden"][name^="operating_hours[' + day + '][closed]"]');
+            if (hidden) {
+                hidden.value = closed ? '1' : '0';
+            }
+        };
 
         postalCodeInput?.addEventListener('input', () => {
             postalCodeInput.value = postalCodeInput.value.replace(/[^0-9]/g, '');

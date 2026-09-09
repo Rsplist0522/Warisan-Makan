@@ -158,9 +158,10 @@ class HeritageShopHardeningTest extends TestCase
             ],
         ])->assertRedirect();
 
-        $this->assertDatabaseMissing('shop_images', ['id' => $oldImage->id]);
         $this->assertFalse(Storage::disk('public')->exists($oldPath));
         $replacement = $shop->fresh()->images()->firstOrFail();
+        $this->assertSame($oldImage->id, $replacement->id);
+        $this->assertNotSame($oldPath, $replacement->path);
         $this->assertTrue($replacement->is_primary);
         $this->assertTrue(Storage::disk('public')->exists($replacement->path));
     }
@@ -201,7 +202,7 @@ class HeritageShopHardeningTest extends TestCase
         Http::assertNotSent(fn ($request): bool => str_contains($request->url(), '127.0.0.1'));
     }
 
-    public function test_crawler_rejects_remote_images_over_the_shared_one_mb_limit(): void
+    public function test_crawler_rejects_remote_images_over_the_shared_two_mb_limit(): void
     {
         Storage::fake('public');
         $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', true);

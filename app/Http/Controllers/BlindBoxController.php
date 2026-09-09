@@ -92,22 +92,22 @@ class BlindBoxController extends Controller
             $currentPage,
             ['path' => $request->url(), 'query' => $request->query()]
         );
+        $paginatedShops->onEachSide(2);
+
+        $existingDraw = $this->findExistingDraw($request, $period);
+        $alreadyDrew = $existingDraw !== null;
+        $currentDraw = $existingDraw?->toDrawArray();
 
         $discoveryMode = 'shops';
         $discoveryItems = $paginatedShops;
         $discoveryShop = null;
-        $latestDraw = BlindBoxDraw::query()
-            ->where('user_id', $request->user()->id)
-            ->latest('drawn_at')
-            ->latest('id')
-            ->first();
 
-        if ($latestDraw !== null) {
+        if ($existingDraw !== null) {
             $discoveryShop = HeritageShop::query()
                 ->published()
                 ->with('activeFoodItems')
-                ->when($latestDraw->shop_source_id, fn ($query) => $query->whereKey($latestDraw->shop_source_id))
-                ->when(! $latestDraw->shop_source_id, fn ($query) => $query->where('shop_name', $latestDraw->shop_name))
+                ->when($existingDraw->shop_source_id, fn ($query) => $query->whereKey($existingDraw->shop_source_id))
+                ->when(! $existingDraw->shop_source_id, fn ($query) => $query->where('shop_name', $existingDraw->shop_name))
                 ->first();
 
             if ($discoveryShop?->activeFoodItems->isNotEmpty()) {
@@ -118,10 +118,6 @@ class BlindBoxController extends Controller
                     ->onEachSide(2);
             }
         }
-
-        $existingDraw = $this->findExistingDraw($request, $period);
-        $alreadyDrew = $existingDraw !== null;
-        $currentDraw = $existingDraw?->toDrawArray();
 
         if ($currentDraw !== null) {
             $currentDraw['is_favourited'] = BlindBoxFavourite::query()
@@ -247,10 +243,34 @@ class BlindBoxController extends Controller
             ], 429);
         }
 
+        $discoveryShop = HeritageShop::query()
+            ->published()
+            ->with('activeFoodItems')
+            ->when($draw->shop_source_id, fn ($query) => $query->whereKey($draw->shop_source_id))
+            ->when(! $draw->shop_source_id, fn ($query) => $query->where('shop_name', $draw->shop_name))
+            ->first();
+
+        $discoveryFoods = $discoveryShop?->activeFoodItems->map(fn ($food) => [
+            'id' => $food->id,
+            'name' => $food->name,
+            'category' => $food->category,
+            'description' => $food->description,
+            'availability' => $food->availability,
+            'image_url' => $food->image_path
+                ? route('heritage-shops.food-images.show', [$discoveryShop, $food])
+                : null,
+            'detail_url' => route('heritage-shops.food-items.show', [$discoveryShop, $food]),
+        ])->values()->all() ?? [];
+
         return response()->json([
             'shop' => $draw->toDrawArray(),
             'period' => $period,
             'period_info' => $this->periodInfo($period),
+            'discovery' => [
+                'mode' => $discoveryFoods !== [] ? 'foods' : 'shops',
+                'shop_name' => $discoveryShop?->shop_name,
+                'foods' => $discoveryFoods,
+            ],
         ]);
     }
 

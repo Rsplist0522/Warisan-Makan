@@ -346,7 +346,7 @@ class HeritageShopAdminTest extends TestCase
         $this->assertDatabaseHas('heritage_shops', ['id' => $shop->id]);
     }
 
-    public function test_manual_gallery_upload_uses_the_configured_one_mb_limit(): void
+    public function test_manual_gallery_upload_uses_the_configured_two_mb_limit(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
 
@@ -357,7 +357,7 @@ class HeritageShopAdminTest extends TestCase
             ->post(route('admin.heritage-shops.store'), [
                 'shop_name' => 'Oversized Photo Cafe',
                 'publish_status' => HeritageShop::STATUS_DRAFT,
-                'images' => [UploadedFile::fake()->image('oversized.jpg')->size(1025)],
+                'images' => [UploadedFile::fake()->image('oversized.jpg')->size((int) config('heritage_shop.max_image_kb') + 1)],
             ]);
 
         $response->assertRedirect(route('admin.heritage-shops.create'))

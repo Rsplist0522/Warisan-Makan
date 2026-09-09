@@ -67,7 +67,7 @@
         <div class="status-banner success">{{ session('success') }}</div>
     @endif
 
-    <form method="POST" action="{{ $mode === 'create' ? route('admin.heritage-shops.store') : route('admin.heritage-shops.update', $shop) }}" enctype="multipart/form-data">
+    <form id="heritage-shop-form" method="POST" action="{{ $mode === 'create' ? route('admin.heritage-shops.store') : route('admin.heritage-shops.update', $shop) }}" enctype="multipart/form-data">
         @csrf
         @foreach ((array) old('crawler_images', []) as $crawlerImage)
             <input type="hidden" name="crawler_images[]" value="{{ $crawlerImage }}">
@@ -108,7 +108,12 @@
                         </div>
                         <div class="field">
                             <label for="primary_food_category">Primary category</label>
-                            <input id="primary_food_category" name="primary_food_category" type="text" value="{{ $shopCategory }}" maxlength="255">
+                            <input id="primary_food_category" name="primary_food_category" type="text" list="existing-category-options" value="{{ $shopCategory }}" maxlength="255">
+                            <datalist id="existing-category-options">
+                                @foreach ($categorySuggestions as $categorySuggestion)
+                                    <option value="{{ $categorySuggestion }}"></option>
+                                @endforeach
+                            </datalist>
                         </div>
                         <div class="field">
                             <label for="establishment_year">Established year</label>
@@ -212,17 +217,17 @@
 
             <aside class="detail-stack">
                 <section class="panel">
-                    <h2>Images</h2>
+                    <h2>Heritage Shop Gallery</h2>
+                    <p class="section-guidance">Upload up to {{ config('heritage_shop.max_gallery_images', 10) }} images in total. Accepted formats: JPG, JPEG, PNG and WebP. Maximum size: {{ number_format(config('heritage_shop.max_image_kb', 2048) / 1024, 0) }} MB per image.</p>
+                    <p class="gallery-count" aria-live="polite"><strong id="gallery-count">{{ $shop->images->count() }} / {{ config('heritage_shop.max_gallery_images', 10) }} images</strong><span id="gallery-remaining"></span></p>
                     <div class="field" style="margin-top:16px;">
-                                                                                <label for="images">Upload gallery images</label>
-
-                            <input id="images" name="images[]" type="file" accept="image/jpeg,image/png,image/webp" multiple data-max-bytes="{{ config('heritage_shop.max_image_bytes', 1048576) }}">
-                            <p class="help-text" id="image-upload-help">JPG, PNG, or WebP only. Each new image must be no larger than {{ number_format(config('heritage_shop.max_image_kb', 1024) / 1024, 2) }} MB ({{ config('heritage_shop.max_image_kb', 1024) }} KB).</p>
-                            @error('images')
-                                <p class="field-error" role="alert">{{ $message }}</p>
-                            @enderror
-                            <div id="image-upload-error" class="status-banner error" style="display:none; margin:0; padding:10px 12px;"></div>
-
+                        <label for="images">Upload gallery images</label>
+                        <input id="images" name="images[]" type="file" accept="image/jpeg,image/png,image/webp" multiple data-max-bytes="{{ config('heritage_shop.max_image_bytes', 2097152) }}" data-max-gallery="{{ config('heritage_shop.max_gallery_images', 10) }}">
+                        <p class="help-text" id="image-upload-help">JPG, JPEG, PNG, or WebP only. Maximum {{ number_format(config('heritage_shop.max_image_kb', 2048) / 1024, 0) }} MB per image.</p>
+                        @error('images')
+                            <p class="field-error" role="alert">{{ $message }}</p>
+                        @enderror
+                        <div id="image-upload-error" class="status-banner error" style="display:none; margin:0; padding:10px 12px;"></div>
                     </div>
                     <div id="upload-preview" style="display:grid; gap:10px; margin-top:14px;"></div>
 
@@ -231,14 +236,16 @@
                             <p style="font-weight:800; margin-bottom:10px;">Current gallery</p>
                             <div style="display:grid; gap:12px;">
                                 @foreach ($shop->images as $image)
-                                    <div style="padding:10px; border:1px solid var(--line); border-radius:12px; background:#fff;">
-                                                                                <img src="{{ $imageService->url($image) }}" alt="Shop gallery image" style="width:100%; height:150px; object-fit:cover; border-radius:8px; margin-bottom:8px;" onerror="this.replaceWith(Object.assign(document.createElement('div'), {textContent:'Image unavailable', className:'muted'}))">
+                                    <div class="existing-image-card" style="padding:10px; border:1px solid var(--line); border-radius:12px; background:#fff;">
+                                        <img class="existing-image-preview" src="{{ $imageService->url($image) }}" alt="Shop gallery image {{ $loop->iteration }}" style="width:100%; height:150px; object-fit:cover; border-radius:8px; margin-bottom:8px;" onerror="this.replaceWith(Object.assign(document.createElement('div'), {textContent:'Image unavailable', className:'muted'}))">
 
                                         <div class="actions" style="margin-top:8px;">
-                                            <label class="button secondary small" style="cursor:pointer;">
-                                                <input type="checkbox" name="remove_images[]" value="{{ $image->id }}" style="margin-right:6px;" @checked(in_array($image->id, (array) old('remove_images', [])))> Remove
+                                            <label class="button secondary small primary-image-choice" style="cursor:pointer;">
+                                                <input type="radio" name="primary_image_id" value="{{ $image->id }}" @checked((int) old('primary_image_id', $shop->images->firstWhere('is_primary', true)?->id ?? $shop->images->first()?->id) === $image->id)> Primary
                                             </label>
-                                            <label class="button small" style="border:1px solid var(--line); background:#fff; cursor:pointer;">
+                                            <button class="button secondary small image-remove-toggle" type="button">Remove</button>
+                                            <input class="image-remove-checkbox" type="checkbox" name="remove_images[]" value="{{ $image->id }}" hidden @checked(in_array($image->id, (array) old('remove_images', [])))>
+                                            <label class="button small image-replace-label" style="border:1px solid var(--line); background:#fff; cursor:pointer;">
                                                 Replace
                                                 <input type="file" name="replace_images[{{ $image->id }}]" accept="image/jpeg,image/png,image/webp" style="display:none;">
                                             </label>
@@ -254,17 +261,29 @@
                     <h2>Publishing</h2>
                     <div class="field" style="margin-top:16px;">
                         <label for="publish_status">Status</label>
-                            <select id="publish_status" name="publish_status" aria-describedby="publish-status-help">
-                                                        @php($selectedStatus = $shopStatus)
+                        <select id="publish_status" name="publish_status" aria-describedby="publish-status-help">
+                            @php($selectedStatus = $shopStatus)
                             <option value="draft" @selected($selectedStatus === 'draft')>Draft</option>
                             <option value="published" @selected($selectedStatus === 'published')>Published</option>
                             <option value="archived" @selected($selectedStatus === 'archived')>Archived</option>
                         </select>
-                                        </div>
+                    </div>
                     <p class="help-text field-guidance" id="publish-status-help" style="margin-top:10px;">Only <strong>Published</strong> records appear in public discovery. Draft and Archived records remain admin-only. Published records require a Heritage story, Address, City, and at least one valid gallery image.</p>
+                    @error('primary_image_id')
+                        <p class="field-error" role="alert">{{ $message }}</p>
+                    @enderror
+                    <div class="publishing-readiness" data-publishing-readiness aria-live="polite">
+                        <strong>Publishing readiness</strong>
+                        <span data-ready-field="shop_name">Shop name</span>
+                        <span data-ready-field="heritage_story">Heritage story</span>
+                        <span data-ready-field="address">Address</span>
+                        <span data-ready-field="city">City</span>
+                        <span data-ready-field="image">At least one gallery image</span>
+                        <span data-ready-field="gallery_limit">Maximum gallery size</span>
+                    </div>
                     <div class="actions" style="margin-top:16px;">
 
-                        <button class="button primary" type="submit">{{ $mode === 'create' ? 'Save shop' : 'Update shop' }}</button>
+                        <button class="button primary" type="submit" data-save-button data-idle-label="{{ $mode === 'create' ? 'Create Shop' : 'Save Changes' }}">{{ $mode === 'create' ? 'Create Shop' : 'Save Changes' }}</button>
                     </div>
                 </section>
             </aside>
@@ -279,6 +298,15 @@
         .required-marker { color: #a33a2d; font-weight: 900; }
         .field-error { margin: 0; color: #a33a2d; font-size: .76rem; font-weight: 800; line-height: 1.4; }
         .field input[aria-invalid="true"], .field textarea[aria-invalid="true"], .field select[aria-invalid="true"] { border-color: rgba(163,54,54,.55); box-shadow: 0 0 0 3px rgba(163,54,54,.1); }
+        .publishing-readiness { display:grid; gap:7px; margin-top:14px; padding:12px; border:1px solid var(--line); border-radius:12px; background:#fffaf2; }
+        .publishing-readiness span { color:#8b3d31; font-size:.76rem; font-weight:800; }
+        .publishing-readiness span::before { content:'Needs: '; }
+        .publishing-readiness span.is-ready { color:#286345; }
+        .publishing-readiness span.is-ready::before { content:'Ready: '; }
+        .existing-image-card.is-marked-for-removal { opacity:.58; background:#f7eeee !important; }
+        .existing-image-card.is-marked-for-removal .existing-image-preview { filter:grayscale(1); }
+        .gallery-count { display:flex; flex-wrap:wrap; gap:8px 12px; margin:12px 0 0; color:var(--muted); font-size:.78rem; }
+        .gallery-count strong { color:var(--accent); }
         .autofill-field {
             border: 1px solid rgba(163, 54, 54, .35) !important;
             box-shadow: 0 0 0 4px rgba(163, 54, 54, .08);
@@ -358,15 +386,39 @@
     </style>
 
     <script>
+        const heritageShopForm = document.getElementById('heritage-shop-form');
         const crawlButton = document.getElementById('crawl-button');
         const crawlStatus = document.getElementById('crawl-status');
         const crawlUrlInput = document.getElementById('crawl_url');
-                const uploadInput = document.getElementById('images');
+        const uploadInput = document.getElementById('images');
         const imageUploadError = document.getElementById('image-upload-error');
-        const maxImageBytes = Number('{{ config('heritage_shop.max_image_bytes', 1048576) }}');
-        const maxImageLabel = '{{ number_format(config('heritage_shop.max_image_kb', 1024) / 1024, 2) }} MB';
+        const maxImageBytes = Number('{{ config('heritage_shop.max_image_bytes', 2097152) }}');
+        const maxImageLabel = '{{ number_format(config('heritage_shop.max_image_kb', 2048) / 1024, 0) }} MB';
+        const maxGalleryImages = Number('{{ config('heritage_shop.max_gallery_images', 10) }}');
         const publishStatusInput = document.getElementById('publish_status');
         const publishRequiredFields = ['heritage_story', 'address', 'city'];
+
+        function updatePublishingReadiness() {
+            if (!document.querySelector('[data-publishing-readiness]')) return;
+            const remainingImages = Array.from(document.querySelectorAll('.image-remove-checkbox')).filter((input) => !input.checked).length;
+            const finalImageCount = remainingImages + (uploadInput?.files?.length ?? 0) + document.querySelectorAll('input[name="crawler_images[]"]').length;
+            const hasImage = finalImageCount > 0;
+            const ready = {
+                shop_name: Boolean(document.getElementById('shop_name')?.value.trim()),
+                heritage_story: Boolean(document.getElementById('heritage_story')?.value.trim()),
+                address: Boolean(document.getElementById('address')?.value.trim()),
+                city: Boolean(document.getElementById('city')?.value.trim()),
+                image: hasImage,
+                gallery_limit: finalImageCount <= maxGalleryImages,
+            };
+            Object.entries(ready).forEach(([key, value]) => document.querySelector('[data-ready-field="' + key + '"]')?.classList.toggle('is-ready', value));
+            const count = document.getElementById('gallery-count');
+            const remaining = document.getElementById('gallery-remaining');
+            if (count) count.textContent = finalImageCount + ' / ' + maxGalleryImages + ' images';
+            if (remaining) remaining.textContent = finalImageCount <= maxGalleryImages
+                ? 'You can add up to ' + (maxGalleryImages - finalImageCount) + ' more image' + (maxGalleryImages - finalImageCount === 1 ? '.' : 's.')
+                : 'Remove ' + (finalImageCount - maxGalleryImages) + ' image' + (finalImageCount - maxGalleryImages === 1 ? '.' : 's.');
+        }
 
         function syncPublishedRequirements() {
             const isPublished = publishStatusInput?.value === 'published';
@@ -380,6 +432,7 @@
 
         publishStatusInput?.addEventListener('change', syncPublishedRequirements);
         syncPublishedRequirements();
+        ['shop_name', 'heritage_story', 'address', 'city'].forEach((id) => document.getElementById(id)?.addEventListener('input', updatePublishingReadiness));
 
         const menuItemsContainer = document.getElementById('menu-items-container');
         const addMenuItemButton = document.getElementById('add-menu-item');
@@ -612,6 +665,8 @@
                 return;
             }
 
+            crawlButton.disabled = true;
+            crawlButton.textContent = 'Fetching...';
             setCrawlStatus('success', 'Fetching shop data...');
             try {
                 const response = await fetch('{{ route('admin.heritage-shops.crawl') }}', {
@@ -649,6 +704,10 @@
                     : 'Source data filled blank fields. No unsupported values were invented; please review before saving.') + researchNote);
             } catch (error) {
                 setCrawlStatus('error', error.message || 'The crawl request failed.');
+            } finally {
+                crawlButton.disabled = false;
+                crawlButton.textContent = 'Fetch / Crawl';
+                updatePublishingReadiness();
             }
         });
 
@@ -664,21 +723,37 @@
             }
         });
 
-                if (uploadInput) {
+        if (uploadInput) {
             uploadInput.addEventListener('change', () => {
                 const preview = document.getElementById('upload-preview');
                 preview.replaceChildren();
                 imageUploadError.style.display = 'none';
-                const oversizedFiles = Array.from(uploadInput.files).filter((file) => file.size > maxImageBytes);
+                const selectedFiles = Array.from(uploadInput.files);
+                const invalidFiles = selectedFiles.filter((file) => file.size > maxImageBytes || !['image/jpeg', 'image/png', 'image/webp'].includes(file.type));
 
-                if (oversizedFiles.length) {
-                    imageUploadError.textContent = 'The image must not be larger than ' + maxImageLabel + '.';
+                const retainedImages = Array.from(document.querySelectorAll('.image-remove-checkbox')).filter((input) => !input.checked).length;
+                const crawlerImages = document.querySelectorAll('input[name="crawler_images[]"]').length;
+                if (invalidFiles.length) {
+                    const file = invalidFiles[0];
+                    imageUploadError.textContent = file.size > maxImageBytes
+                        ? file.name + ' exceeds the maximum Heritage Shop image size of ' + maxImageLabel + '.'
+                        : file.name + ' must be a JPG, JPEG, PNG, or WebP image.';
                     imageUploadError.style.display = 'block';
                     uploadInput.value = '';
+                    updatePublishingReadiness();
                     return;
                 }
 
-                Array.from(uploadInput.files).forEach((file) => {
+                if (retainedImages + crawlerImages + selectedFiles.length > maxGalleryImages) {
+                    const available = Math.max(0, maxGalleryImages - retainedImages - crawlerImages);
+                    imageUploadError.textContent = 'This shop can contain a maximum of ' + maxGalleryImages + ' gallery images. After your current changes, you can add up to ' + available + ' more.';
+                    imageUploadError.style.display = 'block';
+                    uploadInput.value = '';
+                    updatePublishingReadiness();
+                    return;
+                }
+
+                selectedFiles.forEach((file) => {
                     const wrapper = document.createElement('div');
                     wrapper.style.border = '1px solid var(--line)';
                     wrapper.style.borderRadius = '12px';
@@ -695,21 +770,53 @@
                     wrapper.appendChild(img);
                     preview.appendChild(wrapper);
                 });
+                updatePublishingReadiness();
             });
         }
 
         document.querySelectorAll('input[name^="replace_images["]').forEach((input) => {
             input.addEventListener('change', () => {
                 const file = input.files?.[0];
-                if (file && file.size > maxImageBytes) {
-                    imageUploadError.textContent = 'The image must not be larger than ' + maxImageLabel + '.';
+                if (file && (file.size > maxImageBytes || !['image/jpeg', 'image/png', 'image/webp'].includes(file.type))) {
+                    imageUploadError.textContent = 'Use a JPG, PNG, or WebP image no larger than ' + maxImageLabel + '.';
                     imageUploadError.style.display = 'block';
                     input.value = '';
                 } else {
                     imageUploadError.style.display = 'none';
+                    const preview = input.closest('.existing-image-card')?.querySelector('.existing-image-preview');
+                    if (file && preview) preview.src = URL.createObjectURL(file);
                 }
             });
         });
+
+        document.querySelectorAll('.existing-image-card').forEach((card) => {
+            const checkbox = card.querySelector('.image-remove-checkbox');
+            const toggle = card.querySelector('.image-remove-toggle');
+            const sync = () => {
+                card.classList.toggle('is-marked-for-removal', checkbox.checked);
+                toggle.textContent = checkbox.checked ? 'Undo removal' : 'Remove';
+                card.querySelector('input[name="primary_image_id"]')?.toggleAttribute('disabled', checkbox.checked);
+                updatePublishingReadiness();
+            };
+            toggle?.addEventListener('click', () => { checkbox.checked = !checkbox.checked; sync(); });
+            sync();
+        });
+
+        let formIsDirty = false;
+        heritageShopForm?.addEventListener('input', () => { formIsDirty = true; });
+        heritageShopForm?.addEventListener('change', () => { formIsDirty = true; updatePublishingReadiness(); });
+        heritageShopForm?.addEventListener('submit', () => {
+            formIsDirty = false;
+            const saveButton = heritageShopForm.querySelector('[data-save-button]');
+            if (saveButton) { saveButton.disabled = true; saveButton.textContent = 'Saving...'; }
+        });
+        window.addEventListener('beforeunload', (event) => {
+            if (!formIsDirty) return;
+            event.preventDefault();
+            event.returnValue = '';
+        });
+        document.querySelector('[aria-invalid="true"]')?.focus();
+        updatePublishingReadiness();
 
     </script>
 @endsection

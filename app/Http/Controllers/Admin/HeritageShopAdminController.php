@@ -14,6 +14,7 @@ use App\Models\ShopImage;
 use App\Services\HeritageAuditLogger;
 use App\Services\HeritageFoodItemSyncService;
 use App\Services\HeritageShopImageService;
+use App\Services\HeritageShopIntegrityService;
 use App\Services\HeritageShopUrlGuard;
 use App\Services\HeritageShopValidationRules;
 use App\Services\ShopCrawlerService;
@@ -35,6 +36,7 @@ class HeritageShopAdminController extends Controller
 {
     public function __construct(
         private HeritageShopImageService $imageService,
+        private HeritageShopIntegrityService $integrityService,
         private HeritageShopUrlGuard $urlGuard,
         private HeritageAuditLogger $auditLogger,
         private HeritageFoodItemSyncService $foodItemSync,
@@ -83,7 +85,16 @@ class HeritageShopAdminController extends Controller
             ->orderBy('state')
             ->pluck('state');
 
-        return view('admin.heritage-shops.index', compact('shops', 'categories', 'states', 'search', 'category', 'state', 'sort'))
+        $registrySummary = [
+            'total' => HeritageShop::query()->count(),
+            'published' => HeritageShop::query()->where('publish_status', HeritageShop::STATUS_PUBLISHED)->count(),
+            'draft' => HeritageShop::query()->where('publish_status', HeritageShop::STATUS_DRAFT)->count(),
+            'archived' => HeritageShop::query()->where('publish_status', HeritageShop::STATUS_ARCHIVED)->count(),
+            'missing_images' => HeritageShop::query()->whereDoesntHave('images')->count(),
+            'missing_food_items' => HeritageShop::query()->whereDoesntHave('foodItems')->count(),
+        ];
+
+        return view('admin.heritage-shops.index', compact('shops', 'categories', 'states', 'search', 'category', 'state', 'sort', 'registrySummary'))
             ->with('imageService', $this->imageService);
     }
 
@@ -100,6 +111,7 @@ class HeritageShopAdminController extends Controller
             'shop' => new HeritageShop,
             'mode' => 'create',
             'imageService' => $this->imageService,
+            'categorySuggestions' => $this->categorySuggestions(),
         ]);
     }
 
@@ -113,6 +125,7 @@ class HeritageShopAdminController extends Controller
                 $shop = HeritageShop::query()->create($data);
                 $this->attachUploadedImages($shop, $request->file('images', []), $newPaths);
                 $this->attachStoredCrawlerImages($shop, $request->input('crawler_images', []));
+                $this->integrityService->ensurePrimaryImage($shop);
                 if (array_key_exists('food_items', $data)) {
                     $this->foodItemSync->syncQuickItems($shop, $data['food_items']);
                 }
@@ -130,7 +143,9 @@ class HeritageShopAdminController extends Controller
         }
 
         return redirect()->route('admin.heritage-shops.edit', $shop)
-            ->with('success', 'Heritage shop saved successfully.');
+            ->with('success', $shop->publish_status === HeritageShop::STATUS_PUBLISHED
+                ? 'Heritage shop created and published successfully.'
+                : 'Heritage shop created as '.strtolower($shop->publish_status ?: HeritageShop::STATUS_DRAFT).'.');
     }
 
     public function edit(HeritageShop $heritageShop): View
@@ -141,6 +156,7 @@ class HeritageShopAdminController extends Controller
             'shop' => $heritageShop,
             'mode' => 'edit',
             'imageService' => $this->imageService,
+            'categorySuggestions' => $this->categorySuggestions(),
         ]);
     }
 
@@ -187,13 +203,17 @@ class HeritageShopAdminController extends Controller
 
                 $oldValues = $lockedShop->getAttributes();
                 $lockedShop->fill($data)->save();
+                // Soft-delete removals first so the final-count policy permits
+                // an atomic remove-and-add operation at the ten-image limit.
+                // Physical files are retained until the transaction commits.
+                $this->removeRequestedImageIds($lockedShop, $request->input('remove_images', []), $oldPaths);
                 $this->attachUploadedImages($lockedShop, $request->file('images', []), $newPaths);
                 $this->attachStoredCrawlerImages($lockedShop, $request->input('crawler_images', []));
                 if (array_key_exists('food_items', $data)) {
                     $this->foodItemSync->syncQuickItems($lockedShop, $data['food_items']);
                 }
-                $this->removeRequestedImageIds($lockedShop, $request->input('remove_images', []), $oldPaths);
                 $this->replaceRequestedImages($lockedShop, $request->file('replace_images', []), $newPaths, $oldPaths);
+                $this->integrityService->ensurePrimaryImage($lockedShop, $request->integer('primary_image_id'));
 
                 return $lockedShop->fresh();
             });
@@ -206,8 +226,16 @@ class HeritageShopAdminController extends Controller
         $this->auditLogger->record($request->user(), $shop, 'heritage_shop.updated', $oldValues, $shop->getAttributes());
         $this->recordPublicationTransition($request, $shop, $oldValues);
 
+        $oldStatus = $oldValues['publish_status'] ?? HeritageShop::STATUS_DRAFT;
+        $success = match (true) {
+            $oldStatus !== HeritageShop::STATUS_PUBLISHED && $shop->publish_status === HeritageShop::STATUS_PUBLISHED => 'Heritage shop published successfully.',
+            $oldStatus === HeritageShop::STATUS_PUBLISHED && $shop->publish_status === HeritageShop::STATUS_DRAFT => 'Heritage shop unpublished and returned to Draft.',
+            $shop->publish_status === HeritageShop::STATUS_ARCHIVED && $oldStatus !== HeritageShop::STATUS_ARCHIVED => 'Heritage shop archived successfully.',
+            default => 'Heritage shop changes saved successfully.',
+        };
+
         return redirect()->route('admin.heritage-shops.edit', $shop)
-            ->with('success', 'Heritage shop updated successfully.');
+            ->with('success', $success);
     }
 
     public function destroy(Request $request, HeritageShop $heritageShop): RedirectResponse
@@ -448,7 +476,7 @@ class HeritageShopAdminController extends Controller
             }
         }
 
-        return $candidate;
+        return $this->integrityService->normalize($candidate);
     }
 
     private function findShopBySourceUrl(string $url, ?int $ignoreId, ShopCrawlerService $service): ?HeritageShop
@@ -509,7 +537,7 @@ class HeritageShopAdminController extends Controller
             $payload['food_items'] = $this->normalizeFoodItems($menuItems);
         }
 
-        return $payload;
+        return $this->integrityService->normalize($payload);
     }
 
     private function normalizeFoodItems(mixed $items): array
@@ -588,15 +616,10 @@ class HeritageShopAdminController extends Controller
                 continue;
             }
 
-            $wasPrimary = (bool) $image->is_primary;
             $path = $this->imageService->store($replacementFile);
             $newPaths[] = $path;
-            $shop->images()->create([
-                'path' => $path,
-                'is_primary' => $wasPrimary || $shop->images()->count() === 0,
-            ]);
             $oldPaths[] = $image->path;
-            $image->forceDelete();
+            $image->update(['path' => $path]);
 
         }
     }
@@ -627,6 +650,16 @@ class HeritageShopAdminController extends Controller
         return $operatingHours !== ''
             ? array_values(preg_split('/\\r\\n|\\r|\\n/', $operatingHours, -1, PREG_SPLIT_NO_EMPTY) ?: [])
             : null;
+    }
+
+    private function categorySuggestions()
+    {
+        return HeritageShop::query()
+            ->whereNotNull('primary_food_category')
+            ->where('primary_food_category', '!=', '')
+            ->distinct()
+            ->orderBy('primary_food_category')
+            ->pluck('primary_food_category');
     }
 
     private function deleteImagePaths(array $paths): void
@@ -722,8 +755,8 @@ class HeritageShopAdminController extends Controller
 
         $sizeInKb = $response->header('Content-Length');
         $sizeBytes = is_numeric($sizeInKb) ? ((int) $sizeInKb) : strlen($body);
-        if ($sizeBytes > (int) config('heritage_shop.max_image_bytes', 1024 * 1024)) {
-            throw new RuntimeException('Crawler image exceeds the '.number_format(((int) config('heritage_shop.max_image_bytes', 1024 * 1024)) / 1024 / 1024, 2).' MB HeritageShop limit.');
+        if ($sizeBytes > (int) config('heritage_shop.max_image_bytes', 2048 * 1024)) {
+            throw new RuntimeException('Crawler image exceeds the '.number_format(((int) config('heritage_shop.max_image_bytes', 2048 * 1024)) / 1024 / 1024, 2).' MB HeritageShop limit.');
         }
 
         $tempPath = tempnam(sys_get_temp_dir(), 'wm-crawler-');

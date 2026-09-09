@@ -758,30 +758,30 @@
             margin-top: 18px;
             padding: 24px;
             border-radius: 22px;
-            background: linear-gradient(135deg, #8C1F1F 0%, #4A211C 58%, #2E1815 100%);
+            background: #2E1815;
             color: #FBF6EE;
             text-align: left;
             box-shadow: 0 18px 30px rgba(86,59,48,0.18);
+        }
+
+        .achievement-card-preview::after {
+            inset: 12px;
+            width: auto;
+            height: auto;
+            border: 1px solid rgba(242,211,123,0.42);
+            border-radius: 15px;
         }
 
         .achievement-card-preview::before,
         .achievement-card-preview::after {
             position: absolute;
             content: '';
-            width: 180px;
-            height: 180px;
-            border: 1px solid rgba(212,160,23,0.35);
-            border-radius: 50%;
+            pointer-events: none;
         }
 
         .achievement-card-preview::before {
-            top: -92px;
-            right: -54px;
-        }
-
-        .achievement-card-preview::after {
-            bottom: -120px;
-            left: -64px;
+            inset: 0;
+            background: radial-gradient(circle at 88% 8%, rgba(212,160,23,0.3), transparent 32%), linear-gradient(135deg, #8C1F1F 0%, #4A211C 58%, #2E1815 100%);
         }
 
         .achievement-card-kicker,
@@ -810,12 +810,13 @@
             place-items: center;
             width: 82px;
             height: 82px;
-            border: 2px solid rgba(212,160,23,0.75);
-            border-radius: 26px;
-            background: rgba(251,246,238,0.12);
+            border: 2px solid #F2D37B;
+            border-radius: 50%;
+            background: #8C1F1F;
             color: #F2D37B;
             font-size: 2.4rem;
             font-weight: 800;
+            box-shadow: 0 0 0 7px rgba(242,211,123,0.1);
         }
 
         .achievement-card-title {
@@ -870,6 +871,12 @@
 
         .share-download-btn:hover {
             background: rgba(212,160,23,0.2);
+        }
+
+        .share-download-btn:first-child {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
         }
 
         .badge-modal-badge-name {
@@ -1533,58 +1540,80 @@
             const context = canvas.getContext('2d');
             const badge = activeBadgeForShare;
             const story = format === 'story';
+            const panelY = story ? 500 : 170;
+            const panelHeight = story ? 980 : 740;
+            const centerX = width / 2;
 
             context.fillStyle = '#2E1815';
             context.fillRect(0, 0, width, height);
             const gradient = context.createLinearGradient(0, 0, width, height);
             gradient.addColorStop(0, '#8C1F1F');
-            gradient.addColorStop(0.58, '#4A211C');
+            gradient.addColorStop(0.55, '#5B2820');
             gradient.addColorStop(1, '#2E1815');
             context.fillStyle = gradient;
-            context.fillRect(28, 28, width - 56, height - 56);
+            context.fillRect(34, 34, width - 68, height - 68);
 
-            context.strokeStyle = 'rgba(242,211,123,0.38)';
-            context.lineWidth = 3;
+            context.strokeStyle = 'rgba(242,211,123,0.34)';
+            context.lineWidth = 2;
+            context.strokeRect(52, 52, width - 104, height - 104);
             context.beginPath();
-            context.arc(width - 80, 92, 180, 0, Math.PI * 2);
+            context.arc(width - 60, 100, 210, 0, Math.PI * 2);
             context.stroke();
             context.beginPath();
-            context.arc(56, height - 80, 180, 0, Math.PI * 2);
+            context.arc(60, height - 90, 230, 0, Math.PI * 2);
             context.stroke();
 
             context.fillStyle = 'rgba(251,246,238,0.78)';
             context.font = '800 26px Arial, sans-serif';
-            context.letterSpacing = '4px';
-            context.fillText('WARISAN MAKAN  ·  HERITAGE PASSPORT', 78, story ? 118 : 100);
-
-            const centerY = story ? 720 : 490;
-            context.fillStyle = 'rgba(251,246,238,0.12)';
-            context.fillRect(78, centerY - 230, width - 156, story ? 520 : 440);
-            context.strokeStyle = 'rgba(242,211,123,0.75)';
-            context.lineWidth = 5;
-            context.strokeRect(78, centerY - 230, width - 156, story ? 520 : 440);
-
+            context.fillText('WARISAN MAKAN  /  HERITAGE PASSPORT', 82, story ? 130 : 112);
             context.fillStyle = '#F2D37B';
-            context.font = story ? '800 116px Arial, sans-serif' : '800 100px Arial, sans-serif';
+            context.font = '800 22px Arial, sans-serif';
+            context.fillText(story ? 'A NEW CHAPTER IN YOUR FOOD JOURNEY' : 'ACHIEVEMENT UNLOCKED', 82, story ? 176 : 158);
+
+            context.save();
+            context.shadowColor = 'rgba(25,12,9,0.3)';
+            context.shadowBlur = 28;
+            context.shadowOffsetY = 14;
+            context.fillStyle = '#FBF6EE';
+            context.fillRect(80, panelY, width - 160, panelHeight);
+            context.restore();
+            context.strokeStyle = 'rgba(212,160,23,0.72)';
+            context.lineWidth = 4;
+            context.strokeRect(96, panelY + 16, width - 192, panelHeight - 32);
+
+            const sealY = panelY + 150;
+            context.fillStyle = '#8C1F1F';
+            context.beginPath();
+            context.arc(centerX, sealY, 92, 0, Math.PI * 2);
+            context.fill();
+            context.strokeStyle = '#D4A017';
+            context.lineWidth = 8;
+            context.stroke();
+            context.fillStyle = '#F2D37B';
+            context.font = '800 92px Arial, sans-serif';
             context.textAlign = 'center';
-            context.fillText(badge.icon || '★', width / 2, centerY - 54);
+            context.fillText(badge.icon || '★', centerX, sealY + 32);
+
+            context.fillStyle = '#8C1F1F';
+            context.font = '800 22px Arial, sans-serif';
+            context.fillText('MILESTONE UNLOCKED', centerX, panelY + 300);
+            context.fillStyle = '#32241F';
             context.font = story ? '700 58px Georgia, serif' : '700 52px Georgia, serif';
-            wrapCanvasText(context, badge.name, width / 2, centerY + 52, width - 240, 70, 2);
-            context.fillStyle = 'rgba(251,246,238,0.92)';
-            context.font = story ? '32px Arial, sans-serif' : '28px Arial, sans-serif';
-            wrapCanvasText(context, badge.description || @json(__('A new heritage-food milestone.')), width / 2, centerY + 150, width - 260, 42, 3);
+            wrapCanvasText(context, badge.name, centerX, panelY + 380, width - 260, 68, 2);
+            context.fillStyle = '#7A6A63';
+            context.font = story ? '30px Arial, sans-serif' : '28px Arial, sans-serif';
+            wrapCanvasText(context, badge.description || @json(__('A new heritage-food milestone.')), centerX, panelY + 530, width - 270, 42, 3);
 
-            context.textAlign = 'center';
+            context.fillStyle = '#8C1F1F';
+            context.font = '800 25px Arial, sans-serif';
+            context.fillText(badge.progress ? 'HERITAGE VISITS  /  ' + badge.progress : 'A NEW STORY ADDED TO MY FOOD JOURNEY', centerX, panelY + panelHeight - 92);
+
+            context.fillStyle = 'rgba(251,246,238,0.9)';
+            context.font = story ? '30px Arial, sans-serif' : '28px Arial, sans-serif';
+            context.fillText('Every dish has a story. Discover yours.', centerX, height - (story ? 170 : 116));
             context.fillStyle = '#F2D37B';
-            context.font = story ? '800 30px Arial, sans-serif' : '800 26px Arial, sans-serif';
-            context.fillText(badge.progress ? 'MILESTONE  ' + badge.progress + '  VISITS' : 'A NEW STORY ADDED TO MY FOOD JOURNEY', width / 2, centerY + (story ? 260 : 238));
-
-            context.fillStyle = 'rgba(251,246,238,0.82)';
-            context.font = story ? '30px Arial, sans-serif' : '26px Arial, sans-serif';
-            context.fillText('Every dish has a story. Discover yours.', width / 2, height - (story ? 150 : 98));
-            context.fillStyle = 'rgba(251,246,238,0.58)';
             context.font = '22px Arial, sans-serif';
-            context.fillText('warisan makan  ·  explore local heritage food', width / 2, height - (story ? 100 : 58));
+            context.fillText('warisan makan  /  explore local heritage food', centerX, height - (story ? 112 : 68));
             context.textAlign = 'start';
 
             return canvas;

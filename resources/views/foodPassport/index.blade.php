@@ -60,9 +60,6 @@
             display: inline-flex;
             align-items: center;
             gap: 12px;
-            text-decoration: none;
-            font-weight: 700;
-            letter-spacing: 0.04em;
             text-transform: uppercase;
             font-size: 0.82rem;
             color: var(--primary);
@@ -285,9 +282,15 @@
 
         .content-grid {
             display: grid;
-            grid-template-columns: 1.15fr 0.85fr;
+            grid-template-columns: 1.25fr 0.75fr;
             gap: 22px;
             margin-top: 26px;
+            align-items: stretch;
+        }
+
+        .content-grid > .panel,
+        .content-grid > .check-in-panel {
+            height: 100%;
         }
 
         .panel {
@@ -299,6 +302,36 @@
 
         .panel-inner {
             padding: 22px 22px 18px;
+        }
+
+        .shop-tools {
+            display: grid;
+            grid-template-columns: minmax(120px, 1fr) auto auto auto;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .shop-search {
+            width: 100%;
+            min-width: 0;
+            min-height: 44px;
+            margin: 0;
+        }
+
+        .shop-tools .btn {
+            min-height: 44px;
+            padding: 12px;
+            white-space: nowrap;
+        }
+
+        .location-button {
+            width: 154px;
+            min-width: 154px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-align: center;
+            white-space: nowrap;
         }
 
         .section-header {
@@ -393,6 +426,15 @@
 
         .check-in-panel {
             padding: 22px;
+            min-width: 0;
+            min-height: 430px;
+            height: 100%;
+        }
+
+        .check-in-empty {
+            min-height: 310px;
+            margin: 16px 0 0;
+            color: var(--muted);
         }
 
         .selected-shop {
@@ -462,9 +504,16 @@
 
         .pagination {
             display: flex;
+            flex-wrap: wrap;
             justify-content: flex-end;
             gap: 8px;
             margin-top: 16px;
+            max-width: 100%;
+            overflow: hidden;
+        }
+
+        .shops-pagination {
+            justify-content: center;
         }
 
         .pagination a,
@@ -885,7 +934,7 @@
             font-size: 0.88rem;
         }
 
-        @media (max-width: 900px) {
+        @media (max-width: 1100px) {
             .hero, .content-grid {
                 grid-template-columns: 1fr;
             }
@@ -896,10 +945,45 @@
         }
 
         @media (max-width: 640px) {
+            body {
+                overflow-x: hidden;
+            }
+
+            .passport-shell {
+                width: 100%;
+                padding: 16px 12px 30px;
+            }
+
             .topbar {
                 align-items: flex-start;
                 flex-direction: column;
                 gap: 12px;
+            }
+
+            .nav {
+                width: 100%;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+
+            .hero,
+            .content-grid,
+            .panel {
+                width: 100%;
+                min-width: 0;
+            }
+
+            .panel-inner,
+            .check-in-panel {
+                padding: 18px 16px;
+            }
+
+            .check-in-panel {
+                min-height: 0;
+            }
+
+            .check-in-empty {
+                min-height: 120px;
             }
 
             .hero-copy {
@@ -921,6 +1005,21 @@
 
             .shop-item {
                 grid-template-columns: 1fr;
+            }
+
+            .shop-tools {
+                grid-template-columns: 1fr;
+                align-items: stretch;
+            }
+
+            .shop-search,
+            .shop-tools .btn {
+                width: 100%;
+            }
+
+            .location-button {
+                width: 100%;
+                min-width: 0;
             }
 
             .mini-action {
@@ -986,6 +1085,19 @@
                             <span class="tag">{{ __('Live') }}</span>
                         </div>
 
+                        <form class="shop-tools" method="GET" action="{{ route('passport.index') }}#nearby">
+                            <input class="shop-search" type="search" name="shop_search" value="{{ request('shop_search') }}" placeholder="{{ __('Search shops or founders') }}" aria-label="{{ __('Search shops or founders') }}">
+                            @if (request('user_latitude') && request('user_longitude'))
+                                <input type="hidden" name="user_latitude" value="{{ request('user_latitude') }}">
+                                <input type="hidden" name="user_longitude" value="{{ request('user_longitude') }}">
+                            @endif
+                            <button type="submit" class="btn secondary">{{ __('Search') }}</button>
+                            @if (request('shop_search'))
+                                <a href="{{ route('passport.index') }}#nearby" class="btn secondary">{{ __('Show all shops') }}</a>
+                            @endif
+                            <button type="button" id="btnUseLocation" class="btn secondary location-button">{{ __('Use My Location') }}</button>
+                        </form>
+
                         @if (!empty($shops))
                             <div class="shop-list" id="shopList">
                                 @foreach ($shops as $shop)
@@ -1012,7 +1124,11 @@
                                             <a href="{{ $availableShops->previousPageUrl() }}#nearby">{{ __('Previous') }}</a>
                                         @endif
 
-                                        @for ($page = 1; $page <= $availableShops->lastPage(); $page++)
+                                        @php
+                                            $paginationStart = min($availableShops->currentPage(), max(1, $availableShops->lastPage() - 4));
+                                            $paginationEnd = min($availableShops->lastPage(), $paginationStart + 4);
+                                        @endphp
+                                        @for ($page = $paginationStart; $page <= $paginationEnd; $page++)
                                             @if ($page === $availableShops->currentPage())
                                                 <span class="active" aria-current="page">{{ $page }}</span>
                                             @else
@@ -1033,8 +1149,14 @@
                                     @endif
                                 </nav>
                             @endif
+                        @elseif (request('shop_search'))
+                            <div class="shop-list" id="shopList" hidden></div>
+                            <p id="shopEmptyMessage" style="margin: 0; color: var(--muted);">
+                                {{ __('No heritage shops match your search. Try another name or founder.') }}
+                            </p>
                         @else
-                            <p style="margin: 0; color: var(--muted);">
+                            <div class="shop-list" id="shopList" hidden></div>
+                            <p id="shopEmptyMessage" style="margin: 0; color: var(--muted);">
                                 {{ __('No approved heritage shops with GPS coordinates are available for check-in yet. Add the shop location and approve it in the Heritage Shop module.') }}
                             </p>
                         @endif
@@ -1062,8 +1184,12 @@
 
                         <pre id="result" class="result-box">{{ __('Ready to check in. Select a shop and allow location access.') }}</pre>
                     @else
-                        <p style="margin: 16px 0 0; color: var(--muted);">
-                            {{ __('Check-in will be available after an approved Heritage Shop has latitude and longitude coordinates.') }}
+                        <p class="check-in-empty">
+                            @if (request('shop_search'))
+                                {{ __('Select an available shop from the list to check in. Clear your search or try another shop name.') }}
+                            @else
+                                {{ __('Only available heritage shops with approved locations can be checked in to.') }}
+                            @endif
                         </p>
                     @endif
                 </aside>
@@ -1126,15 +1252,19 @@
         const geolocationUnsupportedMessage = @json(__('Geolocation is not supported by this browser.'));
         const requestingLocationMessage = @json(__('Requesting location for your heritage check-in...'));
         const failedLocationMessage = @json(__('Failed to get location: :message'));
+        const sortingNearbyMessage = @json(__('Locating...'));
+        const locationReadyMessage = @json(__('Shops are now sorted by distance from your location.'));
 
-        const shops = @json($shops);
+        let shops = @json($shops);
         let activeShop = shops[0] || null;
 
         function setActiveShop(shop) {
             activeShop = shop;
 
-            document.getElementById('selectedShopName').textContent = shop.name;
-            document.getElementById('selectedShopFounder').textContent = shop.founder;
+            const selectedShopName = document.getElementById('selectedShopName');
+            const selectedShopFounder = document.getElementById('selectedShopFounder');
+            if (selectedShopName) selectedShopName.textContent = shop.name;
+            if (selectedShopFounder) selectedShopFounder.textContent = shop.founder;
 
             const featuredShopName = document.getElementById('featuredShopName');
             const featuredShopFounder = document.getElementById('featuredShopFounder');
@@ -1155,12 +1285,102 @@
             });
         }
 
+        function ensureCheckInControls(shop) {
+            if (document.getElementById('btnCheckIn')) {
+                setActiveShop(shop);
+                return;
+            }
+
+            const panel = document.getElementById('check-in');
+            if (!panel) return;
+
+            const controls = document.createElement('div');
+            controls.innerHTML = `
+                <div class="selected-shop">
+                    <div>
+                        <p class="label">Selected stop</p>
+                        <h3 id="selectedShopName"></h3>
+                        <p id="selectedShopFounder"></p>
+                    </div>
+                </div>
+                <div class="button-row">
+                    <button type="button" id="btnCheckIn" class="btn primary">Check In</button>
+                </div>
+                <pre id="result" class="result-box">Ready to check in. Select a shop and allow location access.</pre>
+            `;
+            panel.appendChild(controls);
+            out = document.getElementById('result');
+            setActiveShop(shop);
+            bindCheckInButton();
+        }
+
         document.querySelectorAll('.select-shop').forEach(button => {
             button.addEventListener('click', () => {
                 const article = button.closest('.shop-item');
                 const shop = shops.find(item => Number(item.id) === Number(article.dataset.id));
                 setActiveShop(shop);
             });
+        });
+
+        function renderShopItem(shop) {
+            const article = document.createElement('article');
+            article.className = 'shop-item';
+            article.dataset.id = shop.id;
+            article.innerHTML = `
+                <div class="shop-body">
+                    <h3>${shop.name}</h3>
+                    <p>${shop.founder}</p>
+                    <div class="shop-meta">
+                        <span>${shop.distance}</span>
+                        <span>${shop.status}</span>
+                    </div>
+                </div>
+                <button type="button" class="mini-action select-shop">Select</button>
+            `;
+            article.querySelector('.select-shop').addEventListener('click', () => setActiveShop(shop));
+            article.addEventListener('click', event => {
+                if (!event.target.closest('.select-shop')) setActiveShop(shop);
+            });
+            return article;
+        }
+
+        function distanceBetween(firstLatitude, firstLongitude, secondLatitude, secondLongitude) {
+            const earthRadius = 6371;
+            const latitudeDifference = (secondLatitude - firstLatitude) * Math.PI / 180;
+            const longitudeDifference = (secondLongitude - firstLongitude) * Math.PI / 180;
+            const latitude = firstLatitude * Math.PI / 180;
+            const secondLatitudeRadians = secondLatitude * Math.PI / 180;
+            const value = Math.sin(latitudeDifference / 2) ** 2
+                + Math.sin(longitudeDifference / 2) ** 2 * Math.cos(latitude) * Math.cos(secondLatitudeRadians);
+
+            return earthRadius * 2 * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value));
+        }
+
+        document.getElementById('btnUseLocation')?.addEventListener('click', function () {
+            if (!navigator.geolocation) {
+                setResult(geolocationUnsupportedMessage);
+                return;
+            }
+
+            const button = this;
+            button.disabled = true;
+            button.textContent = sortingNearbyMessage;
+
+            navigator.geolocation.getCurrentPosition(function (position) {
+                const userLatitude = position.coords.latitude;
+                const userLongitude = position.coords.longitude;
+                const locationUrl = new URL(window.location.href);
+                locationUrl.searchParams.delete('shop_search');
+                locationUrl.searchParams.set('user_latitude', userLatitude.toString());
+                locationUrl.searchParams.set('user_longitude', userLongitude.toString());
+                locationUrl.searchParams.set('shops_page', '1');
+                locationUrl.hash = 'nearby';
+                window.location.assign(locationUrl.toString());
+            }, function (error) {
+                button.disabled = false;
+                button.textContent = @json(__('Use My Location'));
+                setResult(failedLocationMessage.replace(':message', error.message || error.code));
+            }, { enableHighAccuracy: true, timeout: 10000 });
         });
 
         const sectionNavLinks = Array.from(document.querySelectorAll('[data-section-nav]'));
@@ -1189,7 +1409,7 @@
             setActiveSection(initialSection);
         }
 
-        const out = document.getElementById('result');
+        let out = document.getElementById('result');
         const badgeModal = document.getElementById('badgeModal');
         const badgeModalIcon = document.getElementById('badgeModalIcon');
         const badgeModalBadgeName = document.getElementById('badgeModalBadgeName');
@@ -1201,6 +1421,12 @@
         let reloadAfterBadgeModal = false;
 
         function setResult(value) {
+            if (!out) {
+                const emptyMessage = document.getElementById('shopEmptyMessage');
+                if (emptyMessage) emptyMessage.textContent = typeof value === 'string' ? value : value.message || unexpectedErrorMessage;
+                return;
+            }
+
             if (typeof value === 'string') {
                 out.textContent = value;
                 return;
@@ -1590,7 +1816,8 @@
             });
         }
 
-        document.getElementById('btnCheckIn')?.addEventListener('click', function () {
+        function bindCheckInButton() {
+            document.getElementById('btnCheckIn')?.addEventListener('click', function () {
             if (!activeShop) {
                 setResult(selectHeritageShopMessage);
                 return;
@@ -1613,6 +1840,9 @@
             }, function (error) {
                 setResult(failedLocationMessage.replace(':message', error.message || error.code));
             }, { enableHighAccuracy: true, timeout: 10000 });
-        });
+            });
+        }
+
+        bindCheckInButton();
     </script>
 @endsection

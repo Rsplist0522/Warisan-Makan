@@ -166,6 +166,7 @@ Route::prefix('admin')
             Route::get('/', [HeritageShopAdminController::class, 'index'])->name('index');
             Route::get('/create', [HeritageShopAdminController::class, 'create'])->name('create');
             Route::post('/', [HeritageShopAdminController::class, 'store'])->name('store');
+            Route::get('/{heritageShop}/preview', [HeritageShopAdminController::class, 'preview'])->name('preview');
             Route::get('/{heritageShop}/edit', [HeritageShopAdminController::class, 'edit'])->name('edit');
             Route::put('/{heritageShop}', [HeritageShopAdminController::class, 'update'])->name('update');
             Route::delete('/{heritageShop}', [HeritageShopAdminController::class, 'destroy'])->name('destroy');

@@ -40,9 +40,14 @@
             <p>{{ $mode === 'create' ? 'Create a verified public record and review any crawler suggestions before publishing.' : 'Update the public listing and rewrite any imported data as needed.' }}</p>
         </div>
         <div class="actions">
-            @if ($mode === 'edit')
+        @if ($mode === 'edit')
+                @if ($shop->isPubliclyVisible())
+                    <a class="button secondary small" href="{{ route('heritage-shops.show', $shop) }}" target="_blank" rel="noopener noreferrer">View public profile</a>
+                @else
+                    <a class="button secondary small" href="{{ route('admin.heritage-shops.preview', $shop) }}" target="_blank" rel="noopener noreferrer">Preview profile</a>
+                @endif
                 <a class="button secondary small" href="{{ route('admin.heritage-shops.food-items.index', $shop) }}">Manage food catalog</a>
-            @endif
+        @endif
             <a class="button secondary small" href="{{ route('admin.heritage-shops.index') }}">Back to list</a>
         </div>
     </header>

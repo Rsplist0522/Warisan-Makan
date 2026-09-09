@@ -132,9 +132,12 @@
         .card-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 0; }
         .card-actions .button { flex: 1 1 150px; }
         .status { display: inline-flex; width: fit-content; align-items: center; border-radius: 999px; padding: 5px 9px; color: var(--wm-green); background: rgba(61, 111, 85, .11); font-size: .7rem; font-weight: 850; letter-spacing: .04em; text-transform: uppercase; }
-        .pagination { display:flex; justify-content:center; gap:8px; margin-top:22px; }
-        .pagination a, .pagination span { display:inline-flex; align-items:center; justify-content:center; min-width:38px; min-height:38px; padding:0 10px; border:1px solid var(--wm-line); border-radius:9px; color:var(--wm-ink); background:#fff; text-decoration:none; font-weight:800; }
-        .pagination span[aria-current="page"] { color:#3f2a0d; background:var(--wm-gold); }
+        .heritage-pagination { display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:7px; margin-top:24px; }
+        .heritage-pagination__link { display:inline-flex; align-items:center; justify-content:center; min-width:40px; height:40px; padding:0 12px; border:1px solid var(--wm-line); border-radius:10px; color:var(--wm-ink); background:#fff; text-decoration:none; font-weight:800; box-shadow:0 2px 8px rgba(52,31,23,.04); transition:border-color .15s ease, background .15s ease, transform .15s ease; }
+        a.heritage-pagination__link:hover { border-color:var(--wm-gold); background:#fff8eb; transform:translateY(-1px); }
+        .heritage-pagination__link.current { color:#fff; border-color:var(--wm-gold); background:var(--wm-gold); box-shadow:0 4px 12px rgba(200,148,50,.25); }
+        .heritage-pagination__link.disabled { color:var(--wm-muted); background:rgba(255,255,255,.55); opacity:.48; }
+        .heritage-pagination__ellipsis { display:inline-flex; align-items:center; justify-content:center; min-width:28px; height:40px; color:var(--wm-muted); font-weight:800; }
         .empty-state { padding: 52px 24px; text-align: center; }
         .empty-state h2 { margin: 0 0 8px; color: var(--wm-accent); font-size: 1.45rem; }
         .empty-state p { max-width: 520px; margin: 0 auto 18px; color: var(--wm-muted); }
@@ -306,10 +309,22 @@
 @section('content')
 @if (isset($shop))
                     @php
+                        $isAdminPreview = (bool) ($adminPreview ?? false);
                         $primaryImage = $shop->images->first();
                         $primaryImageUrl = $primaryImage ? $imageService->url($primaryImage) : null;
                     @endphp
-                    <a class="back-link" href="{{ route('heritage-shops.index') }}">← {{ __('Back to Heritage Shop list') }}</a>
+                    @if ($isAdminPreview)
+                        <section class="info-section" style="margin-bottom:16px; border-color:rgba(200,148,50,.45); background:#fff8eb;">
+                            <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;">
+                                <div>
+                                    <strong>{{ __('Administrator preview') }} · {{ ucfirst($shop->publish_status ?: 'draft') }}</strong>
+                                    <p style="margin:4px 0 0;">{{ __('This protected preview is not visible to regular users until the shop is published.') }}</p>
+                                </div>
+                                <a class="button primary" href="{{ route('admin.heritage-shops.edit', $shop) }}">{{ __('Edit shop') }}</a>
+                            </div>
+                        </section>
+                    @endif
+                    <a class="back-link" href="{{ $isAdminPreview ? route('admin.heritage-shops.index') : route('heritage-shops.index') }}">← {{ $isAdminPreview ? __('Back to admin shop list') : __('Back to Heritage Shop list') }}</a>
                     <article class="detail-panel">
                         <header class="detail-heading">
                             <div>
@@ -380,6 +395,7 @@
                             </div>
                         </div>
 
+                        @unless ($isAdminPreview)
                         <section class="ai-guide-panel" aria-labelledby="ai-guide-title" data-ai-guide>
                             <div class="ai-guide-head">
                                 <div>
@@ -406,6 +422,7 @@
                                 <p class="ai-guide-source" data-ai-source></p>
                             </div>
                         </section>
+                        @endunless
 
                         @php
                             $menuItems = is_array($menuItems ?? null) ? $menuItems : [];
@@ -432,7 +449,9 @@
                                                     @if (!empty($item['price'])) <span class="menu-price">{{ $item['price'] }}</span> @endif
                                                 </div>
                                                 <h3>
-                                                    @if (!empty($item['id']))
+                                                    @if ($isAdminPreview)
+                                                        {{ $item['name'] ?? __('Heritage food item') }}
+                                                    @elseif (!empty($item['id']))
                                                         <a href="{{ route('heritage-shops.food-items.show', [$shop, $item['id']]) }}">{{ $item['name'] ?? 'Heritage food item' }}</a>
                                                     @else
                                                         {{ $item['name'] ?? __('Heritage food item') }}
@@ -467,9 +486,11 @@
                         @endif
 
                         @auth
+                            @unless ($isAdminPreview)
                             <div class="card-actions" style="margin-top:22px;">
                                 <a class="button secondary" href="{{ route('heritage-shops.correction-requests.create', $shop) }}">{{ __('Report incorrect information') }}</a>
                             </div>
+                            @endunless
                         @endauth
                     </article>
                 @else
@@ -595,7 +616,47 @@
                         </section>
                         @guest
                         @endguest
-                        <nav class="pagination" aria-label="Heritage shop pages">{{ $shops->onEachSide(1)->links() }}</nav>
+                        @if ($shops->hasPages())
+                            @php
+                                $pageWindow = \Illuminate\Pagination\UrlWindow::make($shops->onEachSide(1));
+                                $pageElements = array_filter([
+                                    $pageWindow['first'],
+                                    is_array($pageWindow['slider']) ? '...' : null,
+                                    $pageWindow['slider'],
+                                    is_array($pageWindow['last']) ? '...' : null,
+                                    $pageWindow['last'],
+                                ]);
+                            @endphp
+                            <nav class="heritage-pagination" aria-label="Heritage shop pages">
+                                @if ($shops->onFirstPage())
+                                    <span class="heritage-pagination__link disabled" aria-disabled="true" aria-label="{{ __('Previous page') }}">‹</span>
+                                @else
+                                    <a class="heritage-pagination__link" href="{{ $shops->previousPageUrl() }}" rel="prev" aria-label="{{ __('Previous page') }}">‹</a>
+                                @endif
+
+                                @foreach ($pageElements as $element)
+                                    @if (is_string($element))
+                                        <span class="heritage-pagination__ellipsis" aria-hidden="true">{{ $element }}</span>
+                                    @endif
+
+                                    @if (is_array($element))
+                                        @foreach ($element as $page => $url)
+                                            @if ($page === $shops->currentPage())
+                                                <span class="heritage-pagination__link current" aria-current="page">{{ $page }}</span>
+                                            @else
+                                                <a class="heritage-pagination__link" href="{{ $url }}" aria-label="{{ __('Go to page :page', ['page' => $page]) }}">{{ $page }}</a>
+                                            @endif
+                                        @endforeach
+                                    @endif
+                                @endforeach
+
+                                @if ($shops->hasMorePages())
+                                    <a class="heritage-pagination__link" href="{{ $shops->nextPageUrl() }}" rel="next" aria-label="{{ __('Next page') }}">›</a>
+                                @else
+                                    <span class="heritage-pagination__link disabled" aria-disabled="true" aria-label="{{ __('Next page') }}">›</span>
+                                @endif
+                            </nav>
+                        @endif
                     @endif
                 @endif
 @endsection

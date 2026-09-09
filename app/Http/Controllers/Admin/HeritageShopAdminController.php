@@ -144,6 +144,31 @@ class HeritageShopAdminController extends Controller
         ]);
     }
 
+    public function preview(HeritageShop $heritageShop): View
+    {
+        $heritageShop->load(['images', 'activeFoodItems']);
+        $menuItems = $heritageShop->activeFoodItems->map(fn (HeritageFoodItem $item): array => array_filter([
+            'id' => $item->id,
+            'name' => $item->name,
+            'price' => $item->price,
+            'desc' => $item->description,
+            'description' => $item->description,
+            'category' => $item->category,
+            'heritage_significance' => $item->heritage_significance,
+            'availability' => $item->availability,
+            'image_url' => $item->image_path
+                ? route('admin.heritage-shops.food-items.image', [$heritageShop, $item])
+                : null,
+        ], fn ($value) => filled($value)))->values()->all();
+
+        return view('heritage.shops', [
+            'shop' => $heritageShop,
+            'menuItems' => $menuItems,
+            'imageService' => $this->imageService,
+            'adminPreview' => true,
+        ]);
+    }
+
     public function update(StoreHeritageShopRequest $request, HeritageShop $heritageShop): RedirectResponse
     {
         $data = $this->shopPayload($request);

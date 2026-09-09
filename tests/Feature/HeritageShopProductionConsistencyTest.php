@@ -47,6 +47,46 @@ class HeritageShopProductionConsistencyTest extends TestCase
         ]);
     }
 
+    public function test_only_an_administrator_can_preview_a_non_published_shop(): void
+    {
+        $shop = HeritageShop::query()->create($this->draftPayload('Protected Preview Shop'));
+        $activeItem = $shop->foodItems()->create([
+            'name' => 'Visible Preview Dish',
+            'image_path' => 'heritage-shops/food-items/preview.jpg',
+            'is_active' => true,
+        ]);
+        $shop->foodItems()->create(['name' => 'Hidden Preview Dish', 'is_active' => false]);
+        $regularUser = User::factory()->create(['role' => 'user']);
+        $admin = $this->admin();
+
+        $this->get(route('admin.heritage-shops.preview', $shop))
+            ->assertRedirect(route('admin.login'));
+
+        $this->actingAs($regularUser)
+            ->get(route('admin.heritage-shops.preview', $shop))
+            ->assertForbidden();
+
+        $this->actingAs($admin)
+            ->get(route('admin.heritage-shops.preview', $shop))
+            ->assertOk()
+            ->assertSee('Administrator preview')
+            ->assertSee('Protected Preview Shop')
+            ->assertSee('Visible Preview Dish')
+            ->assertDontSee('Hidden Preview Dish')
+            ->assertSee(route('admin.heritage-shops.food-items.image', [$shop, $activeItem]), false)
+            ->assertSee(route('admin.heritage-shops.edit', $shop), false);
+
+        $this->actingAs($admin)
+            ->get(route('admin.heritage-shops.index'))
+            ->assertOk()
+            ->assertSee(route('admin.heritage-shops.preview', $shop), false)
+            ->assertSee('Preview');
+
+        $this->actingAs($regularUser)
+            ->get(route('heritage-shops.show', ['id' => $shop->id]))
+            ->assertNotFound();
+    }
+
     public function test_shop_duplicate_detection_normalizes_case_and_whitespace_but_allows_a_different_location(): void
     {
         $admin = $this->admin();
@@ -544,6 +584,9 @@ class HeritageShopProductionConsistencyTest extends TestCase
         $this->assertSame(25, $shops->total());
         $this->assertStringContainsString('category=Noodles', $shops->nextPageUrl());
         $this->assertStringContainsString('state=Penang', $shops->nextPageUrl());
+        $this->assertSame(1, substr_count((string) $response->getContent(), 'aria-label="Heritage shop pages"'));
+        $response->assertSee('heritage-pagination__link', false);
+        $response->assertDontSee('Showing 1 to 20 of 25 results');
     }
 
     public function test_public_search_and_filters_match_saved_name_keyword_category_and_state(): void

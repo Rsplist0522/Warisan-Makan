@@ -645,6 +645,73 @@ class HeritageShopProductionConsistencyTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_profile_gallery_exposes_accessible_navigation_and_lightbox_controls(): void
+    {
+        $shop = HeritageShop::query()->create($this->publishedPayload('Gallery Experience Shop'));
+        $shop->images()->createMany([
+            ['path' => 'heritage-shops/gallery-one.jpg', 'is_primary' => true],
+            ['path' => 'heritage-shops/gallery-two.jpg', 'is_primary' => false],
+        ]);
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('heritage-shops.show', $shop))
+            ->assertOk()
+            ->assertSee('data-heritage-gallery', false)
+            ->assertSee('data-gallery-lightbox', false)
+            ->assertSee('aria-label="Previous image"', false)
+            ->assertSee('aria-label="Next image"', false)
+            ->assertSee('1 / 2');
+    }
+
+    public function test_admin_registry_summary_uses_global_unfiltered_counts(): void
+    {
+        HeritageShop::query()->create($this->draftPayload('Summary Draft'));
+        HeritageShop::query()->create([...$this->draftPayload('Summary Archived'), 'publish_status' => HeritageShop::STATUS_ARCHIVED]);
+        $published = HeritageShop::query()->create($this->publishedPayload('Summary Published'));
+        $published->images()->create(['path' => 'heritage-shops/summary.jpg', 'is_primary' => true]);
+
+        $this->actingAs($this->admin())
+            ->get(route('admin.heritage-shops.index', ['search' => 'Summary Published']))
+            ->assertOk()
+            ->assertViewHas('registrySummary', fn (array $summary): bool => $summary['total'] === 3
+                && $summary['published'] === 1
+                && $summary['draft'] === 1
+                && $summary['archived'] === 1
+                && $summary['missing_images'] === 2);
+    }
+
+    public function test_admin_registry_uses_the_compact_custom_paginator(): void
+    {
+        foreach (range(1, 13) as $index) {
+            HeritageShop::query()->create($this->draftPayload('Admin Page Shop '.$index));
+        }
+
+        $this->actingAs($this->admin())
+            ->get(route('admin.heritage-shops.index', ['sort' => 'newest']))
+            ->assertOk()
+            ->assertSee('Showing 1–12 of 13 shops')
+            ->assertSee('admin-pagination__link', false)
+            ->assertDontSee('Showing 1 to 12 of 13 results');
+    }
+
+    public function test_administrator_can_choose_a_primary_gallery_image(): void
+    {
+        $shop = HeritageShop::query()->create($this->draftPayload('Primary Image Shop'));
+        $first = $shop->images()->create(['path' => 'heritage-shops/first.jpg', 'is_primary' => true]);
+        $second = $shop->images()->create(['path' => 'heritage-shops/second.jpg', 'is_primary' => false]);
+
+        $this->withCsrf()->actingAs($this->admin())
+            ->put(route('admin.heritage-shops.update', $shop), [
+                ...$this->draftPayload('Primary Image Shop'),
+                'version' => $shop->version,
+                'primary_image_id' => $second->id,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertFalse($first->fresh()->is_primary);
+        $this->assertTrue($second->fresh()->is_primary);
+    }
+
     private function admin(): User
     {
         return User::factory()->create(['role' => 'admin', 'status' => 'active']);

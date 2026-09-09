@@ -31,10 +31,12 @@
     @endif
 
     <section class="heritage-admin-spotlight" aria-label="HeritageShop management highlights">
-        <div><span class="spotlight-label">Registry health</span><strong>{{ $shops->total() }}</strong><span>records in this view</span></div>
-        <div><span class="spotlight-label">Food coverage</span><strong>{{ $shops->sum(fn ($shop) => $shop->foodItems->count()) }}</strong><span>food items on this page</span></div>
-        <div><span class="spotlight-label">Public storytelling</span><strong>{{ $shops->filter(fn ($shop) => filled($shop->heritage_story))->count() }}</strong><span>profiles with stories</span></div>
-        <div class="spotlight-message"><strong>Make every dish memorable.</strong><span>Open a shop’s food catalog to add names, prices, photos, availability, and heritage significance.</span></div>
+        @foreach ([
+            ['Total shops', 'total'], ['Published', 'published'], ['Drafts', 'draft'],
+            ['Archived', 'archived'], ['Missing images', 'missing_images'], ['Missing food items', 'missing_food_items'],
+        ] as [$label, $key])
+            <div><span class="spotlight-label">{{ $label }}</span><strong>{{ $registrySummary[$key] }}</strong><span>across the complete registry</span></div>
+        @endforeach
         </section>
 
     <section class="panel discovery-panel" aria-labelledby="discovery-heading">
@@ -144,28 +146,29 @@
                                 <div aria-label="No image available" style="width:74px;height:74px;flex:0 0 auto;display:grid;place-items:center;border:1px dashed var(--line);border-radius:10px;color:var(--muted);background:#f8efe5;font-size:.68rem;text-align:center;">No image</div>
                             @endif
                             <div style="min-width:0;">
-                                <strong style="display:block; font-size:1.05rem; margin-bottom:6px;">{{ $shop->shop_name }}</strong>
+                                <div class="record-title-row">
+                                    <strong>{{ $shop->shop_name }}</strong>
+                                    <span class="shop-status shop-status-{{ $shop->publish_status ?: 'draft' }}">{{ ucfirst($shop->publish_status ?: 'draft') }}</span>
+                                </div>
                                 <p>{{ $shop->location ?: 'No address provided' }}</p>
                                 <div class="record-meta">
                                     <span>{{ $shop->primary_food_category ?: 'Uncategorized' }}</span>
                                     <span>{{ $shop->state ?: 'State not provided' }}</span>
                                                                         <span>{{ $shop->images->count() }} image{{ $shop->images->count() === 1 ? '' : 's' }}</span>
                                     <span>{{ $shop->foodItems->count() }} food item{{ $shop->foodItems->count() === 1 ? '' : 's' }}</span>
-                                    <span>{{ $shop->publish_status ?: 'draft' }}</span>
-
-                                    <span>{{ optional($shop->created_at)->format('d M Y') ?: 'Unknown date' }}</span>
+                                    <span>Updated {{ optional($shop->updated_at)->format('d M Y') ?: 'Unknown date' }}</span>
                                 </div>
                             </div>
                         </div>
                         <div class="record-actions">
                             @if ($shop->isPubliclyVisible())
-                                <a class="button secondary small" href="{{ route('heritage-shops.show', $shop) }}" target="_blank" rel="noopener noreferrer">View</a>
+                                <a class="button secondary small" href="{{ route('heritage-shops.show', $shop) }}" target="_blank" rel="noopener noreferrer">View Heritage Shop</a>
                             @else
                                 <a class="button secondary small" href="{{ route('admin.heritage-shops.preview', $shop) }}" target="_blank" rel="noopener noreferrer">Preview</a>
                             @endif
-                            <a class="button secondary small" href="{{ route('admin.heritage-shops.food-items.index', $shop) }}">Manage food</a>
+                            <a class="button secondary small" href="{{ route('admin.heritage-shops.food-items.index', $shop) }}">Manage Food Catalog</a>
                                                         <a class="button primary small" href="{{ route('admin.heritage-shops.edit', $shop) }}">Edit</a>
-                            <form method="POST" action="{{ route('admin.heritage-shops.destroy', $shop) }}" onsubmit="return confirm('Delete {{ addslashes($shop->shop_name) }} permanently? This removes its HeritageShop gallery and food catalog. If visitor passport history is linked, the system will safely block deletion.');" style="display:inline;">
+                            <form class="shop-delete-form" method="POST" action="{{ route('admin.heritage-shops.destroy', $shop) }}" data-shop-name="{{ $shop->shop_name }}" style="display:inline;">
                                 @csrf
                                 @method('DELETE')
                                 <button class="button danger small" type="submit">Delete</button>
@@ -177,19 +180,71 @@
                 @endforeach
             </div>
             @if ($shops->hasPages())
-                <div class="pagination">{{ $shops->links() }}</div>
+                @php
+                    $pageWindow = \Illuminate\Pagination\UrlWindow::make($shops->onEachSide(1));
+                    $pageElements = array_filter([
+                        $pageWindow['first'],
+                        is_array($pageWindow['slider']) ? '...' : null,
+                        $pageWindow['slider'],
+                        is_array($pageWindow['last']) ? '...' : null,
+                        $pageWindow['last'],
+                    ]);
+                @endphp
+                <div class="admin-pagination-summary">
+                    Showing {{ $shops->firstItem() }}–{{ $shops->lastItem() }} of {{ $shops->total() }} shops
+                </div>
+                <nav class="admin-pagination" aria-label="Heritage shop pages">
+                    @if ($shops->onFirstPage())
+                        <span class="admin-pagination__link disabled" aria-disabled="true" aria-label="Previous page">‹</span>
+                    @else
+                        <a class="admin-pagination__link" href="{{ $shops->previousPageUrl() }}" rel="prev" aria-label="Previous page">‹</a>
+                    @endif
+
+                    @foreach ($pageElements as $element)
+                        @if (is_string($element))
+                            <span class="admin-pagination__ellipsis" aria-hidden="true">{{ $element }}</span>
+                        @elseif (is_array($element))
+                            @foreach ($element as $page => $url)
+                                @if ($page === $shops->currentPage())
+                                    <span class="admin-pagination__link current" aria-current="page">{{ $page }}</span>
+                                @else
+                                    <a class="admin-pagination__link" href="{{ $url }}" aria-label="Go to page {{ $page }}">{{ $page }}</a>
+                                @endif
+                            @endforeach
+                        @endif
+                    @endforeach
+
+                    @if ($shops->hasMorePages())
+                        <a class="admin-pagination__link" href="{{ $shops->nextPageUrl() }}" rel="next" aria-label="Next page">›</a>
+                    @else
+                        <span class="admin-pagination__link disabled" aria-disabled="true" aria-label="Next page">›</span>
+                    @endif
+                </nav>
             @endif
         @endif
     </section>
 @push('styles')
 <style>
-    .heritage-admin-spotlight { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)) minmax(260px,2fr); gap:10px; margin-bottom:18px; }
+    .heritage-admin-spotlight { display:grid; grid-template-columns:repeat(6, minmax(0,1fr)); gap:10px; margin-bottom:18px; }
     .heritage-admin-spotlight > div { display:grid; gap:4px; padding:15px; border:1px solid var(--line); border-radius:14px; background:var(--panel); }
     .heritage-admin-spotlight strong { color:var(--accent); font-family:Georgia,serif; font-size:1.35rem; }
     .heritage-admin-spotlight span { color:var(--muted); font-size:.76rem; line-height:1.4; }
     .heritage-admin-spotlight .spotlight-label { color:var(--gold); font-size:.68rem; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
     .heritage-admin-spotlight .spotlight-message { background:linear-gradient(135deg,#fff8eb,#fffdf9); }
     .heritage-admin-spotlight .spotlight-message strong { color:var(--accent); font-family:inherit; font-size:.92rem; }
+    .record-title-row { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:6px; }
+    .record-title-row > strong { font-size:1.05rem; }
+    .shop-status { display:inline-flex; padding:4px 8px; border-radius:999px; font-size:.67rem; font-weight:900; letter-spacing:.04em; text-transform:uppercase; }
+    .shop-status-published { color:#22613f; background:#e7f4ec; }
+    .shop-status-draft { color:#805d16; background:#fff3d4; }
+    .shop-status-archived { color:#6d6060; background:#eee9e9; }
+    .admin-pagination-summary { margin:20px 0 10px; color:var(--muted); font-size:.8rem; text-align:center; }
+    .admin-pagination { display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:7px; }
+    .admin-pagination__link { display:inline-flex; min-width:40px; height:40px; align-items:center; justify-content:center; padding:0 12px; border:1px solid var(--line); border-radius:10px; color:var(--ink); background:#fff; box-shadow:0 2px 8px rgba(52,31,23,.04); font-weight:800; text-decoration:none; }
+    a.admin-pagination__link:hover { border-color:var(--gold); background:#fff8eb; transform:translateY(-1px); }
+    .admin-pagination__link.current { border-color:var(--gold); color:#fff; background:var(--gold); box-shadow:0 4px 12px rgba(200,148,50,.25); }
+    .admin-pagination__link.disabled { opacity:.45; cursor:not-allowed; }
+    .admin-pagination__ellipsis { display:inline-flex; min-width:28px; height:40px; align-items:center; justify-content:center; color:var(--muted); font-weight:800; }
     @media (max-width:900px) { .heritage-admin-spotlight { grid-template-columns:repeat(2,minmax(0,1fr)); } }
         @media (max-width:560px) { .heritage-admin-spotlight { grid-template-columns:1fr; } }
     .discovery-panel { background:linear-gradient(135deg,#fffaf0,#fffdf9); }
@@ -333,6 +388,15 @@
         });
     });
 })();
+
+document.querySelectorAll('.shop-delete-form').forEach((form) => {
+    form.addEventListener('submit', (event) => {
+        const name = form.dataset.shopName || 'this shop';
+        if (!window.confirm('Permanently delete "' + name + '" and its gallery and food catalog? This cannot be undone.')) {
+            event.preventDefault();
+        }
+    });
+});
 </script>
 
 @endsection

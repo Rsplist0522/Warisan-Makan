@@ -34,9 +34,9 @@ return [
 
     'lifetime' => (int) env('SESSION_LIFETIME', 120),
 
-    'user_inactivity_timeout' => 30,
+    'user_inactivity_timeout' => 600,
 
-    'admin_inactivity_timeout' => 70,
+    'admin_inactivity_timeout' => 600,
 
     'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', false),
 

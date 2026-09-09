@@ -465,7 +465,11 @@
                                     @foreach ($menuItems as $item)
                                         <article class="menu-card">
                                             @if (!empty($item['image_url']))
-                                                <img class="menu-card-image" src="{{ $item['image_url'] }}" alt="{{ $item['name'] ?? 'Heritage food item' }} at {{ $shop->shop_name }}" loading="lazy" onerror="this.remove()">
+                                                <x-enlargeable-image
+                                                    :src="$item['image_url']"
+                                                    :alt="($item['name'] ?? __('Heritage food item')).' at '.$shop->shop_name"
+                                                    image-class="menu-card-image"
+                                                />
                                             @endif
                                             <div class="menu-card-content">
                                                 <div class="menu-card-top">
@@ -693,5 +697,8 @@
                             </nav>
                         @endif
                     @endif
+                @endif
+                @if (isset($shop))
+                    <x-image-lightbox />
                 @endif
 @endsection

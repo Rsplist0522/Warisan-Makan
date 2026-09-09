@@ -87,6 +87,29 @@ class HeritageShopProductionConsistencyTest extends TestCase
             ->assertNotFound();
     }
 
+    public function test_published_shop_admin_view_stays_in_protected_preview_with_admin_return_links(): void
+    {
+        $shop = HeritageShop::query()->create([
+            ...$this->draftPayload('Published Admin Preview Shop'),
+            'publish_status' => HeritageShop::STATUS_PUBLISHED,
+        ]);
+        $admin = $this->admin();
+
+        $this->actingAs($admin)
+            ->get(route('admin.heritage-shops.index'))
+            ->assertOk()
+            ->assertSee(route('admin.heritage-shops.preview', $shop), false)
+            ->assertSee('View Heritage Shop');
+
+        $this->actingAs($admin)
+            ->get(route('admin.heritage-shops.preview', $shop))
+            ->assertOk()
+            ->assertSee('Administrator preview')
+            ->assertSee('Back to admin shop list')
+            ->assertSee(route('admin.heritage-shops.index'), false)
+            ->assertSee(route('admin.heritage-shops.edit', $shop), false);
+    }
+
     public function test_shop_duplicate_detection_normalizes_case_and_whitespace_but_allows_a_different_location(): void
     {
         $admin = $this->admin();
@@ -561,7 +584,7 @@ class HeritageShopProductionConsistencyTest extends TestCase
             ->assertDontSee('href="javascript:alert(1)"', false);
     }
 
-    public function test_public_listing_paginates_twenty_records_and_preserves_filters(): void
+    public function test_public_listing_paginates_twenty_one_records_and_preserves_filters(): void
     {
         foreach (range(1, 25) as $index) {
             HeritageShop::query()->create([
@@ -580,13 +603,13 @@ class HeritageShopProductionConsistencyTest extends TestCase
 
         $response->assertOk();
         $shops = $response->viewData('shops');
-        $this->assertSame(20, $shops->count());
+        $this->assertSame(21, $shops->count());
         $this->assertSame(25, $shops->total());
         $this->assertStringContainsString('category=Noodles', $shops->nextPageUrl());
         $this->assertStringContainsString('state=Penang', $shops->nextPageUrl());
         $this->assertSame(1, substr_count((string) $response->getContent(), 'aria-label="Heritage shop pages"'));
         $response->assertSee('heritage-pagination__link', false);
-        $response->assertDontSee('Showing 1 to 20 of 25 results');
+        $response->assertDontSee('Showing 1 to 21 of 25 results');
     }
 
     public function test_public_search_and_filters_match_saved_name_keyword_category_and_state(): void

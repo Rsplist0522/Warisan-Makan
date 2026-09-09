@@ -161,11 +161,7 @@
                             </div>
                         </div>
                         <div class="record-actions">
-                            @if ($shop->isPubliclyVisible())
-                                <a class="button secondary small" href="{{ route('heritage-shops.show', $shop) }}" target="_blank" rel="noopener noreferrer">View Heritage Shop</a>
-                            @else
-                                <a class="button secondary small" href="{{ route('admin.heritage-shops.preview', $shop) }}" target="_blank" rel="noopener noreferrer">Preview</a>
-                            @endif
+                            <a class="button secondary small" href="{{ route('admin.heritage-shops.preview', $shop) }}">{{ $shop->isPubliclyVisible() ? 'View Heritage Shop' : 'Preview' }}</a>
                             <a class="button secondary small" href="{{ route('admin.heritage-shops.food-items.index', $shop) }}">Manage Food Catalog</a>
                                                         <a class="button primary small" href="{{ route('admin.heritage-shops.edit', $shop) }}">Edit</a>
                             <form class="shop-delete-form" method="POST" action="{{ route('admin.heritage-shops.destroy', $shop) }}" data-shop-name="{{ $shop->shop_name }}" style="display:inline;">

@@ -48,7 +48,8 @@ class HeritageShopController extends Controller
             default => $shopsQuery->orderBy('shop_name'),
         };
 
-        $shops = $shopsQuery->paginate(20)->withQueryString();
+        // The desktop catalog uses a three-column grid, so 21 keeps full rows.
+        $shops = $shopsQuery->paginate(21)->withQueryString();
         $categories = HeritageShop::query()
             ->published()
             ->whereNotNull('primary_food_category')

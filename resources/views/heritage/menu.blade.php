@@ -110,7 +110,11 @@
                     @foreach ($menuItems as $item)
                         <article class="menu-card">
                             @if (!empty($item['image_url']))
-                                <img class="menu-card-image" src="{{ $item['image_url'] }}" alt="{{ $item['name'] ?? 'Heritage food item' }} at {{ $shop->shop_name }}" loading="lazy" onerror="this.remove()">
+                                <x-enlargeable-image
+                                    :src="$item['image_url']"
+                                    :alt="($item['name'] ?? __('Heritage food item')).' at '.$shop->shop_name"
+                                    image-class="menu-card-image"
+                                />
                             @endif
                             <div class="menu-card-content">
                                 <div class="menu-card-top">
@@ -145,5 +149,6 @@
             <a class="button" href="{{ route('heritage-shops.show', ['id' => $shop->id]) }}">{{ __('View full profile') }}</a>
             <a class="button primary" href="{{ route('heritage-shops.index') }}">{{ __('Discover more heritage shops') }}</a>
         </div>
+        <x-image-lightbox />
     </main>
 @endsection

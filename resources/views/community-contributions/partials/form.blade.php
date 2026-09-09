@@ -191,7 +191,17 @@
             </div>
             <div class="field">
                 <label for="postal_code">{{ __('Postal code') }}</label>
-                <input id="postal_code" name="postal_code" value="{{ $fieldValue('postal_code') }}" placeholder="50000">
+                <input
+                    id="postal_code"
+                    name="postal_code"
+                    type="text"
+                    inputmode="numeric"
+                    pattern="[0-9]*"
+                    maxlength="20"
+                    value="{{ $fieldValue('postal_code') }}"
+                    placeholder="50000"
+                >
+                @error('postal_code') <p class="field-error">{{ $message }}</p> @enderror
             </div>
             <div class="field">
                 <label for="latitude">{{ __('Latitude (optional)') }}</label>
@@ -417,6 +427,11 @@
         const preview = document.getElementById('media-preview');
         const form = document.querySelector('form.form-grid');
         const hourRows = document.querySelectorAll('.soft-card-row');
+        const postalCodeInput = document.getElementById('postal_code');
+
+        postalCodeInput?.addEventListener('input', () => {
+            postalCodeInput.value = postalCodeInput.value.replace(/[^0-9]/g, '');
+        });
 
         hourRows.forEach((row) => {
             const timeInputs = row.querySelectorAll('input[type="time"]');

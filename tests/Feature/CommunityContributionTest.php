@@ -1821,6 +1821,37 @@ class CommunityContributionTest extends TestCase
         $this->assertDatabaseCount('heritage_shop_contributions', 1);
     }
 
+    public function test_postal_code_only_accepts_digits(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('community-contribution.create'))
+            ->assertOk()
+            ->assertSee('inputmode="numeric"', false)
+            ->assertSee('pattern="[0-9]*"', false);
+
+        $this->actingAs($user)
+            ->post(route('community-contribution.store'), [
+                ...$this->validContributionData(),
+                'postal_code' => 'five-zero-one-zero-zero',
+            ])
+            ->assertSessionHasErrors('postal_code');
+
+        $this->assertDatabaseCount('heritage_shop_contributions', 0);
+
+        $this->actingAs($user)
+            ->post(route('community-contribution.store'), [
+                ...$this->validContributionData(),
+                'postal_code' => '05000',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('heritage_shop_contributions', [
+            'postal_code' => '05000',
+        ]);
+    }
+
     private function fakeContributionAndShopImageDisks(): void
     {
         Storage::fake('media-test');

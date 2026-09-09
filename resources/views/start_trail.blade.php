@@ -497,6 +497,192 @@
             font-size: 13px !important;
             font-weight: 700 !important;
         }
+
+        @media (max-width: 640px) {
+            .start-trail-page .user-main > main {
+                width: 100%;
+                max-width: 100%;
+                padding: 20px 12px 28px;
+            }
+
+            .start-trail-page .trail-page-header,
+            .start-trail-page .trail-map-card,
+            .start-trail-page .trail-route-card,
+            .start-trail-page .trail-actions-card {
+                border-radius: 24px;
+                padding: 16px;
+            }
+
+            .start-trail-page .trail-page-header {
+                margin-bottom: 16px;
+            }
+
+            .start-trail-page .trail-page-header > div > div:first-child {
+                gap: 10px;
+            }
+
+            .start-trail-page .trail-page-header h1 {
+                font-size: 2rem;
+                line-height: 1;
+            }
+
+            .start-trail-page .trail-page-header > div > div:last-child {
+                width: 100%;
+                gap: 10px;
+                padding: 10px 12px;
+            }
+
+            .start-trail-page .trail-page-header > div > div:last-child > div:first-child {
+                width: 44px;
+                height: 44px;
+                flex: 0 0 44px;
+            }
+
+            .start-trail-page .trail-layout,
+            .start-trail-page .trail-layout > div {
+                display: contents;
+            }
+
+            .start-trail-page .trail-layout > aside {
+                display: contents;
+            }
+
+            .start-trail-page .trail-layout {
+                display: flex;
+                flex-direction: column;
+                gap: 16px;
+            }
+
+            .start-trail-page .trail-map-card {
+                order: 1;
+            }
+
+            .start-trail-page .trail-actions-card {
+                order: 2;
+            }
+
+            .start-trail-page .trail-route-card {
+                order: 3;
+            }
+
+            .start-trail-page #startMapContainer {
+                height: 300px;
+                margin-top: 14px;
+                border-radius: 20px;
+            }
+
+            .start-trail-page .trail-map-card h2 {
+                margin-top: 10px;
+                font-size: 1.35rem;
+            }
+
+            .start-trail-page .trail-map-card > .mt-5.grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 8px;
+                margin-top: 12px;
+            }
+
+            .start-trail-page .trail-map-card > .mt-5.grid > div {
+                border-radius: 16px;
+                padding: 12px;
+            }
+
+            .start-trail-page .trail-map-card > .mt-5.grid > div:last-child {
+                grid-column: 1 / -1;
+            }
+
+            .start-trail-page .trail-map-card > .mt-5.grid p {
+                margin-top: 8px;
+            }
+
+            .start-trail-page .trail-route-card > div:first-child {
+                align-items: flex-start;
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .start-trail-page .trail-route-card > div:first-child > div:last-child {
+                align-self: stretch;
+                justify-content: center;
+            }
+
+            .start-trail-page .trail-route-card .mt-6.flex {
+                align-items: stretch;
+            }
+
+            .start-trail-page .trail-route-card .mt-6.flex > div:last-child {
+                width: 100%;
+                flex-wrap: wrap;
+            }
+
+            .start-trail-page .trail-route-card .mt-6.flex button {
+                flex: 1 1 100%;
+                width: 100%;
+            }
+
+            .start-trail-page .trail-preview-controls,
+            .start-trail-page .trail-share-grid {
+                grid-template-columns: 1fr !important;
+            }
+
+            .start-trail-page .trail-preview-btn {
+                height: 44px !important;
+            }
+
+            .start-trail-page .trail-share-btn {
+                height: 56px !important;
+                flex-direction: row !important;
+                justify-content: flex-start !important;
+                padding-inline: 16px !important;
+            }
+
+            .start-trail-page .trail-share-icon {
+                flex: 0 0 32px;
+            }
+
+            .start-trail-page .trail-tip {
+                margin-top: 16px;
+                border-radius: 18px;
+                padding: 12px;
+            }
+        }
+
+        @media (max-width: 380px) {
+            .start-trail-page .trail-stop-card {
+                grid-template-columns: 28px 26px 56px minmax(0, 1fr);
+                gap: 8px;
+                padding: 12px;
+                border-radius: 18px;
+            }
+
+            .start-trail-page .trail-stop-image {
+                width: 56px;
+                height: 56px;
+                border-radius: 14px;
+            }
+
+            .start-trail-page .trail-stop-number,
+            .start-trail-page .trail-drag-handle {
+                width: 26px;
+                height: 26px;
+            }
+
+            .start-trail-page .trail-stop-title {
+                font-size: 14px;
+            }
+
+            .start-trail-page .trail-stop-actions {
+                grid-column: 3 / -1;
+                gap: 6px;
+            }
+
+            .start-trail-page .trail-visit-button,
+            .start-trail-page .trail-remove-button {
+                min-width: 0;
+                width: 100%;
+                padding-inline: 8px;
+            }
+        }
     </style>
 @endpush
 

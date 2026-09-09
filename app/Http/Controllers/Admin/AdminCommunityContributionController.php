@@ -11,7 +11,9 @@ use App\Models\ModerationActivity;
 use App\Models\User;
 use App\Notifications\ContributionStatusChanged;
 use App\Notifications\CorrectionRequestStatusChanged;
+use App\Services\HeritageAuditLogger;
 use App\Services\HeritageShopImageService;
+use App\Services\HeritageShopIntegrityService;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -28,9 +30,11 @@ use Throwable;
 
 class AdminCommunityContributionController extends Controller
 {
-    public function __construct(private HeritageShopImageService $imageService)
-    {
-    }
+    public function __construct(
+        private HeritageShopImageService $imageService,
+        private HeritageShopIntegrityService $integrityService,
+        private HeritageAuditLogger $auditLogger,
+    ) {}
 
     public function submissions(Request $request): View
     {
@@ -161,7 +165,7 @@ class AdminCommunityContributionController extends Controller
             : null;
         $publishableMedia = $validated['moderation_action'] === 'approve'
             ? $this->validatePublishableMediaSelection($contribution, $validated['publish_media_ids'] ?? [])
-            : new EloquentCollection();
+            : new EloquentCollection;
         $copiedShopImagePaths = [];
 
         try {
@@ -175,9 +179,52 @@ class AdminCommunityContributionController extends Controller
                 &$copiedShopImagePaths
             ): void {
                 if ($validated['moderation_action'] === 'approve') {
-                    $contribution->forceFill(['admin_feedback' => $feedback])->save();
-                    $shop = $contribution->approve($admin);
+                    $shop = HeritageShop::query()
+                        ->where('source_contribution_id', $contribution->getKey())
+                        ->lockForUpdate()
+                        ->first();
+                    $newImageCount = $this->newCommunityGalleryImageCount($contribution, $shop, $publishableMedia);
+                    $finalImageCount = $this->integrityService->finalGalleryCount($shop, [], $newImageCount);
+                    $candidate = $contribution->heritageShopPayload();
+                    $shopValues = $this->integrityService->validateFinalState(
+                        $candidate,
+                        $shop,
+                        $finalImageCount,
+                        $finalImageCount,
+                    );
+                    $oldValues = $shop?->getAttributes() ?? [];
+
+                    if ($shop) {
+                        $shop->fill([...$shopValues, 'publish_status' => HeritageShop::STATUS_DRAFT])->save();
+                    } else {
+                        $shop = HeritageShop::query()->create([
+                            ...$shopValues,
+                            'source_contribution_id' => $contribution->getKey(),
+                            'publish_status' => HeritageShop::STATUS_DRAFT,
+                        ]);
+                    }
+
                     $this->publishSelectedMediaAsShopImages($contribution, $shop, $publishableMedia, $copiedShopImagePaths);
+                    $this->integrityService->ensurePrimaryImage($shop);
+                    $persistedImageCount = $this->integrityService->finalGalleryCount($shop);
+                    $persistedValidImageCount = $this->integrityService->finalGalleryCount($shop, [], 0, [], true);
+                    $this->integrityService->validateFinalState(
+                        [...$shopValues, 'publish_status' => HeritageShop::STATUS_PUBLISHED],
+                        $shop,
+                        $persistedImageCount,
+                        $persistedValidImageCount,
+                    );
+                    $shop->forceFill(['publish_status' => HeritageShop::STATUS_PUBLISHED])->save();
+                    $contribution->forceFill(['admin_feedback' => $feedback])->save();
+                    $contribution->approve($shop, $admin);
+                    $this->auditLogger->record(
+                        $admin,
+                        $shop,
+                        $oldValues === [] ? 'heritage_shop.created' : 'heritage_shop.updated',
+                        $oldValues,
+                        $shop->getAttributes(),
+                    );
+                    $this->auditLogger->record($admin, $shop, 'heritage_shop.published', $oldValues, $shop->getAttributes());
                     $toStatus = HeritageShopContribution::STATUS_APPROVED;
                 } elseif ($validated['moderation_action'] === 'reject') {
                     $toStatus = HeritageShopContribution::STATUS_REJECTED;
@@ -235,6 +282,10 @@ class AdminCommunityContributionController extends Controller
         } catch (Throwable $exception) {
             foreach ($copiedShopImagePaths as $path) {
                 $this->imageService->delete($path);
+            }
+
+            if ($exception instanceof ValidationException) {
+                return back()->withInput()->withErrors($exception->errors());
             }
 
             if ($exception instanceof RuntimeException) {
@@ -359,41 +410,53 @@ class AdminCommunityContributionController extends Controller
             ? trim(strip_tags($validated['admin_comment']))
             : null;
 
-        DB::transaction(function () use ($validated, $correctionRequest, $admin, $fromStatus, $comment): void {
-            if ($validated['moderation_action'] === 'approve') {
-                $payload = $correctionRequest->heritageShopUpdatePayload();
+        try {
+            DB::transaction(function () use ($validated, $correctionRequest, $admin, $fromStatus, $comment): void {
+                if ($validated['moderation_action'] === 'approve') {
+                    $shop = HeritageShop::query()->lockForUpdate()->findOrFail($correctionRequest->heritage_shop_id);
+                    $payload = $correctionRequest->heritageShopUpdatePayload();
 
-                if ($payload !== []) {
-                    $correctionRequest->heritageShop->forceFill($payload)->save();
+                    if ($payload !== []) {
+                        $candidate = [...$shop->only($shop->getFillable()), ...$payload];
+                        $finalCount = $this->integrityService->finalGalleryCount($shop);
+                        $finalValidCount = $this->integrityService->finalGalleryCount($shop, [], 0, [], true);
+                        $normalized = $this->integrityService->validateFinalState($candidate, $shop, $finalCount, $finalValidCount);
+                        $oldValues = $shop->getAttributes();
+                        $shop->fill(collect($normalized)->only(array_keys($payload))->all())->save();
+                        $this->integrityService->ensurePrimaryImage($shop);
+                        $this->auditLogger->record($admin, $shop, 'heritage_shop.updated', $oldValues, $shop->getAttributes());
+                    }
+
+                    $toStatus = CorrectionRequest::STATUS_APPROVED;
+                    $action = 'correction_approved';
+                } elseif ($validated['moderation_action'] === 'reject') {
+                    $toStatus = CorrectionRequest::STATUS_REJECTED;
+                    $action = 'correction_rejected';
+                } else {
+                    $toStatus = CorrectionRequest::STATUS_NEEDS_INFORMATION;
+                    $action = 'additional_information_requested';
                 }
 
-                $toStatus = CorrectionRequest::STATUS_APPROVED;
-                $action = 'correction_approved';
-            } elseif ($validated['moderation_action'] === 'reject') {
-                $toStatus = CorrectionRequest::STATUS_REJECTED;
-                $action = 'correction_rejected';
-            } else {
-                $toStatus = CorrectionRequest::STATUS_NEEDS_INFORMATION;
-                $action = 'additional_information_requested';
-            }
+                $correctionRequest->forceFill([
+                    'status' => $toStatus,
+                    'admin_comment' => $comment,
+                    'reviewed_by_user_id' => $admin->id,
+                    'reviewed_at' => now(),
+                ])->save();
 
-            $correctionRequest->forceFill([
-                'status' => $toStatus,
-                'admin_comment' => $comment,
-                'reviewed_by_user_id' => $admin->id,
-                'reviewed_at' => now(),
-            ])->save();
-
-            $this->recordCorrectionActivity(
-                $correctionRequest,
-                $admin->id,
-                $action,
-                $fromStatus,
-                $toStatus,
-                $comment,
-                ['field_name' => $correctionRequest->field_name]
-            );
-        });
+                $this->recordCorrectionActivity(
+                    $correctionRequest,
+                    $admin->id,
+                    $action,
+                    $fromStatus,
+                    $toStatus,
+                    $comment,
+                    ['field_name' => $correctionRequest->field_name]
+                );
+            });
+        } catch (ValidationException $exception) {
+            return back()->withInput()->withErrors($exception->errors());
+        }
 
         $correctionRequest->refresh();
         $correctionRequest->user?->notify(new CorrectionRequestStatusChanged($correctionRequest));
@@ -563,7 +626,7 @@ class AdminCommunityContributionController extends Controller
             ->values();
 
         if ($ids->isEmpty()) {
-            return new EloquentCollection();
+            return new EloquentCollection;
         }
 
         $media = $contribution->media()
@@ -597,9 +660,33 @@ class AdminCommunityContributionController extends Controller
                     'publish_media_ids' => 'A selected supporting image is missing from contribution media storage.',
                 ]);
             }
+
+            $maximumBytes = (int) config('heritage_shop.max_image_bytes', 2048 * 1024);
+            $actualBytes = Storage::disk($mediaDisk)->size($item->r2_object_key);
+            if (max((int) $item->file_size_bytes, $actualBytes) > $maximumBytes) {
+                throw ValidationException::withMessages([
+                    'publish_media_ids' => ($item->original_name ?: 'This file').' can remain as contribution evidence, but Heritage Shop gallery images must not exceed '.number_format($maximumBytes / 1024 / 1024, 0).' MB.',
+                ]);
+            }
         }
 
         return new EloquentCollection($ids->map(fn (int $id): Media => $media->get($id))->all());
+    }
+
+    private function newCommunityGalleryImageCount(
+        HeritageShopContribution $contribution,
+        ?HeritageShop $shop,
+        EloquentCollection $media,
+    ): int {
+        if (! $shop) {
+            return $media->count();
+        }
+
+        return $media->reject(function (Media $item) use ($contribution, $shop): bool {
+            $targetPath = $this->shopImagePathForContributionMedia($contribution, $shop, $item);
+
+            return $shop->images()->withTrashed()->where('path', $targetPath)->exists();
+        })->count();
     }
 
     /**
@@ -632,7 +719,7 @@ class AdminCommunityContributionController extends Controller
             }
 
             $targetExistsBeforeCopy = Storage::disk($this->imageService->diskName())->exists($targetPath);
-            $this->imageService->copyFromDisk($sourceDisk, $item->r2_object_key, $targetPath);
+            $this->imageService->copyFromDisk($sourceDisk, $item->r2_object_key, $targetPath, $item->mime_type);
             if (! $targetExistsBeforeCopy) {
                 $copiedShopImagePaths[] = $targetPath;
             }

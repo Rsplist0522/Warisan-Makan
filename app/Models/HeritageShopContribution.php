@@ -303,16 +303,9 @@ class HeritageShopContribution extends Model
         ]);
     }
 
-    public function approve(?User $admin = null): HeritageShop
+    public function heritageShopPayload(): array
     {
-        $this->forceFill([
-            'status' => self::STATUS_APPROVED,
-            'approved_by_user_id' => $admin?->id,
-            'approved_at' => now(),
-            'rejection_reason' => null,
-        ])->save();
-
-        $shop = HeritageShop::updateOrCreate(['source_contribution_id' => $this->id], [
+        return [
             'source_contribution_id' => $this->id,
             'shop_name' => $this->shop_name,
             'primary_food_category' => $this->primary_food_category,
@@ -332,7 +325,20 @@ class HeritageShopContribution extends Model
             'latitude' => $this->latitude,
             'longitude' => $this->longitude,
             'publish_status' => HeritageShop::STATUS_PUBLISHED,
-        ]);
+        ];
+    }
+
+    /**
+     * Finalize moderation after a HeritageShop has passed shared integrity checks.
+     */
+    public function approve(HeritageShop $shop, ?User $admin = null): HeritageShop
+    {
+        $this->forceFill([
+            'status' => self::STATUS_APPROVED,
+            'approved_by_user_id' => $admin?->id,
+            'approved_at' => now(),
+            'rejection_reason' => null,
+        ])->save();
 
         $this->syncApprovedFoodItems($shop);
 

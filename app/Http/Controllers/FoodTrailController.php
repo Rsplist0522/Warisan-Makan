@@ -10,9 +10,8 @@ class FoodTrailController extends Controller
 {
     public function index()
     {
-        // Food Trails mirrors the server catalogue exactly, equivalent to
-        // SELECT * FROM warisan_makan.heritage_shops ordered by latest update.
-        $shops = HeritageShop::query()
+        // Only published restaurants are available to users in Food Trails.
+        $shops = HeritageShop::published()
             ->with('images')
             ->latest('updated_at')
             ->get();

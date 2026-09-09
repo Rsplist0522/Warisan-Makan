@@ -47,6 +47,7 @@
     .share-actions,.share-download-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
     .share-download-actions{margin-top:10px}
     .share-btn,.share-download-btn{padding:11px 12px;border:1px solid rgba(140,31,31,.14);border-radius:11px;background:rgba(140,31,31,.05);color:var(--primary);font:inherit;font-weight:700;cursor:pointer}
+    .share-btn.active,.share-download-btn.active{background:linear-gradient(135deg,var(--primary),#6D1717);border-color:transparent;color:#fff;box-shadow:0 10px 18px rgba(140,31,31,.18)}
     .share-download-btn{border-color:rgba(212,160,23,.38);background:rgba(212,160,23,.1);font-size:.82rem}
     .share-download-btn:first-child{background:var(--primary);border-color:var(--primary);color:#fff}
     .share-status{min-height:24px;margin-top:12px!important;font-size:.82rem}
@@ -306,9 +307,6 @@
   }
 
   async function downloadAchievementCard(format){
-    const isTouchDevice = 'ontouchstart' in window || (window.navigator.maxTouchPoints || 0) > 0;
-    if(isTouchDevice && await shareAchievementFile(format)) return true;
-
     const canvas = drawAchievementCard(format);
     if(!canvas) return false;
 
@@ -367,44 +365,58 @@
         return;
       }
       if(channel === 'instagram'){
-        if(await shareAchievementFile('story')) return;
         await copyShareText();
         await downloadAchievementCard('story');
-        window.open('https://www.instagram.com/', '_blank', 'noopener');
+        window.location.assign('https://www.instagram.com/');
         shareStatus.textContent = 'Instagram opened. The story card was downloaded and the caption was copied—upload the PNG after logging in.';
         return;
       }
       if(channel === 'facebook'){
-        if(await shareAchievementFile('square')) return;
         await copyShareText();
         await downloadAchievementCard('square');
         const url = 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(window.location.href) + '&quote=' + encodeURIComponent(badgeShareText);
-        window.open(url, '_blank', 'noopener');
+        window.location.assign(url);
         shareStatus.textContent = 'Facebook opened. The square card was downloaded and the caption was copied—attach the PNG if needed.';
         return;
       }
       if(channel === 'whatsapp'){
         shareStatus.textContent = 'Preparing your WhatsApp achievement card...';
+        const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        const whatsappWindow = isMobileDevice ? null : window.open('', '_blank');
 
-        const isTouchDevice = 'ontouchstart' in window || (window.navigator.maxTouchPoints || 0) > 0;
-        if(isTouchDevice){
-          const shared = await shareAchievementFile('square');
-          if(shared) return;
+        if(isMobileDevice){
+          try{
+            if(await shareAchievementFile('square')) return;
+          }catch(error){
+            if(error && error.name === 'AbortError'){
+              shareStatus.textContent = 'Sharing cancelled.';
+              return;
+            }
+            console.warn('Native achievement sharing was unavailable:', error);
+          }
         }
 
-        const whatsappUrl = isTouchDevice
+        const whatsappUrl = isMobileDevice
           ? 'https://wa.me/?text=' + encodeURIComponent(badgeShareText)
           : 'https://web.whatsapp.com/send?text=' + encodeURIComponent(badgeShareText);
-        await downloadAchievementCard('square');
-        const whatsappWindow = window.open(whatsappUrl, '_blank', 'noopener');
-        await copyShareText();
-        if(!whatsappWindow){
-          shareStatus.textContent = 'The card was downloaded and the caption was copied, but the browser blocked WhatsApp. Allow pop-ups or open WhatsApp Web manually.';
-        }else{
-          shareStatus.textContent = isTouchDevice
-            ? 'WhatsApp opened. Attach the downloaded card if your device did not include it automatically.'
-            : 'WhatsApp Web opened. The square card was downloaded and the caption was copied—attach the PNG in the chat.';
+
+        try{
+          await downloadAchievementCard('square');
+        }catch(error){
+          console.warn('Achievement card download failed:', error);
         }
+
+        try{
+          await copyShareText();
+        }catch(error){
+          console.warn('Caption copy failed:', error);
+        }
+
+        if(whatsappWindow) whatsappWindow.location.href = whatsappUrl;
+        else window.location.assign(whatsappUrl);
+        shareStatus.textContent = isMobileDevice
+          ? 'WhatsApp opened. Attach the downloaded card if it was not included automatically.'
+          : 'WhatsApp Web opened. Attach the downloaded card to your message.';
       }
     }catch(error){
       if(error && error.name === 'AbortError'){
@@ -416,7 +428,15 @@
   }
 
   document.querySelectorAll('[data-close-badge-modal]').forEach(element => element.addEventListener('click', closeBadgeModal));
-  document.querySelectorAll('[data-share]').forEach(button => button.addEventListener('click', () => shareBadge(button.dataset.share)));
+  function activateShareButton(button){
+    const shareButtons = button.closest('.badge-modal-card')?.querySelectorAll('[data-share]') || [];
+    shareButtons.forEach(item => item.classList.toggle('active', item === button));
+  }
+
+  document.querySelectorAll('[data-share]').forEach(button => {
+    button.addEventListener('click', () => activateShareButton(button));
+    button.addEventListener('click', () => shareBadge(button.dataset.share));
+  });
 
   async function parseApiResponse(response){
     const contentType = response.headers.get('content-type') || '';

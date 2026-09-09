@@ -39,7 +39,7 @@
     .badge-share-slot { width: 100%; min-height: 40px; margin-top: auto; padding-top: 14px; }
     .badge-share-button { width: 100%; min-height: 40px; border: 1px solid rgba(140,31,31,.2); border-radius: 10px; background: rgba(140,31,31,.07); color: #8C1F1F; font-weight: 800; cursor: pointer; }
     .badge-share-button:hover { background: #8C1F1F; color: #fff; }
-    .badge-modal[hidden] { display:none; } .badge-modal { position:fixed; inset:0; z-index:1000; display:grid; place-items:center; padding:20px; } .badge-modal-backdrop { position:absolute; inset:0; background:rgba(47,37,31,.56); } .badge-modal-card { position:relative; width:min(100%,560px); padding:28px; border-radius:24px; background:#FFFDF9; text-align:center; } .badge-modal-close { position:absolute; top:12px; right:14px; border:0; background:transparent; color:#8C1F1F; font-size:1.4rem; cursor:pointer; } .achievement-card-preview { margin-top:18px; padding:24px; border-radius:22px; background:linear-gradient(135deg,#8C1F1F,#2E1815); color:#FBF6EE; } .achievement-card-icon { margin:15px auto; color:#F2D37B; font-size:3rem; } .achievement-card-title { color:#F2D37B; font-family:Georgia,serif; } .share-actions,.share-download-actions { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:12px; } .share-btn,.share-download-btn { padding:11px; border:1px solid rgba(140,31,31,.14); border-radius:11px; background:rgba(140,31,31,.05); color:#8C1F1F; font-weight:700; cursor:pointer; } .badge-modal-continue { width:100%; margin-top:16px; padding:12px; border:0; border-radius:11px; background:#8C1F1F; color:#fff; font-weight:800; }
+    .badge-modal[hidden] { display:none; } .badge-modal { position:fixed; inset:0; z-index:1000; display:grid; place-items:center; padding:20px; } .badge-modal-backdrop { position:absolute; inset:0; background:rgba(47,37,31,.56); backdrop-filter:blur(4px); } .badge-modal-card { position:relative; width:min(100%,560px); max-height:min(680px,calc(100vh - 40px)); overflow:auto; padding:30px 26px 24px; border-radius:24px; background:#FFFDF9; text-align:center; box-shadow:0 28px 70px rgba(47,37,31,.25); } .badge-modal-close { position:absolute; top:12px; right:14px; border:0; background:rgba(140,31,31,.08); color:#8C1F1F; font-size:1.4rem; cursor:pointer; } .achievement-card-preview { position:relative; overflow:hidden; margin-top:18px; min-height:280px; padding:24px; border-radius:22px; background:linear-gradient(135deg,#8C1F1F 0%,#4A211C 58%,#2E1815 100%); color:#FBF6EE; box-shadow:0 18px 30px rgba(86,59,48,.18); } .achievement-card-preview:after { position:absolute; inset:12px; content:''; pointer-events:none; border:1px solid rgba(242,211,123,.42); border-radius:15px; } .achievement-card-icon { position:relative; z-index:1; display:grid; place-items:center; width:82px; height:82px; margin:24px auto 18px; border:2px solid #F2D37B; border-radius:50%; background:#8C1F1F; color:#F2D37B; font-size:2.4rem; } .achievement-card-title,.achievement-card-preview p,.achievement-card-preview div { position:relative; z-index:1; } .achievement-card-title { color:#F2D37B; font-family:Georgia,serif; } .share-actions,.share-download-actions { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:12px; } .share-btn,.share-download-btn { padding:11px; border:1px solid rgba(140,31,31,.14); border-radius:11px; background:rgba(140,31,31,.05); color:#8C1F1F; font-weight:700; cursor:pointer; } .share-btn.active,.share-download-btn.active { background:linear-gradient(135deg,#8C1F1F,#6D1717); border-color:transparent; color:#fff; box-shadow:0 10px 18px rgba(140,31,31,.18); } .badge-modal-continue { width:100%; margin-top:16px; padding:12px; border:0; border-radius:11px; background:#8C1F1F; color:#fff; font-weight:800; }
     @media (max-width:760px) { .passport-page { padding:22px 16px 40px; } .statistics-grid,.badge-grid { grid-template-columns:1fr; } }
 </style>
 @endpush
@@ -61,6 +61,244 @@
 
 @push('scripts')
 <script>
+/*
 (() => { const modal=document.getElementById('badgeModal'); if(!modal)return; let badge=null,shareText=''; const icon=document.getElementById('badgeModalIcon'),name=document.getElementById('badgeModalBadgeName'),description=document.getElementById('badgeModalBadgeDescription'),status=document.getElementById('shareStatus'); const canvasFor=format=>{const c=document.createElement('canvas'),w=1080,h=format==='story'?1920:1080;c.width=w;c.height=h;const x=c.getContext('2d'),g=x.createLinearGradient(0,0,w,h);g.addColorStop(0,'#8C1F1F');g.addColorStop(1,'#2E1815');x.fillStyle=g;x.fillRect(0,0,w,h);x.textAlign='center';x.fillStyle='#F2D37B';x.font='110px Arial';x.fillText(badge.icon||'★',w/2,h*.38);x.font='700 58px Georgia';x.fillText(badge.name,w/2,h*.5);x.fillStyle='#FBF6EE';x.font='30px Arial';x.fillText('Every dish has a story. Discover yours.',w/2,h-120);return c;}; const download=f=>{const a=document.createElement('a');a.download='warisan-makan-badge-'+f+'.png';a.href=canvasFor(f).toDataURL('image/png');a.click();status.textContent=f==='story'?@json(__('Story card downloaded.')):@json(__('Square card downloaded.'));}; const copy=async()=>{if(navigator.clipboard)await navigator.clipboard.writeText(shareText);status.textContent=@json(__('Caption copied. Add it with your achievement card.'));}; const share=async c=>{if(c==='copy')return copy();if(c==='download-square')return download('square');if(c==='download-story')return download('story');if(c==='instagram'){await copy();download('story');window.open('https://www.instagram.com/','_blank');}if(c==='facebook'){await copy();download('square');window.open('https://www.facebook.com/sharer/sharer.php?u='+encodeURIComponent(location.href)+'&quote='+encodeURIComponent(shareText),'_blank');}if(c==='whatsapp'){download('square');window.open('https://wa.me/?text='+encodeURIComponent(shareText),'_blank');}}; const open=card=>{badge={name:card.dataset.badgeName,description:card.dataset.badgeDescription,icon:card.dataset.badgeIcon,progress:card.dataset.badgeProgress};icon.textContent=badge.icon||'★';name.textContent=badge.name;description.textContent=badge.description;shareText='I just earned the '+badge.name+' badge on the Warisan Makan Heritage Passport.';modal.hidden=false;document.body.classList.add('modal-open');}; document.querySelectorAll('[data-badge-share]').forEach(card=>{card.onclick=e=>{if(!e.target.closest('[data-open-badge-share]'))open(card);};card.querySelector('[data-open-badge-share]')?.addEventListener('click',e=>{e.stopPropagation();open(card);});});document.querySelectorAll('[data-close-badge-modal]').forEach(e=>e.onclick=()=>{modal.hidden=true;document.body.classList.remove('modal-open');});document.querySelectorAll('[data-share]').forEach(e=>e.onclick=()=>share(e.dataset.share));})();
+    */
+    (() => {
+        const modal = document.getElementById('badgeModal');
+        if (!modal) return;
+        let badge = null;
+        let shareText = '';
+        const icon = document.getElementById('badgeModalIcon');
+        const name = document.getElementById('badgeModalBadgeName');
+        const description = document.getElementById('badgeModalBadgeDescription');
+        const status = document.getElementById('shareStatus');
+
+        function wrapText(context, text, x, y, maxWidth, lineHeight, maxLines) {
+            const words = String(text || '').split(' ');
+            let line = '';
+            let lines = 0;
+            words.forEach((word, index) => {
+                const candidate = line ? line + ' ' + word : word;
+                if (context.measureText(candidate).width > maxWidth && line) {
+                    context.fillText(line, x, y + lines * lineHeight);
+                    line = word;
+                    lines += 1;
+                } else {
+                    line = candidate;
+                }
+                if (index === words.length - 1 && lines < maxLines) {
+                    context.fillText(line, x, y + lines * lineHeight);
+                }
+            });
+        }
+
+        function canvasFor(format) {
+            const canvas = document.createElement('canvas');
+            const width = 1080;
+            const height = format === 'story' ? 1920 : 1080;
+            const story = format === 'story';
+            const panelY = story ? 500 : 170;
+            const panelHeight = story ? 980 : 740;
+            const context = canvas.getContext('2d');
+            canvas.width = width;
+            canvas.height = height;
+
+            const gradient = context.createLinearGradient(0, 0, width, height);
+            gradient.addColorStop(0, '#8C1F1F');
+            gradient.addColorStop(.55, '#5B2820');
+            gradient.addColorStop(1, '#2E1815');
+            context.fillStyle = gradient;
+            context.fillRect(0, 0, width, height);
+            context.strokeStyle = 'rgba(242,211,123,.4)';
+            context.lineWidth = 2;
+            context.strokeRect(52, 52, width - 104, height - 104);
+            context.fillStyle = 'rgba(251,246,238,.8)';
+            context.font = '800 26px Arial';
+            context.fillText('WARISAN MAKAN  /  HERITAGE PASSPORT', 82, story ? 130 : 112);
+            context.fillStyle = '#F2D37B';
+            context.font = '800 22px Arial';
+            context.fillText(story ? 'A NEW CHAPTER IN YOUR FOOD JOURNEY' : 'ACHIEVEMENT UNLOCKED', 82, story ? 176 : 158);
+            context.fillStyle = '#FBF6EE';
+            context.fillRect(80, panelY, width - 160, panelHeight);
+            context.strokeStyle = '#D4A017';
+            context.lineWidth = 4;
+            context.strokeRect(96, panelY + 16, width - 192, panelHeight - 32);
+            const centerX = width / 2;
+            const sealY = panelY + 150;
+            context.fillStyle = '#8C1F1F';
+            context.beginPath();
+            context.arc(centerX, sealY, 92, 0, Math.PI * 2);
+            context.fill();
+            context.strokeStyle = '#D4A017';
+            context.lineWidth = 8;
+            context.stroke();
+            context.fillStyle = '#F2D37B';
+            context.font = '800 92px Arial';
+            context.textAlign = 'center';
+            context.fillText(badge.icon || '★', centerX, sealY + 32);
+            context.fillStyle = '#8C1F1F';
+            context.font = '800 22px Arial';
+            context.fillText('MILESTONE UNLOCKED', centerX, panelY + 300);
+            context.fillStyle = '#32241F';
+            context.font = story ? '700 58px Georgia' : '700 52px Georgia';
+            wrapText(context, badge.name, centerX, panelY + 380, width - 260, 68, 2);
+            context.fillStyle = '#7A6A63';
+            context.font = story ? '30px Arial' : '28px Arial';
+            wrapText(context, badge.description, centerX, panelY + 530, width - 270, 42, 3);
+            context.fillStyle = '#8C1F1F';
+            context.font = '800 25px Arial';
+            context.fillText(badge.progress ? 'HERITAGE VISITS  /  ' + badge.progress : 'A NEW STORY ADDED TO MY FOOD JOURNEY', centerX, panelY + panelHeight - 92);
+            context.fillStyle = 'rgba(251,246,238,.9)';
+            context.font = '30px Arial';
+            context.fillText('Every dish has a story. Discover yours.', centerX, height - (story ? 170 : 116));
+            context.font = '22px Arial';
+            context.fillStyle = '#F2D37B';
+            context.fillText('warisan makan  /  explore local heritage food', centerX, height - (story ? 112 : 68));
+            context.textAlign = 'start';
+            return canvas;
+        }
+
+        async function copy() {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(shareText);
+            }
+            status.textContent = @json(__('Caption copied. Add it with your achievement card.'));
+        }
+
+        async function download(format) {
+            const blob = await new Promise(resolve => canvasFor(format).toBlob(resolve, 'image/png'));
+            if (!blob) return false;
+            const objectUrl = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.download = 'warisan-makan-' + (badge.name || 'badge').toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + format + '.png';
+            link.href = objectUrl;
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+            status.textContent = format === 'story' ? @json(__('Story card downloaded.')) : @json(__('Square card downloaded.'));
+            return true;
+        }
+
+        async function shareAchievementFile(format) {
+            if (!navigator.share || !navigator.canShare || typeof File === 'undefined') {
+                return false;
+            }
+
+            const blob = await new Promise(resolve => canvasFor(format).toBlob(resolve, 'image/png'));
+            if (!blob) return false;
+
+            const slug = (badge.name || 'badge').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+            const file = new File([blob], 'warisan-makan-' + slug + '-' + format + '.png', { type: 'image/png' });
+            if (!navigator.canShare({ files: [file] })) return false;
+
+            await navigator.share({
+                files: [file],
+                title: badge.name + ' · Warisan Makan',
+                text: shareText
+            });
+            status.textContent = @json(__('Achievement card shared successfully.'));
+            return true;
+        }
+
+        async function share(channel) {
+            if (channel === 'copy') return copy();
+            if (channel === 'download-square') return download('square');
+            if (channel === 'download-story') return download('story');
+            if (channel === 'instagram') {
+                const instagramWindow = window.open('', '_blank');
+                await copy();
+                await download('story');
+                if (instagramWindow) instagramWindow.location.href = 'https://www.instagram.com/';
+                return;
+            }
+            if (channel === 'facebook') {
+                const facebookWindow = window.open('', '_blank');
+                await copy();
+                await download('square');
+                if (facebookWindow) facebookWindow.location.href = 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(location.href) + '&quote=' + encodeURIComponent(shareText);
+                return;
+            }
+            if (channel === 'whatsapp') {
+                status.textContent = @json(__('Preparing your WhatsApp achievement card...'));
+                const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+                const whatsappWindow = isMobileDevice ? null : window.open('', '_blank');
+
+                if (isMobileDevice) {
+                    try {
+                        if (await shareAchievementFile('square')) return;
+                    } catch (error) {
+                        if (error && error.name === 'AbortError') {
+                            status.textContent = @json(__('Sharing cancelled.'));
+                            return;
+                        }
+                        console.warn('Native achievement sharing was unavailable:', error);
+                    }
+                }
+
+                const whatsappUrl = isMobileDevice
+                    ? 'https://wa.me/?text=' + encodeURIComponent(shareText)
+                    : 'https://web.whatsapp.com/send?text=' + encodeURIComponent(shareText);
+
+                try {
+                    await download('square');
+                } catch (error) {
+                    console.warn('Achievement card download failed:', error);
+                }
+
+                try {
+                    await copy();
+                } catch (error) {
+                    console.warn('Caption copy failed:', error);
+                }
+
+                if (whatsappWindow) whatsappWindow.location.href = whatsappUrl;
+                else window.location.assign(whatsappUrl);
+                status.textContent = isMobileDevice
+                    ? @json(__('WhatsApp opened. Attach the downloaded card if it was not included automatically.'))
+                    : @json(__('WhatsApp Web opened. Attach the downloaded card to your message.'));
+            }
+        }
+
+        function open(card) {
+            badge = {
+                name: card.dataset.badgeName,
+                description: card.dataset.badgeDescription,
+                icon: card.dataset.badgeIcon,
+                progress: card.dataset.badgeProgress
+            };
+            icon.textContent = badge.icon || '★';
+            name.textContent = badge.name;
+            description.textContent = badge.description;
+            shareText = 'I just earned the ' + badge.name + ' badge on the Warisan Makan Heritage Passport after discovering heritage food stories. What should I explore next?';
+            modal.hidden = false;
+            document.body.classList.add('modal-open');
+        }
+
+        document.querySelectorAll('[data-badge-share]').forEach(card => {
+            card.addEventListener('click', event => {
+                if (!event.target.closest('[data-open-badge-share]')) open(card);
+            });
+            card.querySelector('[data-open-badge-share]')?.addEventListener('click', event => {
+                event.stopPropagation();
+                open(card);
+            });
+        });
+        document.querySelectorAll('[data-close-badge-modal]').forEach(element => element.addEventListener('click', () => {
+            modal.hidden = true;
+            document.body.classList.remove('modal-open');
+        }));
+        function activateShareButton(button) {
+            const shareButtons = button.closest('.badge-modal-card')?.querySelectorAll('[data-share]') || [];
+            shareButtons.forEach(item => item.classList.toggle('active', item === button));
+        }
+
+        document.querySelectorAll('[data-share]').forEach(element => {
+            element.addEventListener('click', () => activateShareButton(element));
+            element.addEventListener('click', () => share(element.dataset.share));
+        });
+    })();
 </script>
 @endpush

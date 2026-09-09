@@ -401,26 +401,29 @@
                 @error('address') <p class="field-error">{{ $message }}</p> @enderror
             </div>
             <div class="field">
-                <label for="city">{{ __('City') }}</label>
+                <label class="required" for="city">{{ __('City') }}</label>
                 <input
                     id="city"
                     name="city"
                     value="{{ $fieldValue('city') }}"
                     placeholder="{{ __('Kuala Lumpur') }}"
                 >
+                @error('city') <p class="field-error">{{ $message }}</p> @enderror
             </div>
             <div class="field">
-                <label for="state">{{ __('State') }}</label>
+                <label class="required" for="state">{{ __('State') }}</label>
                 <input
                     id="state"
                     name="state"
                     value="{{ $fieldValue('state') }}"
                     placeholder="{{ __('Wilayah Persekutuan') }}"
                 >
+                @error('state') <p class="field-error">{{ $message }}</p> @enderror
             </div>
             <div class="field">
-                <label for="postal_code">{{ __('Postal code') }}</label>
+                <label class="required" for="postal_code">{{ __('Postal code') }}</label>
                 <input id="postal_code" name="postal_code" value="{{ $fieldValue('postal_code') }}" placeholder="50000">
+                @error('postal_code') <p class="field-error">{{ $message }}</p> @enderror
             </div>
             <div class="field">
                 <label for="latitude">{{ __('Latitude (optional)') }}</label>
@@ -505,7 +508,7 @@
                             >
                         </div>
                         <div class="food-item-field food-item-price-field">
-                            <label>{{ __('Price (Optional)') }}</label>
+                            <label>{{ __('Price') }}</label>
                             <div class="food-item-price-control">
                                 <span>RM</span>
                                 <input
@@ -523,11 +526,11 @@
                     </div>
                     <div class="food-item-media">
                         <div class="food-item-image-field">
-                            <label>{{ __('Food Image (Optional)') }}</label>
+                            <label>{{ __('Food Image') }}</label>
                             <div class="food-item-upload-row">
                                 @php($foodItemImageUrl = $contribution?->foodItemImageUrl($item['image_path'] ?? null))
                                 <button type="button" class="food-item-upload-button" data-food-item-upload>{{ __('Upload Image') }}</button>
-                                <p class="food-item-image-note" data-food-item-file-name>{{ $foodItemImageUrl ? __('Current image saved') : __('JPG / PNG / WEBP, optional') }}</p>
+                                <p class="food-item-image-note" data-food-item-file-name>{{ $foodItemImageUrl ? __('Current image saved') : __('JPG / PNG / WEBP') }}</p>
                             </div>
                             <div class="food-item-preview-row">
                                 <img
@@ -640,7 +643,7 @@
                 <input name="food_items[__INDEX__][desc]" placeholder="{{ __('Brief description') }}">
             </div>
             <div class="food-item-field food-item-price-field">
-                <label>{{ __('Price (Optional)') }}</label>
+                <label>{{ __('Price') }}</label>
                 <div class="food-item-price-control">
                     <span>RM</span>
                     <input name="food_items[__INDEX__][price]" type="number" min="0" step="0.01" inputmode="decimal" placeholder="45.00">
@@ -649,10 +652,10 @@
         </div>
         <div class="food-item-media">
             <div class="food-item-image-field">
-                <label>{{ __('Food Image (Optional)') }}</label>
+                <label>{{ __('Food Image') }}</label>
                 <div class="food-item-upload-row">
                     <button type="button" class="food-item-upload-button" data-food-item-upload>{{ __('Upload Image') }}</button>
-                    <p class="food-item-image-note" data-food-item-file-name>{{ __('JPG / PNG / WEBP, optional') }}</p>
+                    <p class="food-item-image-note" data-food-item-file-name>{{ __('JPG / PNG / WEBP') }}</p>
                 </div>
                 <div class="food-item-preview-row">
                     <img class="food-item-image-preview" alt="{{ __('Selected food item image preview') }}" data-food-item-preview hidden>
@@ -723,7 +726,7 @@ const canAddMoreFilesMessage = @json(__('You can add up to :count more :files.')
                 }
                 removeImageButton.hidden = true;
                 if (fileName) {
-                    fileName.textContent = @json(__('JPG / PNG / WEBP, optional'));
+                    fileName.textContent = @json(__('JPG / PNG / WEBP'));
                 }
             });
         };
@@ -741,7 +744,7 @@ const canAddMoreFilesMessage = @json(__('You can add up to :count more :files.')
                     removeImageButton.hidden = true;
                 }
                 if (fileName) {
-                    fileName.textContent = @json(__('JPG / PNG / WEBP, optional'));
+                    fileName.textContent = @json(__('JPG / PNG / WEBP'));
                 }
                 return;
             }
@@ -777,9 +780,14 @@ const canAddMoreFilesMessage = @json(__('You can add up to :count more :files.')
         let selectedSupportingFiles = [];
 
         const pluralizeFile = (count) => count === 1 ? 'file' : 'files';
+        const supportingFileKey = (file) => [
+            file.name,
+            file.size,
+            file.type,
+            file.lastModified,
+        ].join('::');
         const retainedExistingMediaCount = () => existingMediaCount - removeMediaInputs.filter((checkbox) => checkbox.checked).length;
         const usedSupportingMediaCount = () => retainedExistingMediaCount() + selectedSupportingFiles.length;
-        const availableNewMediaSlots = () => Math.max(0, maxSupportingMedia - retainedExistingMediaCount());
         const remainingSupportingMediaSlots = () => Math.max(0, maxSupportingMedia - usedSupportingMediaCount());
 
         const setMediaError = (message = '') => {
@@ -1084,9 +1092,20 @@ const canAddMoreFilesMessage = @json(__('You can add up to :count more :files.')
 
         input?.addEventListener('change', () => {
             const incomingFiles = [...input.files];
-            const availableSlots = availableNewMediaSlots();
+            const selectedKeys = new Set(selectedSupportingFiles.map(supportingFileKey));
+            const uniqueIncomingFiles = incomingFiles.filter((file) => {
+                const key = supportingFileKey(file);
 
-            if (incomingFiles.length > availableSlots) {
+                if (selectedKeys.has(key)) {
+                    return false;
+                }
+
+                selectedKeys.add(key);
+                return true;
+            });
+            const availableSlots = remainingSupportingMediaSlots();
+
+            if (uniqueIncomingFiles.length > availableSlots) {
                 const keptExisting = retainedExistingMediaCount();
                 const savedContext = keptExisting > 0
                     ? `You already have ${keptExisting} saved ${pluralizeFile(keptExisting)} selected to keep. `
@@ -1099,11 +1118,9 @@ const canAddMoreFilesMessage = @json(__('You can add up to :count more :files.')
                 return;
             }
 
-            selectedSupportingFiles = incomingFiles;
+            selectedSupportingFiles = [...selectedSupportingFiles, ...uniqueIncomingFiles];
             setMediaError('');
-            if (typeof DataTransfer !== 'undefined') {
-                syncSupportingMediaInput();
-            }
+            syncSupportingMediaInput();
             renderSupportingMediaPreview();
             updateSupportingMediaCounts();
         });

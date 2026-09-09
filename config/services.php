@@ -36,6 +36,16 @@ return [
         'maps_api_key' => env('GOOGLE_MAPS_API_KEY'),
     ],
 
+    'gmail_api' => [
+        'client_id' => env('GOOGLE_GMAIL_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_GMAIL_CLIENT_SECRET'),
+        'refresh_token' => env('GOOGLE_GMAIL_REFRESH_TOKEN'),
+        'from' => env('GOOGLE_GMAIL_FROM'),
+        'token_endpoint' => env('GOOGLE_GMAIL_TOKEN_ENDPOINT', 'https://oauth2.googleapis.com/token'),
+        'send_endpoint' => env('GOOGLE_GMAIL_SEND_ENDPOINT', 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send'),
+        'timeout' => env('GOOGLE_GMAIL_TIMEOUT', 10),
+    ],
+
     // The crawler uses Groq's OpenAI-compatible chat-completions API.
     // Prioritizes CHATBOX_ specific keys for your separate presentation key.
     'groq' => [

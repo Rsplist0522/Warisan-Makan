@@ -41,7 +41,8 @@ class HeritageShopHardeningTest extends TestCase
             'heritageShop' => $shop->id,
             'image' => $image->id,
         ]))
-            ->assertRedirect(route('login'));
+            ->assertOk()
+            ->assertHeader('content-type', 'image/jpeg');
 
         $this->actingAs(User::factory()->create())
             ->get(route('heritage-shops.images.show', [

@@ -131,6 +131,19 @@ class UserInactivityTimeoutTest extends TestCase
         $this->assertGreaterThan($activeAt, session('user_last_activity'));
     }
 
+    public function test_activity_heartbeat_preserves_form_submitter_after_session_check(): void
+    {
+        $user = User::factory()->create(['role' => 'user']);
+
+        $response = $this->actingAs($user)
+            ->get(route('community-contribution.create'));
+
+        $response->assertOk()
+            ->assertSee('event.stopImmediatePropagation()', false)
+            ->assertSee('const submitter = event.submitter instanceof HTMLElement ? event.submitter : null;', false)
+            ->assertSee('form.requestSubmit(submitter);', false);
+    }
+
     public function test_activity_heartbeat_cannot_revive_an_expired_user_session(): void
     {
         $user = User::factory()->create(['role' => 'user']);

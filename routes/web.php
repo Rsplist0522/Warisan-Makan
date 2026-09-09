@@ -230,7 +230,7 @@ Route::get('/start_trail', function () {
 })->middleware(['auth', 'user.inactivity']);
 
 Route::get('/heritage-shops', [HeritageShopController::class, 'index'])
-    ->middleware(['system.access', 'user.inactivity'])
+    ->middleware('user.inactivity')
     ->name('heritage-shops.index');
 Route::get('/heritage-shops/{heritageShop}/menu', [HeritageShopController::class, 'menu'])
     ->whereNumber('heritageShop')

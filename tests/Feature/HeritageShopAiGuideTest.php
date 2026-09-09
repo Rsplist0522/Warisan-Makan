@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\HeritageShop;
+use App\Models\User;
 use App\Services\HeritageShopAiGuideService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -39,7 +40,9 @@ class HeritageShopAiGuideTest extends TestCase
             'publish_status' => HeritageShop::STATUS_PUBLISHED,
         ]);
 
-        $response = $this->withCsrf()->postJson(route('heritage-shops.ai-guide', $shop), [
+        $response = $this->actingAs(User::factory()->create())
+            ->withCsrf()
+            ->postJson(route('heritage-shops.ai-guide', $shop), [
             'question' => 'What makes this shop special?',
         ]);
 
@@ -67,7 +70,9 @@ class HeritageShopAiGuideTest extends TestCase
             'publish_status' => HeritageShop::STATUS_DRAFT,
         ]);
 
-        $this->withCsrf()->postJson(route('heritage-shops.ai-guide', $draft), [
+        $this->actingAs(User::factory()->create())
+            ->withCsrf()
+            ->postJson(route('heritage-shops.ai-guide', $draft), [
             'question' => 'Tell me about this shop.',
         ])->assertNotFound();
 
@@ -86,7 +91,9 @@ class HeritageShopAiGuideTest extends TestCase
             'publish_status' => HeritageShop::STATUS_PUBLISHED,
         ]);
 
-        $response = $this->withCsrf()->postJson(route('heritage-shops.ai-guide', $shop), [
+        $response = $this->actingAs(User::factory()->create())
+            ->withCsrf()
+            ->postJson(route('heritage-shops.ai-guide', $shop), [
             'question' => 'What is this place?',
         ]);
 
@@ -104,13 +111,29 @@ class HeritageShopAiGuideTest extends TestCase
             'publish_status' => HeritageShop::STATUS_PUBLISHED,
         ]);
 
-        $missingQuestion = $this->withCsrf()->postJson(route('heritage-shops.ai-guide', $shop), []);
+        $missingQuestion = $this->actingAs(User::factory()->create())
+            ->withCsrf()
+            ->postJson(route('heritage-shops.ai-guide', $shop), []);
         $this->assertSame(302, $missingQuestion->status());
 
-        $oversizedQuestion = $this->withCsrf()->postJson(route('heritage-shops.ai-guide', $shop), [
+        $oversizedQuestion = $this->actingAs(User::factory()->create())
+            ->withCsrf()
+            ->postJson(route('heritage-shops.ai-guide', $shop), [
             'question' => str_repeat('x', 501),
         ]);
         $this->assertSame(302, $oversizedQuestion->status());
+    }
+
+    public function test_guest_cannot_invoke_the_ai_guide(): void
+    {
+        $shop = HeritageShop::create([
+            'shop_name' => 'Protected AI Heritage Cafe',
+            'publish_status' => HeritageShop::STATUS_PUBLISHED,
+        ]);
+
+        $this->withCsrf()->postJson(route('heritage-shops.ai-guide', $shop), [
+            'question' => 'What is this place?',
+        ])->assertRedirect(route('login'));
     }
 
     private function withCsrf(): self

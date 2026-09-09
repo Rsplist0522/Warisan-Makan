@@ -113,14 +113,23 @@
             </div>
         </details>
 
-        <a class="user-nav-item {{ $blindBoxActive ? 'active' : '' }}" data-label="{{ __('Blind Box') }}" title="{{ __('Blind Box') }}" href="{{ route('blind-box.index') }}" @guest data-login-required="true" @endguest>
-            <span class="user-nav-icon" aria-hidden="true">@include('partials.module-icon', ['icon' => 'box'])</span>
-            <span class="user-nav-text">{{ __('Blind Box') }}</span>
-        </a>
-        <a class="user-nav-item {{ request()->routeIs('blind-box.favourites') ? 'active' : '' }}" data-label="{{ __('Blind Box Favourites') }}" title="{{ __('Blind Box Favourites') }}" href="{{ route('blind-box.favourites') }}">
-            <span class="user-nav-icon" aria-hidden="true">&#9825;</span>
-            <span class="user-nav-text">{{ __('My Favourites') }}</span>
-        </a>
+        <details class="user-nav-group" {{ $blindBoxActive ? 'open' : '' }}>
+            <summary class="user-nav-item user-nav-parent {{ $blindBoxActive ? 'is-active' : '' }}" data-label="{{ __('Blind Box') }}" title="{{ __('Blind Box') }}">
+                <span class="user-nav-icon" aria-hidden="true">@include('partials.module-icon', ['icon' => 'box'])</span>
+                <span class="user-nav-text">{{ __('Blind Box') }}</span>
+                <span class="user-nav-chevron" aria-hidden="true">&rsaquo;</span>
+            </summary>
+            <div class="user-nav-submenu" aria-label="{{ __('Blind box navigation') }}">
+                <a class="user-nav-item user-nav-child {{ request()->routeIs('blind-box.index') ? 'active' : '' }}" data-label="{{ __('Blind Box / Draw') }}" title="{{ __('Blind Box / Draw') }}" href="{{ route('blind-box.index') }}" @guest data-login-required="true" @endguest>
+                    <span class="user-nav-icon" aria-hidden="true">@include('partials.module-icon', ['icon' => 'box'])</span>
+                    <span class="user-nav-text">{{ __('Blind Box / Draw') }}</span>
+                </a>
+                <a class="user-nav-item user-nav-child {{ request()->routeIs('blind-box.favourites') ? 'active' : '' }}" data-label="{{ __('My Favourites') }}" title="{{ __('My Favourites') }}" href="{{ route('blind-box.favourites') }}" @guest data-login-required="true" @endguest>
+                    <span class="user-nav-icon" aria-hidden="true">&#9825;</span>
+                    <span class="user-nav-text">{{ __('My Favourites') }}</span>
+                </a>
+            </div>
+        </details>
     </nav>
 
     @auth

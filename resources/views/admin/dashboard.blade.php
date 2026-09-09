@@ -18,6 +18,8 @@
         .module-icon svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
         .module-stats { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; padding-top: 16px; color: var(--muted); font-size: .74rem; font-weight: 800; }
         .module-stats span { padding: 5px 8px; border-radius: 8px; background: rgba(255,255,255,.72); }
+        .module-stats.contribution-stats { gap: 6px; font-size: .66rem; }
+        .module-stats.contribution-stats span { padding-inline: 6px; white-space: nowrap; }
         .module-status { margin-top: auto; padding-top: 18px; color: var(--accent); font-size: .78rem; font-weight: 850; }
         .module-stats + .module-status { margin-top: 0; }
     </style>
@@ -32,8 +34,10 @@
             ->whereIn('status', [
                 \App\Models\HeritageShopContribution::STATUS_PENDING_REVIEW,
                 \App\Models\HeritageShopContribution::STATUS_UNDER_REVIEW,
-                \App\Models\HeritageShopContribution::STATUS_REVISION_REQUIRED,
             ])->count();
+        $correctionRequestReviewCount = \App\Models\CorrectionRequest::query()
+            ->whereIn('status', \App\Models\CorrectionRequest::activeStatuses())
+            ->count();
         $badgeCount = \App\Models\Badge::query()->where('is_active', true)->count();
         $trailCount = \App\Models\FoodTrailSuggestion::query()->count();
         $blindBoxCatalog = app(\App\Services\BlindBoxCatalogManager::class);
@@ -66,8 +70,8 @@
             <span class="module-icon" aria-hidden="true">@include('partials.module-icon', ['icon' => 'community'])</span>
             <h3>Community Contribution</h3>
             <p>Review heritage eatery submissions, move items through moderation, and inspect the admin activity history.</p>
-            <div class="module-stats"><span>{{ $contributionReviewCount }} in review queue</span></div>
-            <strong class="module-status">Review Submissions &rarr;</strong>
+            <div class="module-stats contribution-stats"><span>{{ $contributionReviewCount }} pending {{ \Illuminate\Support\Str::plural('submission', $contributionReviewCount) }}</span><span>{{ $correctionRequestReviewCount }} pending correction {{ \Illuminate\Support\Str::plural('request', $correctionRequestReviewCount) }}</span></div>
+            <strong class="module-status">Manage Contributions &rarr;</strong>
         </a>
         <a class="module-card" href="{{ route('admin.badges.index') }}">
             <span class="module-icon" aria-hidden="true">@include('partials.module-icon', ['icon' => 'passport'])</span>

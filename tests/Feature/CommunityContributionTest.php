@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Mail\GmailApi\GmailApiClient;
 use App\Models\CorrectionRequest;
 use App\Models\HeritageShop;
 use App\Models\HeritageShopContribution;
 use App\Models\Media;
+use App\Models\SiteBranding;
 use App\Models\ShopImage;
 use App\Models\User;
 use App\Notifications\ContributionStatusChanged;
@@ -13,13 +15,23 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Tests\TestCase;
 
 class CommunityContributionTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        config()->set('session.user_inactivity_timeout', 365 * 24 * 60 * 60);
+        config()->set('session.admin_inactivity_timeout', 365 * 24 * 60 * 60);
+    }
 
     public function test_guest_is_redirected_to_login(): void
     {
@@ -41,27 +53,44 @@ class CommunityContributionTest extends TestCase
         $response->assertSee('<style>', false);
     }
 
-    public function test_submission_form_has_back_to_home_outside_the_main_card(): void
+    public function test_food_item_optional_wording_is_not_shown_on_food_item_labels(): void
     {
         $user = User::factory()->create();
 
         $response = $this->actingAs($user)->get(route('community-contribution.create'));
 
         $response->assertOk();
-        $response->assertSee('Back to Home');
-        $response->assertSee('href="'.route('home').'"', false);
+        $response->assertSee('Price');
+        $response->assertSee('Food Image');
+        $response->assertSee('JPG / PNG / WEBP');
+        $response->assertDontSee('Price (Optional)');
+        $response->assertDontSee('Food Image (Optional)');
+        $response->assertDontSee('JPG / PNG / WEBP, optional');
+    }
+
+    public function test_submission_form_keeps_content_navigation_out_of_the_global_topbar(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->get(route('community-contribution.create'));
+
+        $response->assertOk();
         $response->assertSee('Back to My Contributions');
 
         $content = $response->getContent();
-        $backToHomePosition = strpos($content, 'Back to Home');
+        $topbar = $this->userTopbarHtml($content);
+        $backToMyContributionsPosition = strpos($content, 'Back to My Contributions');
         $mainCardPosition = strpos($content, '<main class="page-shell">');
 
-        $this->assertIsInt($backToHomePosition);
+        $this->assertGlobalUserTopbarOnly($content, route('community-contribution.create'));
+        $this->assertStringNotContainsString('Back to Home', $topbar);
+        $this->assertStringNotContainsString('href="'.route('home').'"', $topbar);
+        $this->assertIsInt($backToMyContributionsPosition);
         $this->assertIsInt($mainCardPosition);
-        $this->assertLessThan($mainCardPosition, $backToHomePosition);
+        $this->assertGreaterThan($mainCardPosition, $backToMyContributionsPosition);
     }
 
-    public function test_shared_user_contribution_pages_have_one_global_back_to_home_link(): void
+    public function test_shared_user_contribution_pages_render_global_topbar_only(): void
     {
         $user = User::factory()->create();
         $draft = HeritageShopContribution::create([
@@ -113,15 +142,9 @@ class CommunityContributionTest extends TestCase
             $response = $this->actingAs($user)->get($route);
 
             $response->assertOk();
-            $response->assertSee('href="'.route('home').'"', false);
 
             $content = $response->getContent();
-            $this->assertSame(1, substr_count($content, 'Back to Home'), "Unexpected Back to Home count for [{$route}].");
-            $this->assertLessThan(
-                strpos($content, '<main class="page-shell">'),
-                strpos($content, 'Back to Home'),
-                "Back to Home should render before the main content for [{$route}]."
-            );
+            $this->assertGlobalUserTopbarOnly($content, $route);
         }
     }
 
@@ -141,6 +164,20 @@ class CommunityContributionTest extends TestCase
             'status' => HeritageShopContribution::STATUS_DRAFT,
         ]);
         $this->assertDatabaseCount('contribution_versions', 1);
+    }
+
+    public function test_draft_success_flash_is_visible_after_redirect(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->followingRedirects()
+            ->post(route('community-contribution.store'), [
+                'submission_action' => 'draft',
+                'shop_name' => 'Capital Cafe draft',
+            ])
+            ->assertOk()
+            ->assertSee('Heritage shop draft saved successfully.');
     }
 
     public function test_empty_draft_submission_is_rejected_server_side(): void
@@ -193,10 +230,125 @@ class CommunityContributionTest extends TestCase
                 'establishment_year',
                 'heritage_story',
                 'address',
+                'city',
+                'state',
+                'postal_code',
             ]);
 
         $this->assertDatabaseCount('heritage_shop_contributions', 0);
         $this->assertDatabaseCount('contribution_versions', 0);
+    }
+
+    public function test_submission_validation_errors_are_visible_after_redirect(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('community-contribution.create'))
+            ->assertOk();
+
+        $payload = [
+            'submission_action' => 'submit',
+            'contribution_title' => 'Only a title is not complete enough',
+        ];
+
+        $this
+            ->post(route('community-contribution.store'), [
+                ...$payload,
+            ])
+            ->assertRedirect(route('community-contribution.create'))
+            ->assertSessionHasErrors([
+                'shop_name',
+                'primary_food_category',
+                'establishment_year',
+                'heritage_story',
+                'address',
+                'city',
+                'state',
+                'postal_code',
+            ]);
+
+        $this->get(route('community-contribution.create'))->assertOk();
+
+        $this
+            ->followingRedirects()
+            ->post(route('community-contribution.store'), $payload)
+            ->assertOk()
+            ->assertSee('Please fix the following:')
+            ->assertSee('<div class="status-banner error" role="alert">', false);
+    }
+
+    public function test_submission_success_flash_is_visible_after_redirect(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->followingRedirects()
+            ->post(route('community-contribution.store'), $this->validContributionData())
+            ->assertOk()
+            ->assertSee('Heritage shop information submitted for review.');
+
+        $this->assertDatabaseHas('heritage_shop_contributions', [
+            'user_id' => $user->id,
+            'status' => HeritageShopContribution::STATUS_PENDING_REVIEW,
+        ]);
+    }
+
+    public function test_submit_for_review_requires_complete_location_fields(): void
+    {
+        $user = User::factory()->create();
+
+        foreach (['address', 'city', 'state', 'postal_code'] as $field) {
+            $data = $this->validContributionData();
+            $data[$field] = '';
+
+            $this->actingAs($user)
+                ->post(route('community-contribution.store'), $data)
+                ->assertSessionHasErrors($field);
+        }
+
+        $this->assertDatabaseCount('heritage_shop_contributions', 0);
+    }
+
+    public function test_save_draft_still_allows_incomplete_location_fields(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('community-contribution.store'), [
+                'submission_action' => 'draft',
+                'contribution_title' => 'Draft with partial location',
+                'address' => '213, Jalan Tuanku Abdul Rahman',
+            ])
+            ->assertRedirect(route('community-contribution.drafts'));
+
+        $this->assertDatabaseHas('heritage_shop_contributions', [
+            'user_id' => $user->id,
+            'contribution_title' => 'Draft with partial location',
+            'address' => '213, Jalan Tuanku Abdul Rahman',
+            'city' => null,
+            'state' => null,
+            'postal_code' => null,
+            'status' => HeritageShopContribution::STATUS_DRAFT,
+        ]);
+    }
+
+    public function test_submit_saved_draft_requires_complete_location_fields(): void
+    {
+        $user = User::factory()->create();
+        $draft = HeritageShopContribution::create([
+            ...$this->modelContributionData(),
+            'user_id' => $user->id,
+            'status' => HeritageShopContribution::STATUS_DRAFT,
+            'city' => null,
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('community-contribution.drafts.submit', $draft))
+            ->assertRedirect(route('community-contribution.edit', $draft))
+            ->assertSessionHasErrors('submission');
+
+        $this->assertSame(HeritageShopContribution::STATUS_DRAFT, $draft->fresh()->status);
     }
 
     public function test_contributor_payload_cannot_mass_assign_ownership_or_moderation_fields(): void
@@ -754,7 +906,7 @@ class CommunityContributionTest extends TestCase
         $this->actingAs($user)
             ->get(route('community-contribution.edit', $draft))
             ->assertOk()
-            ->assertSee('Price (Optional)')
+            ->assertSee('Price')
             ->assertSee('<span>RM</span>', false)
             ->assertSee('value="45.00"', false)
             ->assertDontSee('RM RM 45.00');
@@ -1399,6 +1551,121 @@ class CommunityContributionTest extends TestCase
             return array_count_values($channels)['database'] === 1
                 && array_count_values($channels)['mail'] === 1;
         });
+    }
+
+    public function test_contribution_notification_can_be_delivered_through_gmail_api_mailer_without_real_http(): void
+    {
+        config([
+            'app.name' => 'WarisanMakan',
+            'app.url' => 'https://warisan-makan-youg.onrender.com',
+            'mail.default' => 'gmail_api',
+            'mail.mailers.gmail_api.from.address' => 'sender@example.com',
+            'mail.mailers.gmail_api.from.name' => 'WarisanMakan',
+        ]);
+        URL::forceRootUrl('https://warisan-makan-youg.onrender.com');
+        URL::forceScheme('https');
+        Mail::purge('gmail_api');
+
+        $client = new CapturingGmailApiClient();
+        $this->app->instance(GmailApiClient::class, $client);
+
+        try {
+            $user = User::factory()->create([
+                'email' => 'contributor@example.com',
+                'name' => 'Contributor',
+            ]);
+            $contribution = HeritageShopContribution::create([
+                ...$this->modelContributionData(),
+                'user_id' => $user->id,
+                'status' => HeritageShopContribution::STATUS_APPROVED,
+                'submitted_at' => now(),
+                'approved_at' => now(),
+            ]);
+
+            $user->notify(new ContributionStatusChanged($contribution));
+
+            $this->assertDatabaseHas('notifications', [
+                'notifiable_id' => $user->id,
+                'notifiable_type' => 'user',
+            ]);
+            $this->assertCount(1, $client->rawMessages);
+
+            $mime = $this->base64UrlDecode($client->rawMessages[0]);
+
+            $this->assertStringContainsString('To: contributor@example.com', $mime);
+            $this->assertStringContainsString('Subject: WarisanMakan Contribution Approved', $mime);
+            $this->assertStringContainsString('View Contribution', quoted_printable_decode($mime));
+            $this->assertStringContainsString(
+                "https://warisan-makan-youg.onrender.com/community-contributions/{$contribution->public_id}",
+                quoted_printable_decode($mime)
+            );
+            $this->assertStringContainsString('Regards,', quoted_printable_decode($mime));
+            $this->assertStringContainsString('WarisanMakan', quoted_printable_decode($mime));
+        } finally {
+            URL::forceRootUrl(null);
+            URL::forceScheme(null);
+            Mail::purge('gmail_api');
+        }
+    }
+
+    public function test_warisanmakan_mail_branding_uses_public_logo_route_when_logo_exists(): void
+    {
+        config([
+            'app.name' => 'WarisanMakan',
+            'app.url' => 'https://warisan-makan-youg.onrender.com',
+        ]);
+        URL::forceRootUrl('https://warisan-makan-youg.onrender.com');
+        URL::forceScheme('https');
+
+        try {
+            SiteBranding::create([
+                'logo_data' => base64_encode('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"></svg>'),
+                'logo_mime_type' => 'image/svg+xml',
+                'logo_filename' => 'warisanmakan.svg',
+            ]);
+            $user = User::factory()->create();
+            $contribution = HeritageShopContribution::create([
+                ...$this->modelContributionData(),
+                'user_id' => $user->id,
+                'status' => HeritageShopContribution::STATUS_APPROVED,
+                'submitted_at' => now(),
+            ]);
+
+            $html = (string) (new ContributionStatusChanged($contribution))->toMail($user)->render();
+
+            $this->assertStringContainsString('alt="WarisanMakan"', $html);
+            $this->assertStringContainsString('https://warisan-makan-youg.onrender.com/brand-logo', $html);
+            $this->assertStringNotContainsString('<span class="brand-name"', $html);
+            $this->assertStringContainsString('Regards,<br>', $html);
+            $this->assertStringContainsString('WarisanMakan', $html);
+            $this->assertStringNotContainsString('Laravel Logo', $html);
+            $this->assertStringNotContainsString('Regards, Laravel', $html);
+            $this->assertStringNotContainsString('Laravel. All rights reserved.', $html);
+        } finally {
+            URL::forceRootUrl(null);
+            URL::forceScheme(null);
+        }
+    }
+
+    public function test_warisanmakan_mail_branding_uses_single_text_fallback_when_logo_is_missing(): void
+    {
+        config([
+            'app.name' => 'WarisanMakan',
+            'app.url' => 'https://warisan-makan-youg.onrender.com',
+        ]);
+        URL::forceRootUrl('https://warisan-makan-youg.onrender.com');
+        URL::forceScheme('https');
+
+        try {
+            $html = view('vendor.mail.html.header', ['url' => config('app.url')])->render();
+
+            $this->assertStringNotContainsString('<img', $html);
+            $this->assertSame(1, substr_count($html, '<span class="brand-name">WarisanMakan</span>'));
+            $this->assertStringNotContainsString('Laravel Logo', $html);
+        } finally {
+            URL::forceRootUrl(null);
+            URL::forceScheme(null);
+        }
     }
 
     public function test_opening_revision_notification_marks_it_read_and_removes_it_from_unread_list(): void
@@ -3582,6 +3849,30 @@ class CommunityContributionTest extends TestCase
         config()->set('heritage_shop.image_disk', 'heritage-test');
     }
 
+    private function assertGlobalUserTopbarOnly(string $content, string $route): void
+    {
+        $topbar = $this->userTopbarHtml($content);
+
+        $this->assertSame(1, substr_count($topbar, 'class="language-form"'), "Unexpected language control count for [{$route}].");
+        $this->assertSame(1, substr_count($topbar, 'id="user-layout-language"'), "Unexpected language select count for [{$route}].");
+        $this->assertSame(1, substr_count($topbar, 'class="topbar-account-group"'), "Unexpected account group count for [{$route}].");
+        $this->assertSame(1, substr_count($topbar, 'class="dashboard-profile-link"'), "Unexpected profile control count for [{$route}].");
+        $this->assertSame(0, substr_count($topbar, 'class="user-topbar-link"'), "Authenticated topbar should not render page actions for [{$route}].");
+    }
+
+    private function userTopbarHtml(string $content): string
+    {
+        $topbarStart = strpos($content, '<header class="user-topbar">');
+
+        $this->assertIsInt($topbarStart);
+
+        $topbarEnd = strpos($content, '</header>', $topbarStart);
+
+        $this->assertIsInt($topbarEnd);
+
+        return substr($content, $topbarStart, $topbarEnd - $topbarStart);
+    }
+
     private function underReviewContribution(User $user, User $admin): HeritageShopContribution
     {
         return HeritageShopContribution::create([
@@ -3964,6 +4255,13 @@ class CommunityContributionTest extends TestCase
             ->assertSessionHasNoErrors();
     }
 
+    private function base64UrlDecode(string $value): string
+    {
+        $padded = str_pad($value, strlen($value) + ((4 - strlen($value) % 4) % 4), '=');
+
+        return base64_decode(strtr($padded, '-_', '+/'), true) ?: '';
+    }
+
     private function assertUuidString(?string $value): void
     {
         $this->assertIsString($value);
@@ -3971,5 +4269,20 @@ class CommunityContributionTest extends TestCase
             '/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i',
             $value
         );
+    }
+}
+
+class CapturingGmailApiClient implements GmailApiClient
+{
+    /**
+     * @var array<int, string>
+     */
+    public array $rawMessages = [];
+
+    public function sendRawMessage(string $rawMessage): string
+    {
+        $this->rawMessages[] = $rawMessage;
+
+        return 'gmail-message-id';
     }
 }

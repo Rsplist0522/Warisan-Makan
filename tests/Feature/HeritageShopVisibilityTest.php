@@ -12,8 +12,45 @@ class HeritageShopVisibilityTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_public_discovery_and_details_exclude_draft_and_archived_records(): void
+    public function test_guest_can_access_listing_but_detail_routes_require_login(): void
     {
+        $published = HeritageShop::create([
+            'shop_name' => 'Published Heritage Cafe',
+            'publish_status' => HeritageShop::STATUS_PUBLISHED,
+        ]);
+        $item = $published->foodItems()->create([
+            'name' => 'Published Dish',
+            'is_active' => true,
+            'image_path' => 'heritage-shops/food-items/published-dish.jpg',
+        ]);
+        $image = ShopImage::create([
+            'shop_id' => $published->id,
+            'path' => 'heritage-shops/published.jpg',
+            'is_primary' => true,
+        ]);
+
+        $this->get(route('heritage-shops.index'))
+            ->assertOk()
+            ->assertSee($published->shop_name);
+
+        $this->get(route('heritage-shops.show', ['id' => $published->id]))
+            ->assertRedirect(route('login'));
+        $this->get(route('heritage-shops.menu', $published))
+            ->assertRedirect(route('login'));
+        $this->get(route('heritage-shops.food-items.show', [$published, $item]))
+            ->assertRedirect(route('login'));
+        $this->get(route('heritage-shops.images.show', [$published, $image]))
+            ->assertRedirect(route('login'));
+        $this->get(route('heritage-shops.food-images.show', [$published, $item]))
+            ->assertRedirect(route('login'));
+        $this->withCsrf()->postJson(route('heritage-shops.ai-guide', $published), [
+            'question' => 'What makes this shop special?',
+        ])->assertRedirect(route('login'));
+    }
+
+    public function test_authenticated_discovery_and_details_exclude_draft_and_archived_records(): void
+    {
+        $user = User::factory()->create();
         $published = HeritageShop::create([
             'shop_name' => 'Published Heritage Cafe',
             'publish_status' => HeritageShop::STATUS_PUBLISHED,
@@ -27,36 +64,27 @@ class HeritageShopVisibilityTest extends TestCase
             'publish_status' => HeritageShop::STATUS_ARCHIVED,
         ]);
 
-        $this->get(route('guest.continue'))
-            ->assertRedirect(route('user.dashboard'));
-
-        $this->get(route('guest.continue'))
-            ->assertRedirect(route('user.dashboard'));
-
         $this->get(route('heritage-shops.index'))
             ->assertOk()
             ->assertSee($published->shop_name)
             ->assertDontSee($draft->shop_name)
             ->assertDontSee($archived->shop_name);
 
-        $this->get(route('heritage-shops.show', ['id' => $published->id]))
-            ->assertRedirect(route('login'));
-
-        $this->actingAs(User::factory()->create())
+        $this->actingAs($user)
             ->get(route('heritage-shops.show', ['id' => $published->id]))
             ->assertOk()
             ->assertSee($published->shop_name);
 
-        $this->actingAs(User::factory()->create())
+        $this->actingAs($user)
             ->get(route('heritage-shops.show', ['id' => $draft->id]))
             ->assertNotFound();
 
-        $this->actingAs(User::factory()->create())
+        $this->actingAs($user)
             ->get(route('heritage-shops.show', ['id' => $archived->id]))
             ->assertNotFound();
     }
 
-    public function test_public_image_route_rejects_an_image_from_a_non_published_shop(): void
+    public function test_authenticated_image_route_rejects_an_image_from_a_non_published_shop(): void
     {
         $draft = HeritageShop::create([
             'shop_name' => 'Private Heritage Cafe',
@@ -118,5 +146,13 @@ class HeritageShopVisibilityTest extends TestCase
             ->assertSee('Sunday: 11:30-14:30')
             ->assertSee('No Hours Cafe')
             ->assertDontSee('>Array<', false);
+    }
+
+    private function withCsrf(): self
+    {
+        $token = 'heritage-shop-visibility-csrf-token';
+
+        return $this->withSession(['_token' => $token])
+            ->withHeader('X-CSRF-TOKEN', $token);
     }
 }

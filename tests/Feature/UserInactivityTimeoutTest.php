@@ -4,7 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
 class UserInactivityTimeoutTest extends TestCase
@@ -30,6 +30,51 @@ class UserInactivityTimeoutTest extends TestCase
         $response->assertOk();
         $this->assertGreaterThan($activeAt, session('user_last_activity'));
         $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_all_normal_authenticated_user_routes_enforce_active_user_middleware(): void
+    {
+        $deliberateSharedOrLogoutRoutes = ['logout', 'session.activity'];
+
+        $missingMiddleware = collect(Route::getRoutes()->getRoutes())
+            ->filter(function ($route) use ($deliberateSharedOrLogoutRoutes): bool {
+                $middleware = $route->gatherMiddleware();
+
+                return in_array('auth', $middleware, true)
+                    && ! in_array('active_user', $middleware, true)
+                    && ! in_array('admin', $middleware, true)
+                    && ! in_array($route->getName(), $deliberateSharedOrLogoutRoutes, true);
+            })
+            ->map(fn ($route): string => $route->methods()[0].' '.$route->uri())
+            ->values()
+            ->all();
+
+        $this->assertSame([], $missingMiddleware);
+    }
+
+    public function test_user_deactivated_while_logged_in_is_blocked_on_next_module_request(): void
+    {
+        $protectedUrls = [
+            route('blind-box.index'),
+            route('passport.index'),
+            route('foodtrails.index'),
+            url('/start_trail'),
+            route('heritage-shops.show', ['id' => 999999]),
+        ];
+
+        foreach ($protectedUrls as $protectedUrl) {
+            $user = User::factory()->create(['role' => 'user', 'status' => 'active']);
+            $this->actingAs($user)->withSession(['user_last_activity' => now()->timestamp]);
+
+            $user->forceFill(['status' => 'inactive'])->save();
+
+            $this->get($protectedUrl)
+                ->assertRedirect(route('login'))
+                ->assertSessionHasErrors('login');
+
+            $this->assertGuest();
+            $this->assertNull(session('user_last_activity'));
+        }
     }
 
     public function test_user_is_logged_out_after_five_minutes_of_inactivity(): void

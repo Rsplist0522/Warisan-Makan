@@ -3,10 +3,10 @@
 namespace App\Services;
 
 use App\Models\ShopImage;
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\File;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Filesystem\FilesystemAdapter;
 use RuntimeException;
 
 class HeritageShopImageService
@@ -46,6 +46,15 @@ class HeritageShopImageService
      */
     public function store(File|UploadedFile $file, ?string $directory = null): string
     {
+        $maximumBytes = (int) config('heritage_shop.max_image_bytes', 2048 * 1024);
+        if (($file->getSize() ?: 0) > $maximumBytes) {
+            throw new RuntimeException('The Heritage Shop image must not exceed '.number_format($maximumBytes / 1024 / 1024, 0).' MB.');
+        }
+
+        if (! in_array(strtolower((string) $file->getMimeType()), ['image/jpeg', 'image/png', 'image/webp'], true)) {
+            throw new RuntimeException('Heritage Shop images must be JPG, JPEG, PNG, or WebP files.');
+        }
+
         $path = Storage::disk($this->diskName())->putFile($directory ?: $this->directory(), $file);
 
         if ($path === false || blank($path)) {
@@ -60,13 +69,22 @@ class HeritageShopImageService
      * storage so public gallery images do not share lifecycle ownership with
      * contribution evidence.
      */
-    public function copyFromDisk(string $sourceDiskName, string $sourcePath, string $targetPath): string
+    public function copyFromDisk(string $sourceDiskName, string $sourcePath, string $targetPath, ?string $validatedMimeType = null): string
     {
         $sourceDisk = Storage::disk($sourceDiskName);
         $targetDisk = Storage::disk($this->diskName());
 
         if (blank($sourcePath) || ! $sourceDisk->exists($sourcePath)) {
             throw new RuntimeException('The selected supporting image could not be found.');
+        }
+
+        $maximumBytes = (int) config('heritage_shop.max_image_bytes', 2048 * 1024);
+        if ($sourceDisk->size($sourcePath) > $maximumBytes) {
+            throw new RuntimeException('This file can remain as contribution evidence, but Heritage Shop gallery images must not exceed '.number_format($maximumBytes / 1024 / 1024, 0).' MB.');
+        }
+
+        if ($validatedMimeType !== null && ! in_array(strtolower($validatedMimeType), ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'], true)) {
+            throw new RuntimeException('Only JPG, JPEG, PNG, and WebP evidence can enter the Heritage Shop gallery.');
         }
 
         $stream = $sourceDisk->readStream($sourcePath);
@@ -106,7 +124,7 @@ class HeritageShopImageService
      * New records use the configured HeritageShop disk; older records are read
      * from the public and legacy media disks when that file still exists.
      */
-        public function response(ShopImage $image)
+    public function response(ShopImage $image)
     {
         return $this->responseForPath($image->path);
     }
@@ -121,8 +139,6 @@ class HeritageShopImageService
             'Cache-Control' => 'public, max-age=86400',
         ]);
     }
-
-
 
     /**
      * Delete a file from the configured disk and known legacy disks without

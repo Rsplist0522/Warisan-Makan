@@ -651,6 +651,14 @@ const foodTrailApp = (() => {
                 'No restaurants match your criteria. Adjust the filters to see more results.'
             );
         };
+    const applyBlindBoxSearch = () => {
+        const searchValue = new URLSearchParams(window.location.search).get('search')?.trim();
+        const searchInput = getElement(selectors.searchKeyword);
+        if (!searchValue || !searchInput) return;
+
+        searchInput.value = searchValue;
+        handleGenerateTrail();
+    };
     const handleResetFilters = () => {
         getElement(selectors.categoryFilter).value = 'all';
         getElement(selectors.distanceFilter).value = 'all';
@@ -706,6 +714,7 @@ const foodTrailApp = (() => {
         renderRouteSummary();
         updateRouteCompletion();
         renderSelectedRestaurantDetails();
+        applyBlindBoxSearch();
         if (window.google?.maps) {
             initGoogleMapHelpers();
             if (state.routeRestaurants.length) renderMapMarkers();

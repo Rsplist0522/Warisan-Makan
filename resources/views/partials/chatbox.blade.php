@@ -80,16 +80,56 @@
         sendMessage();
     };
 
+    function isSafeInternalLink(href) {
+        if (typeof href !== 'string' || !href.startsWith('/') || href.startsWith('//') || href.startsWith('/\\')) {
+            return false;
+        }
+
+        try {
+            return new URL(href, window.location.origin).origin === window.location.origin;
+        } catch (error) {
+            return false;
+        }
+    }
+
+    function appendAiContent(container, text) {
+        const source = String(text ?? '');
+        const markdownToken = /\*\*([^*\n]+)\*\*|\[([^\]\n]+)\]\(([^)\s]+)\)/g;
+        let cursor = 0;
+        let match;
+
+        while ((match = markdownToken.exec(source)) !== null) {
+            container.appendChild(document.createTextNode(source.slice(cursor, match.index)));
+
+            if (match[1] !== undefined) {
+                const strong = document.createElement('strong');
+                strong.textContent = match[1];
+                container.appendChild(strong);
+            } else if (isSafeInternalLink(match[3])) {
+                const link = document.createElement('a');
+                link.href = match[3];
+                link.textContent = match[2];
+                container.appendChild(link);
+            } else {
+                container.appendChild(document.createTextNode(match[0]));
+            }
+
+            cursor = markdownToken.lastIndex;
+        }
+
+        container.appendChild(document.createTextNode(source.slice(cursor)));
+    }
+
     function addBubble(text, role) {
         const b = document.createElement('div');
         b.className = `chat-bubble ${role} animate__animated animate__fadeInUp animate__faster`;
-        
-        // Converts [Text](/url) into a clickable HTML link
-        let html = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
-        // Converts **Bold** into HTML
-        html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-        
-        b.innerHTML = html;
+
+        if (role === 'user') {
+            b.textContent = String(text ?? '');
+        } else {
+            appendAiContent(b, text);
+        }
+
         messages.appendChild(b);
         messages.scrollTop = messages.scrollHeight;
         return b;

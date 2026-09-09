@@ -4,11 +4,12 @@ namespace App\Http\Requests;
 
 use App\Models\HeritageFoodItem;
 use App\Models\HeritageShop;
-use App\Services\HeritageShopImageService;
+use App\Services\HeritageShopIntegrityService;
 use App\Services\HeritageShopValidationRules;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Fluent;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Validator;
 
 class StoreHeritageShopRequest extends FormRequest
@@ -63,12 +64,43 @@ class StoreHeritageShopRequest extends FormRequest
         );
 
         $validator->after(function (Validator $validator): void {
-            $this->validateDuplicateIdentity($validator);
             $this->validateQuickFoodItemNames($validator);
             $this->validatePrimaryImage($validator);
 
-            if ($this->input('publish_status') === HeritageShop::STATUS_PUBLISHED) {
-                $this->validatePublishedImage($validator);
+            if ($validator->errors()->isNotEmpty()) {
+                return;
+            }
+
+            $integrity = app(HeritageShopIntegrityService::class);
+            $shop = $this->route('heritageShop');
+            $shop = $shop instanceof HeritageShop ? $shop : null;
+            $removeIds = (array) $this->input('remove_images', []);
+            $newUploads = collect((array) $this->file('images', []))
+                ->filter(fn ($file): bool => $file instanceof UploadedFile && $file->isValid())
+                ->count();
+            $replacementIds = collect((array) $this->file('replace_images', []))
+                ->filter(fn ($file, $id): bool => is_numeric($id) && $file instanceof UploadedFile && $file->isValid())
+                ->keys()
+                ->all();
+            $crawlerPaths = (array) $this->input('crawler_images', []);
+
+            $finalCount = $integrity->finalGalleryCount($shop, $removeIds, $newUploads, $crawlerPaths);
+            $finalValidCount = $integrity->finalGalleryCount(
+                $shop,
+                [...$removeIds, ...$replacementIds],
+                $newUploads + count($replacementIds),
+                $crawlerPaths,
+                true,
+            );
+
+            try {
+                $integrity->validateFinalState($this->all(), $shop, $finalCount, $finalValidCount);
+            } catch (ValidationException $exception) {
+                foreach ($exception->errors() as $field => $messages) {
+                    foreach ($messages as $message) {
+                        $validator->errors()->add($field, $message);
+                    }
+                }
             }
         });
     }
@@ -82,10 +114,10 @@ class StoreHeritageShopRequest extends FormRequest
             ...HeritageShopValidationRules::fields($shop instanceof HeritageShop ? $shop->getKey() : null),
             'version' => [$shop instanceof HeritageShop ? 'required' : 'nullable', 'integer', 'min:1'],
 
-            'images' => ['nullable', 'array', 'max:10'],
-            'images.*' => ['file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:'.(int) config('heritage_shop.max_image_kb', 1024)],
+            'images' => ['nullable', 'array', 'max:'.(int) config('heritage_shop.max_gallery_images', 10)],
+            'images.*' => ['file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:'.(int) config('heritage_shop.max_image_kb', 2048)],
             'replace_images' => ['nullable', 'array'],
-            'replace_images.*' => ['file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:'.(int) config('heritage_shop.max_image_kb', 1024)],
+            'replace_images.*' => ['file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:'.(int) config('heritage_shop.max_image_kb', 2048)],
 
             'existing_images' => ['nullable', 'array'],
             'existing_images.*' => ['integer'],
@@ -104,42 +136,18 @@ class StoreHeritageShopRequest extends FormRequest
 
     public function messages(): array
     {
+        $maximumImages = (int) config('heritage_shop.max_gallery_images', 10);
+        $maximumMegabytes = round((int) config('heritage_shop.max_image_kb', 2048) / 1024, 1);
+
         return [
             'postal_code.regex' => 'The postal code must contain exactly 5 digits.',
             'publish_status.in' => 'The selected publication status must be Draft, Published, or Archived.',
+            'images.max' => "A Heritage Shop gallery can contain at most {$maximumImages} images.",
+            'images.*.max' => "Each Heritage Shop image must be {$maximumMegabytes} MB or smaller.",
+            'replace_images.*.max' => "Each Heritage Shop image must be {$maximumMegabytes} MB or smaller.",
+            'images.*.mimes' => 'Heritage Shop images must be JPG, JPEG, PNG, or WebP files.',
+            'replace_images.*.mimes' => 'Heritage Shop images must be JPG, JPEG, PNG, or WebP files.',
         ];
-    }
-
-    private function validateDuplicateIdentity(Validator $validator): void
-    {
-        if ($validator->errors()->hasAny(['shop_name', 'address', 'city', 'state'])) {
-            return;
-        }
-
-        $shop = $this->route('heritageShop');
-        $duplicateKey = HeritageShop::duplicateKeyFor(
-            $this->input('shop_name'),
-            $this->input('address'),
-            $this->input('city'),
-            $this->input('state'),
-        );
-        $duplicate = HeritageShop::query()
-            ->where('duplicate_key', $duplicateKey)
-            ->when($shop instanceof HeritageShop, fn ($query) => $query->whereKeyNot($shop->getKey()))
-            ->exists();
-
-        $isUnchangedLegacyIdentity = $shop instanceof HeritageShop
-            && $shop->duplicate_key === null
-            && HeritageShop::duplicateKeyFor(
-                $shop->getOriginal('shop_name'),
-                $shop->getOriginal('address'),
-                $shop->getOriginal('city'),
-                $shop->getOriginal('state'),
-            ) === $duplicateKey;
-
-        if ($duplicate && ! $isUnchangedLegacyIdentity) {
-            $validator->errors()->add('shop_name', 'A heritage shop with the same name and location already exists.');
-        }
     }
 
     private function validateQuickFoodItemNames(Validator $validator): void
@@ -175,37 +183,6 @@ class StoreHeritageShopRequest extends FormRequest
                 }
             }
             $seen[$normalized] = true;
-        }
-    }
-
-    private function validatePublishedImage(Validator $validator): void
-    {
-        $imageService = app(HeritageShopImageService::class);
-        $shop = $this->route('heritageShop');
-        $currentImages = $shop instanceof HeritageShop
-            ? $shop->images()->get()->filter(fn ($image): bool => $imageService->exists($image->path))->keyBy('id')
-            : collect();
-        $removeIds = collect((array) $this->input('remove_images', []))->map(fn ($id): int => (int) $id);
-        $replacementFiles = collect((array) $this->file('replace_images', []))
-            ->filter(fn ($file, $id): bool => is_numeric($id) && $file instanceof UploadedFile && $file->isValid() && $currentImages->has((int) $id));
-        $replacedIds = $replacementFiles->keys()->map(fn ($id): int => (int) $id);
-        $retainedCount = $currentImages->keys()
-            ->diff($removeIds)
-            ->diff($replacedIds)
-            ->count();
-        $uploadedCount = collect((array) $this->file('images', []))
-            ->filter(fn ($file): bool => $file instanceof UploadedFile && $file->isValid())
-            ->count();
-        $crawlerCount = collect((array) $this->input('crawler_images', []))
-            ->unique()
-            ->filter(fn ($path): bool => is_string($path)
-                && str_starts_with($path, $imageService->directory().'/crawler/')
-                && ! str_contains($path, '..')
-                && $imageService->exists($path))
-            ->count();
-
-        if ($retainedCount + $replacementFiles->count() + $uploadedCount + $crawlerCount < 1) {
-            $validator->errors()->add('images', 'A published heritage shop must have at least one valid shop image.');
         }
     }
 

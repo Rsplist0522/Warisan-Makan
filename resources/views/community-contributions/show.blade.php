@@ -87,21 +87,17 @@
             @include('community-contributions.partials.food-items-hours', ['contribution' => $contribution])
 
             <section class="panel">
-                <h2>Supporting media</h2>
+                <h2>Supporting images</h2>
                 @if ($contribution->media->isNotEmpty())
                     <div class="media-grid" style="margin-top:14px">
                         @foreach ($contribution->media as $media)
                             <a class="media-card" href="{{ $media->url }}" target="_blank" rel="noopener">
-                                @if ($media->media_type === 'video')
-                                    <video controls preload="metadata"><source src="{{ $media->url }}"></video>
-                                @else
-                                    <img src="{{ $media->url }}" alt="Supporting evidence">
-                                @endif
+                                <img src="{{ $media->url }}" alt="Supporting evidence">
                             </a>
                         @endforeach
                     </div>
                 @else
-                    <p class="muted">No media uploaded.</p>
+                    <p class="muted">No supporting images were uploaded.</p>
                 @endif
             </section>
         </div>

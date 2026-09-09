@@ -8,17 +8,16 @@ use App\Models\HeritageShop;
 use App\Models\HeritageShopContribution;
 use App\Models\Media;
 use App\Models\SiteBranding;
-use App\Models\ShopImage;
 use App\Models\User;
 use App\Notifications\ContributionStatusChanged;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class CommunityContributionTest extends TestCase
@@ -51,6 +50,40 @@ class CommunityContributionTest extends TestCase
         $response->assertDontSee('Admin dashboard');
         $response->assertDontSee('Admin history');
         $response->assertSee('<style>', false);
+    }
+
+    public function test_supporting_media_picker_accumulates_separate_file_selections_and_initializes_counter(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->get(route('community-contribution.create'));
+
+        $response->assertOk()
+            ->assertSee('accept="image/jpeg,image/png,image/webp"', false)
+            ->assertSee('data-max-supporting-media="10"', false)
+            ->assertSee('let selectedSupportingFiles = [];', false)
+            ->assertSee('const transfer = new DataTransfer();', false)
+            ->assertSee('selectedSupportingFiles = [...selectedSupportingFiles, ...uniqueIncomingFiles];', false)
+            ->assertSee('updateSupportingMediaCounts();', false)
+            ->assertSee('id="media-slot-summary"', false)
+            ->assertSee('id="media-slot-detail"', false);
+    }
+
+    public function test_supporting_media_form_text_describes_ten_image_two_mb_limit(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('community-contribution.create'))
+            ->assertOk()
+            ->assertSee('Supporting images')
+            ->assertSee('Add supporting images')
+            ->assertSee('Up to 10 images in total. JPG, JPEG, PNG, or WEBP; maximum 2 MB per image.')
+            ->assertSee(':count of :total images selected.', false)
+            ->assertSee('Maximum supporting images reached.')
+            ->assertDontSee('Add images or videos')
+            ->assertDontSee('MP4')
+            ->assertDontSee('20 MB');
     }
 
     public function test_food_item_optional_wording_is_not_shown_on_food_item_labels(): void
@@ -435,27 +468,27 @@ class CommunityContributionTest extends TestCase
         );
     }
 
-    public function test_new_contribution_can_upload_exactly_six_supporting_media_files(): void
+    public function test_new_contribution_can_upload_exactly_ten_supporting_images(): void
     {
         Storage::fake(config('filesystems.media_disk'));
         $user = User::factory()->create();
         $data = $this->validContributionData();
-        $data['supporting_media'] = $this->fakeSupportingMediaFiles(6);
+        $data['supporting_media'] = $this->fakeSupportingMediaFiles(10);
 
         $this->actingAs($user)
             ->post(route('community-contribution.store'), $data)
             ->assertSessionHasNoErrors();
 
         $contribution = HeritageShopContribution::firstOrFail();
-        $this->assertSame(6, $contribution->media()->count());
+        $this->assertSame(10, $contribution->media()->count());
     }
 
-    public function test_new_contribution_cannot_upload_more_than_six_supporting_media_files(): void
+    public function test_new_contribution_cannot_upload_more_than_ten_supporting_images(): void
     {
         Storage::fake(config('filesystems.media_disk'));
         $user = User::factory()->create();
         $data = $this->validContributionData();
-        $data['supporting_media'] = $this->fakeSupportingMediaFiles(7);
+        $data['supporting_media'] = $this->fakeSupportingMediaFiles(11);
 
         $this->actingAs($user)
             ->post(route('community-contribution.store'), $data)
@@ -465,7 +498,7 @@ class CommunityContributionTest extends TestCase
         $this->assertDatabaseCount('media', 0);
     }
 
-    public function test_edit_contribution_with_two_existing_media_can_add_four_new_files(): void
+    public function test_edit_contribution_with_two_existing_media_can_add_eight_new_images(): void
     {
         Storage::fake(config('filesystems.media_disk'));
         $user = User::factory()->create();
@@ -473,17 +506,17 @@ class CommunityContributionTest extends TestCase
         $data = [
             ...$this->validContributionData(),
             'submission_action' => 'draft',
-            'supporting_media' => $this->fakeSupportingMediaFiles(4, 'new'),
+            'supporting_media' => $this->fakeSupportingMediaFiles(8, 'new'),
         ];
 
         $this->actingAs($user)
             ->put(route('community-contribution.update', $draft), $data)
             ->assertSessionHasNoErrors();
 
-        $this->assertSame(6, $draft->fresh()->media()->count());
+        $this->assertSame(10, $draft->fresh()->media()->count());
     }
 
-    public function test_edit_contribution_with_two_existing_media_cannot_add_five_new_files(): void
+    public function test_edit_contribution_with_two_existing_media_cannot_add_nine_new_images(): void
     {
         Storage::fake(config('filesystems.media_disk'));
         $user = User::factory()->create();
@@ -492,7 +525,7 @@ class CommunityContributionTest extends TestCase
         $data = [
             ...$this->validContributionData(),
             'submission_action' => 'draft',
-            'supporting_media' => $this->fakeSupportingMediaFiles(5, 'new'),
+            'supporting_media' => $this->fakeSupportingMediaFiles(9, 'new'),
         ];
 
         $this->actingAs($user)
@@ -505,7 +538,7 @@ class CommunityContributionTest extends TestCase
         }
     }
 
-    public function test_edit_contribution_can_remove_one_existing_media_and_add_five_new_files(): void
+    public function test_edit_contribution_can_remove_one_existing_media_and_add_nine_new_images(): void
     {
         Storage::fake(config('filesystems.media_disk'));
         $user = User::factory()->create();
@@ -515,7 +548,7 @@ class CommunityContributionTest extends TestCase
             ...$this->validContributionData(),
             'submission_action' => 'draft',
             'remove_media' => [$mediaToRemove->id],
-            'supporting_media' => $this->fakeSupportingMediaFiles(5, 'new'),
+            'supporting_media' => $this->fakeSupportingMediaFiles(9, 'new'),
         ];
 
         $this->actingAs($user)
@@ -523,12 +556,12 @@ class CommunityContributionTest extends TestCase
             ->assertSessionHasNoErrors();
 
         $draft->refresh();
-        $this->assertSame(6, $draft->media()->count());
+        $this->assertSame(10, $draft->media()->count());
         $this->assertSoftDeleted('media', ['id' => $mediaToRemove->id]);
         $this->assertFalse(Storage::disk(config('filesystems.media_disk'))->exists($mediaToRemove->r2_object_key));
     }
 
-    public function test_edit_contribution_can_remove_both_existing_media_and_add_six_new_files(): void
+    public function test_edit_contribution_can_remove_both_existing_media_and_add_ten_new_images(): void
     {
         Storage::fake(config('filesystems.media_disk'));
         $user = User::factory()->create();
@@ -538,14 +571,14 @@ class CommunityContributionTest extends TestCase
             ...$this->validContributionData(),
             'submission_action' => 'draft',
             'remove_media' => $removeIds,
-            'supporting_media' => $this->fakeSupportingMediaFiles(6, 'new'),
+            'supporting_media' => $this->fakeSupportingMediaFiles(10, 'new'),
         ];
 
         $this->actingAs($user)
             ->put(route('community-contribution.update', $draft), $data)
             ->assertSessionHasNoErrors();
 
-        $this->assertSame(6, $draft->fresh()->media()->count());
+        $this->assertSame(10, $draft->fresh()->media()->count());
         foreach ($removeIds as $id) {
             $this->assertSoftDeleted('media', ['id' => $id]);
         }
@@ -587,7 +620,7 @@ class CommunityContributionTest extends TestCase
             ->put(route('community-contribution.update', $draft), [
                 ...$this->validContributionData(),
                 'submission_action' => 'draft',
-                'supporting_media' => $this->fakeSupportingMediaFiles(5, 'new'),
+                'supporting_media' => $this->fakeSupportingMediaFiles(9, 'new'),
             ])
             ->assertSessionHasErrors('supporting_media');
 
@@ -605,7 +638,7 @@ class CommunityContributionTest extends TestCase
             ->put(route('community-contribution.update', $draft), [
                 ...$this->validContributionData(),
                 'submission_action' => 'submit',
-                'supporting_media' => $this->fakeSupportingMediaFiles(5, 'new'),
+                'supporting_media' => $this->fakeSupportingMediaFiles(9, 'new'),
             ])
             ->assertSessionHasErrors('supporting_media');
 
@@ -626,7 +659,7 @@ class CommunityContributionTest extends TestCase
         $this->actingAs($user)
             ->put(route('community-contribution.update', $revision), [
                 ...$this->validContributionData(),
-                'supporting_media' => $this->fakeSupportingMediaFiles(5, 'new'),
+                'supporting_media' => $this->fakeSupportingMediaFiles(9, 'new'),
             ])
             ->assertSessionHasErrors('supporting_media');
 
@@ -652,7 +685,7 @@ class CommunityContributionTest extends TestCase
         $this->actingAs($user)
             ->put(route('community-contribution.update', $withdrawn->fresh()), [
                 ...$this->validContributionData(),
-                'supporting_media' => $this->fakeSupportingMediaFiles(5, 'new'),
+                'supporting_media' => $this->fakeSupportingMediaFiles(9, 'new'),
             ])
             ->assertSessionHasErrors('supporting_media');
 
@@ -815,9 +848,7 @@ class CommunityContributionTest extends TestCase
             ->assertSessionHasNoErrors();
 
         $this->actingAs($admin)
-            ->post(route('admin.community-contributions.moderate', $contribution->fresh()), [
-                'moderation_action' => 'approve',
-            ])
+            ->post(route('admin.community-contributions.moderate', $contribution->fresh()), $this->validApprovalPayload($contribution))
             ->assertSessionHasNoErrors();
 
         $shop = HeritageShop::where('source_contribution_id', $contribution->id)->firstOrFail();
@@ -1378,9 +1409,7 @@ class CommunityContributionTest extends TestCase
         ]);
 
         $this->actingAs($admin)
-            ->post(route('admin.community-contributions.moderate', $contribution), [
-                'moderation_action' => 'approve',
-            ])
+            ->post(route('admin.community-contributions.moderate', $contribution), $this->validApprovalPayload($contribution))
             ->assertSessionHasNoErrors();
 
         $contribution->refresh();
@@ -1487,9 +1516,7 @@ class CommunityContributionTest extends TestCase
         ]);
 
         $this->actingAs($admin)
-            ->post(route('admin.community-contributions.moderate', $contribution), [
-                'moderation_action' => 'approve',
-            ])
+            ->post(route('admin.community-contributions.moderate', $contribution), $this->validApprovalPayload($contribution))
             ->assertSessionHasNoErrors();
 
         Notification::assertSentTo($owner, ContributionStatusChanged::class);
@@ -1512,9 +1539,7 @@ class CommunityContributionTest extends TestCase
         ]);
 
         $this->actingAs($admin)
-            ->post(route('admin.community-contributions.moderate', $contribution), [
-                'moderation_action' => 'approve',
-            ])
+            ->post(route('admin.community-contributions.moderate', $contribution), $this->validApprovalPayload($contribution))
             ->assertSessionHasNoErrors();
 
         Notification::assertSentTo($user, ContributionStatusChanged::class, function (ContributionStatusChanged $notification) use ($user, $contribution): bool {
@@ -1541,9 +1566,7 @@ class CommunityContributionTest extends TestCase
         ]);
 
         $this->actingAs($admin)
-            ->post(route('admin.community-contributions.moderate', $contribution), [
-                'moderation_action' => 'approve',
-            ])
+            ->post(route('admin.community-contributions.moderate', $contribution), $this->validApprovalPayload($contribution))
             ->assertSessionHasNoErrors();
 
         Notification::assertSentToTimes($user, ContributionStatusChanged::class, 1);
@@ -1566,7 +1589,7 @@ class CommunityContributionTest extends TestCase
         URL::forceScheme('https');
         Mail::purge('gmail_api');
 
-        $client = new CapturingGmailApiClient();
+        $client = new CapturingGmailApiClient;
         $this->app->instance(GmailApiClient::class, $client);
 
         try {
@@ -2129,10 +2152,9 @@ class CommunityContributionTest extends TestCase
         ]);
 
         $this->actingAs($admin)
-            ->post(route('admin.community-contributions.moderate', $contribution), [
-                'moderation_action' => 'approve',
+            ->post(route('admin.community-contributions.moderate', $contribution), $this->validApprovalPayload($contribution, [
                 'feedback' => 'Information verified.',
-            ])
+            ]))
             ->assertSessionHasNoErrors();
 
         $this->assertDatabaseHas('heritage_shop_contributions', [
@@ -2181,6 +2203,18 @@ class CommunityContributionTest extends TestCase
         $this->assertNotSame($media->r2_object_key, $image->path);
         $this->assertTrue(Storage::disk('media-test')->exists($media->r2_object_key));
         $this->assertTrue(Storage::disk('heritage-test')->exists($image->path));
+        $this->assertDatabaseHas('heritage_admin_audits', [
+            'user_id' => $admin->id,
+            'entity_type' => HeritageShop::class,
+            'entity_id' => $shop->id,
+            'action' => 'heritage_shop.created',
+        ]);
+        $this->assertDatabaseHas('heritage_admin_audits', [
+            'user_id' => $admin->id,
+            'entity_type' => HeritageShop::class,
+            'entity_id' => $shop->id,
+            'action' => 'heritage_shop.published',
+        ]);
     }
 
     public function test_admin_can_publish_multiple_selected_contribution_images_on_approval(): void
@@ -2211,7 +2245,7 @@ class CommunityContributionTest extends TestCase
         $this->assertTrue(Storage::disk('heritage-test')->exists($images[1]->path));
     }
 
-    public function test_admin_can_approve_with_zero_selected_images(): void
+    public function test_admin_cannot_approve_with_zero_selected_images(): void
     {
         Notification::fake();
         $this->fakeContributionAndShopImageDisks();
@@ -2225,12 +2259,11 @@ class CommunityContributionTest extends TestCase
             ->post(route('admin.community-contributions.moderate', $contribution), [
                 'moderation_action' => 'approve',
             ])
-            ->assertSessionHasNoErrors();
+            ->assertSessionHasErrors('images');
 
-        $shop = HeritageShop::where('source_contribution_id', $contribution->id)->firstOrFail();
-
-        $this->assertSame(HeritageShopContribution::STATUS_APPROVED, $contribution->fresh()->status);
-        $this->assertSame(0, $shop->images()->count());
+        $this->assertSame(HeritageShopContribution::STATUS_UNDER_REVIEW, $contribution->fresh()->status);
+        $this->assertDatabaseCount('heritage_shops', 0);
+        $this->assertDatabaseCount('shop_images', 0);
     }
 
     public function test_unselected_supporting_image_remains_evidence_and_is_not_published(): void
@@ -2459,15 +2492,180 @@ class CommunityContributionTest extends TestCase
         $this->assertDatabaseCount('heritage_shops', 0);
     }
 
+    public function test_oversized_contribution_evidence_remains_evidence_but_cannot_enter_heritage_gallery(): void
+    {
+        Notification::fake();
+        $this->fakeContributionAndShopImageDisks();
+        $user = User::factory()->create();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $contribution = $this->underReviewContribution($user, $admin);
+        $media = $this->storedContributionMedia(
+            $contribution,
+            'image',
+            'large-evidence.jpg',
+            'image/jpeg',
+            str_repeat('x', (int) config('heritage_shop.max_image_bytes') + 1),
+        );
+
+        $this->actingAs($admin)
+            ->post(route('admin.community-contributions.moderate', $contribution), [
+                'moderation_action' => 'approve',
+                'publish_media_ids' => [$media->id],
+            ])
+            ->assertSessionHasErrors('publish_media_ids');
+
+        $this->assertSame(HeritageShopContribution::STATUS_UNDER_REVIEW, $contribution->fresh()->status);
+        $this->assertTrue(Storage::disk('media-test')->exists($media->r2_object_key));
+        $this->assertDatabaseHas('media', ['id' => $media->id]);
+        $this->assertDatabaseCount('heritage_shops', 0);
+    }
+
+    public function test_incomplete_community_record_cannot_publish_or_leave_orphan_gallery_files(): void
+    {
+        Notification::fake();
+        $this->fakeContributionAndShopImageDisks();
+        $user = User::factory()->create();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $contribution = HeritageShopContribution::create([
+            'user_id' => $user->id,
+            'shop_name' => 'Incomplete Approval Shop',
+            'heritage_story' => null,
+            'address' => null,
+            'city' => null,
+            'status' => HeritageShopContribution::STATUS_UNDER_REVIEW,
+            'reviewed_by_user_id' => $admin->id,
+            'review_started_at' => now(),
+            'submitted_at' => now(),
+        ]);
+        $media = $this->storedContributionMedia($contribution, 'image', 'valid-evidence.jpg', 'image/jpeg', 'valid-image');
+
+        $this->actingAs($admin)
+            ->post(route('admin.community-contributions.moderate', $contribution), [
+                'moderation_action' => 'approve',
+                'publish_media_ids' => [$media->id],
+            ])
+            ->assertSessionHasErrors(['heritage_story', 'address', 'city']);
+
+        $this->assertSame(HeritageShopContribution::STATUS_UNDER_REVIEW, $contribution->fresh()->status);
+        $this->assertDatabaseCount('heritage_shops', 0);
+        $this->assertDatabaseCount('shop_images', 0);
+        $this->assertSame([], Storage::disk('heritage-test')->allFiles());
+    }
+
+    public function test_community_images_cannot_push_heritage_gallery_above_ten(): void
+    {
+        Notification::fake();
+        $this->fakeContributionAndShopImageDisks();
+        $user = User::factory()->create();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $contribution = $this->underReviewContribution($user, $admin);
+        $ids = collect(range(1, 11))->map(fn (int $index): int => $this->storedContributionMedia(
+            $contribution,
+            'image',
+            "gallery-{$index}.jpg",
+            'image/jpeg',
+            "image-{$index}",
+        )->id)->all();
+
+        $this->actingAs($admin)
+            ->post(route('admin.community-contributions.moderate', $contribution), [
+                'moderation_action' => 'approve',
+                'publish_media_ids' => $ids,
+            ])
+            ->assertSessionHasErrors('images');
+
+        $this->assertSame(HeritageShopContribution::STATUS_UNDER_REVIEW, $contribution->fresh()->status);
+        $this->assertDatabaseCount('heritage_shops', 0);
+        $this->assertDatabaseCount('shop_images', 0);
+    }
+
+    public function test_invalid_published_correction_is_rolled_back_and_not_approved(): void
+    {
+        Notification::fake();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $shop = $this->validPublishedShop(['heritage_story' => 'The original protected story.']);
+        $correction = CorrectionRequest::create([
+            'user_id' => User::factory()->create()->id,
+            'heritage_shop_id' => $shop->id,
+            'field_name' => 'heritage_story',
+            'current_value' => $shop->heritage_story,
+            'suggested_value' => '',
+            'reason' => 'Attempt to blank the story.',
+            'status' => CorrectionRequest::STATUS_UNDER_REVIEW,
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.community-contributions.correction-requests.moderate', $correction), [
+                'moderation_action' => 'approve',
+            ])
+            ->assertSessionHasErrors('heritage_story');
+
+        $this->assertSame('The original protected story.', $shop->fresh()->heritage_story);
+        $this->assertSame(CorrectionRequest::STATUS_UNDER_REVIEW, $correction->fresh()->status);
+    }
+
+    public function test_correction_cannot_blank_required_story_on_a_published_shop(): void
+    {
+        Notification::fake();
+        $user = User::factory()->create();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $shop = $this->validPublishedShop(['shop_name' => 'Protected Story Shop']);
+        $correction = CorrectionRequest::create([
+            'user_id' => $user->id,
+            'heritage_shop_id' => $shop->id,
+            'field_name' => 'heritage_story',
+            'current_value' => $shop->heritage_story,
+            'suggested_value' => '   ',
+            'reason' => 'Attempt to remove the required story.',
+            'status' => CorrectionRequest::STATUS_UNDER_REVIEW,
+            'reviewed_by_user_id' => $admin->id,
+            'review_started_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.community-contributions.correction-requests.moderate', $correction), [
+                'moderation_action' => 'approve',
+            ])
+            ->assertSessionHasErrors('heritage_story');
+
+        $this->assertSame('A verified heritage story preserved across generations.', $shop->fresh()->heritage_story);
+        $this->assertSame(CorrectionRequest::STATUS_UNDER_REVIEW, $correction->fresh()->status);
+    }
+
+    public function test_correction_cannot_bypass_duplicate_shop_identity(): void
+    {
+        Notification::fake();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $existing = $this->validPublishedShop(['shop_name' => 'Existing Heritage Identity']);
+        $shop = $this->validPublishedShop(['shop_name' => 'Different Heritage Identity']);
+        $correction = CorrectionRequest::create([
+            'user_id' => User::factory()->create()->id,
+            'heritage_shop_id' => $shop->id,
+            'field_name' => 'shop_name',
+            'current_value' => $shop->shop_name,
+            'suggested_value' => $existing->shop_name,
+            'reason' => 'Conflicting identity.',
+            'status' => CorrectionRequest::STATUS_UNDER_REVIEW,
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.community-contributions.correction-requests.moderate', $correction), [
+                'moderation_action' => 'approve',
+            ])
+            ->assertSessionHasErrors('shop_name');
+
+        $this->assertSame('Different Heritage Identity', $shop->fresh()->shop_name);
+        $this->assertSame(CorrectionRequest::STATUS_UNDER_REVIEW, $correction->fresh()->status);
+    }
+
     public function test_user_can_submit_correction_request_and_admin_can_approve_it(): void
     {
         Storage::fake(config('filesystems.media_disk'));
         $user = User::factory()->create();
         $admin = User::factory()->create(['role' => 'admin']);
-        $shop = HeritageShop::create([
+        $shop = $this->validPublishedShop([
             'shop_name' => 'Capital Cafe',
             'contact_number' => '+60 3-1111 1111',
-            'publish_status' => HeritageShop::STATUS_PUBLISHED,
         ]);
 
         $this->actingAs($user)
@@ -2512,6 +2710,12 @@ class CommunityContributionTest extends TestCase
         $this->assertDatabaseHas('moderation_activities', [
             'correction_request_id' => $correctionRequest->id,
             'action' => 'correction_approved',
+        ]);
+        $this->assertDatabaseHas('heritage_admin_audits', [
+            'user_id' => $admin->id,
+            'entity_type' => HeritageShop::class,
+            'entity_id' => $shop->id,
+            'action' => 'heritage_shop.updated',
         ]);
         $this->assertDatabaseHas('notifications', [
             'notifiable_id' => $user->id,
@@ -2971,11 +3175,10 @@ class CommunityContributionTest extends TestCase
 
         $user = User::factory()->create();
         $admin = User::factory()->create(['role' => 'admin']);
-        $shop = HeritageShop::create([
+        $shop = $this->validPublishedShop([
             'shop_name' => 'Capital Cafe',
             'founder_name' => 'Tan Ah Kow',
             'founder_background' => null,
-            'publish_status' => HeritageShop::STATUS_PUBLISHED,
         ]);
 
         $this->actingAs($user)
@@ -3020,11 +3223,10 @@ class CommunityContributionTest extends TestCase
 
         $user = User::factory()->create();
         $admin = User::factory()->create(['role' => 'admin']);
-        $shop = HeritageShop::create([
+        $shop = $this->validPublishedShop([
             'shop_name' => 'Capital Cafe',
             'current_owner_name' => 'Hameediyah family successors',
             'current_owner_details' => 'The restaurant is still operated by later generations.',
-            'publish_status' => HeritageShop::STATUS_PUBLISHED,
         ]);
 
         $content = $this->actingAs($user)
@@ -3102,10 +3304,9 @@ class CommunityContributionTest extends TestCase
 
         $user = User::factory()->create();
         $admin = User::factory()->create(['role' => 'admin']);
-        $shop = HeritageShop::create([
+        $shop = $this->validPublishedShop([
             'shop_name' => 'Capital Cafe',
             'primary_food_category' => 'Hainanese cuisine',
-            'publish_status' => HeritageShop::STATUS_PUBLISHED,
         ]);
 
         $this->actingAs($user)
@@ -3202,7 +3403,7 @@ class CommunityContributionTest extends TestCase
 
         $correctionRequest = CorrectionRequest::firstOrFail();
 
-        $this->assertSame("Wednesday: Closed", $correctionRequest->suggestedValueDisplay());
+        $this->assertSame('Wednesday: Closed', $correctionRequest->suggestedValueDisplay());
         $this->assertSame([
             ['day' => 'Wednesday', 'open' => null, 'close' => null, 'closed' => true],
         ], $correctionRequest->heritageShopUpdatePayload()['operating_hours']);
@@ -3295,13 +3496,12 @@ class CommunityContributionTest extends TestCase
 
         $user = User::factory()->create();
         $admin = User::factory()->create(['role' => 'admin']);
-        $shop = HeritageShop::create([
+        $shop = $this->validPublishedShop([
             'shop_name' => 'Capital Cafe',
             'operating_hours' => [
                 ['day' => 'Thursday', 'open' => '11:30', 'close' => '14:30', 'closed' => false],
                 ['day' => 'Thursday', 'open' => '17:30', 'close' => '22:30', 'closed' => false],
             ],
-            'publish_status' => HeritageShop::STATUS_PUBLISHED,
         ]);
 
         $this->actingAs($user)
@@ -3435,9 +3635,7 @@ class CommunityContributionTest extends TestCase
             ->assertSessionHasNoErrors();
 
         $this->actingAs($admin)
-            ->post(route('admin.community-contributions.moderate', $contribution->fresh()), [
-                'moderation_action' => 'approve',
-            ])
+            ->post(route('admin.community-contributions.moderate', $contribution->fresh()), $this->validApprovalPayload($contribution))
             ->assertSessionHasNoErrors();
 
         $shop = HeritageShop::where('source_contribution_id', $contribution->id)->firstOrFail();
@@ -3451,13 +3649,12 @@ class CommunityContributionTest extends TestCase
 
         $user = User::factory()->create();
         $admin = User::factory()->create(['role' => 'admin']);
-        $shop = HeritageShop::create([
+        $shop = $this->validPublishedShop([
             'shop_name' => 'Capital Cafe',
             'address' => '3, Jalan Balai Polis',
             'city' => 'Kuala Lumpur',
             'state' => 'Kuala Lumpur',
             'postal_code' => '50000',
-            'publish_status' => HeritageShop::STATUS_PUBLISHED,
         ]);
 
         $this->actingAs($user)
@@ -3749,13 +3946,89 @@ class CommunityContributionTest extends TestCase
         $this->assertDatabaseCount('media', 0);
     }
 
+    public function test_supporting_media_accepts_allowed_image_types(): void
+    {
+        Storage::fake(config('filesystems.media_disk'));
+        $user = User::factory()->create();
+
+        foreach ([
+            'jpg' => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'png' => 'image/png',
+            'webp' => 'image/webp',
+        ] as $extension => $mimeType) {
+            $data = $this->validContributionData();
+            $data['supporting_media'] = [
+                UploadedFile::fake()->create("supporting-image.{$extension}", 64, $mimeType),
+            ];
+
+            $this->actingAs($user)
+                ->post(route('community-contribution.store'), $data)
+                ->assertSessionHasNoErrors();
+        }
+
+        $this->assertDatabaseCount('heritage_shop_contributions', 4);
+        $this->assertDatabaseCount('media', 4);
+    }
+
+    public function test_supporting_media_rejects_video_file_types(): void
+    {
+        Storage::fake(config('filesystems.media_disk'));
+        $user = User::factory()->create();
+
+        foreach ([
+            'mp4' => 'video/mp4',
+            'mov' => 'video/quicktime',
+            'avi' => 'video/x-msvideo',
+        ] as $extension => $mimeType) {
+            $data = $this->validContributionData();
+            $data['supporting_media'] = [
+                UploadedFile::fake()->create("supporting-video.{$extension}", 64, $mimeType),
+            ];
+
+            $this->actingAs($user)
+                ->post(route('community-contribution.store'), $data)
+                ->assertSessionHasErrors('supporting_media.0');
+        }
+
+        $this->assertDatabaseCount('heritage_shop_contributions', 0);
+        $this->assertDatabaseCount('media', 0);
+    }
+
+    public function test_supporting_media_accepts_two_mb_image_and_rejects_larger_image(): void
+    {
+        Storage::fake(config('filesystems.media_disk'));
+        $user = User::factory()->create();
+
+        $withinLimit = $this->validContributionData();
+        $withinLimit['supporting_media'] = [
+            UploadedFile::fake()->create('two-mb.jpg', 2048, 'image/jpeg'),
+        ];
+
+        $this->actingAs($user)
+            ->post(route('community-contribution.store'), $withinLimit)
+            ->assertSessionHasNoErrors();
+
+        $oversized = $this->validContributionData();
+        $oversized['supporting_media'] = [
+            UploadedFile::fake()->create('too-large.jpg', 2049, 'image/jpeg'),
+        ];
+
+        $this->actingAs($user)
+            ->post(route('community-contribution.store'), $oversized)
+            ->assertSessionHasErrors('supporting_media.0');
+
+        $this->assertDatabaseCount('heritage_shop_contributions', 1);
+        $this->assertDatabaseCount('media', 1);
+    }
+
     public function test_oversized_and_fake_extension_media_are_rejected_server_side(): void
     {
         Storage::fake(config('filesystems.media_disk'));
         $user = User::factory()->create();
         $oversized = $this->validContributionData();
         $oversized['supporting_media'] = [
-            UploadedFile::fake()->create('too-large.jpg', 20481, 'image/jpeg'),
+            UploadedFile::fake()->create('too-large.jpg', 2049, 'image/jpeg'),
         ];
 
         $this->actingAs($user)
@@ -3915,7 +4188,52 @@ class CommunityContributionTest extends TestCase
         ]);
     }
 
-    public function test_valid_supporting_video_is_stored_as_video_media(): void
+    private function validApprovalPayload(HeritageShopContribution $contribution, array $extra = []): array
+    {
+        if (config('filesystems.media_disk') !== 'media-test' || config('heritage_shop.image_disk') !== 'heritage-test') {
+            $this->fakeContributionAndShopImageDisks();
+        }
+
+        $media = $this->storedContributionMedia(
+            $contribution,
+            'image',
+            'approval-gallery-'.$contribution->id.'.jpg',
+            'image/jpeg',
+            'validated-contribution-image-bytes',
+        );
+
+        return [
+            'moderation_action' => 'approve',
+            'publish_media_ids' => [$media->id],
+            ...$extra,
+        ];
+    }
+
+    private function validPublishedShop(array $overrides = []): HeritageShop
+    {
+        if (config('heritage_shop.image_disk') !== 'heritage-integrity-test') {
+            Storage::fake('heritage-integrity-test');
+            config()->set('heritage_shop.image_disk', 'heritage-integrity-test');
+        }
+
+        $shop = HeritageShop::create([
+            'shop_name' => 'Valid Published Heritage Shop',
+            'heritage_story' => 'A verified heritage story preserved across generations.',
+            'address' => '1 Heritage Lane',
+            'city' => 'Kuala Lumpur',
+            'state' => 'Kuala Lumpur',
+            'postal_code' => '50000',
+            'publish_status' => HeritageShop::STATUS_PUBLISHED,
+            ...$overrides,
+        ]);
+        $path = 'heritage-shops/test-gallery-'.$shop->id.'.jpg';
+        Storage::disk(config('heritage_shop.image_disk'))->put($path, 'validated-image-bytes');
+        $shop->images()->create(['path' => $path, 'is_primary' => true]);
+
+        return $shop;
+    }
+
+    public function test_supporting_video_is_rejected_and_not_stored_as_contribution_media(): void
     {
         Storage::fake(config('filesystems.media_disk'));
         $user = User::factory()->create();
@@ -3926,13 +4244,10 @@ class CommunityContributionTest extends TestCase
 
         $this->actingAs($user)
             ->post(route('community-contribution.store'), $data)
-            ->assertSessionHasNoErrors();
+            ->assertSessionHasErrors('supporting_media.0');
 
-        $media = HeritageShopContribution::firstOrFail()->media()->firstOrFail();
-
-        $this->assertSame('video', $media->media_type);
-        $this->assertSame('video/mp4', $media->mime_type);
-        $this->assertTrue(Storage::disk(config('filesystems.media_disk'))->exists($media->r2_object_key));
+        $this->assertDatabaseCount('heritage_shop_contributions', 0);
+        $this->assertDatabaseCount('media', 0);
     }
 
     public function test_new_contributions_receive_unique_public_ids(): void
@@ -4084,7 +4399,11 @@ class CommunityContributionTest extends TestCase
         ]);
 
         $version = $contribution->recordVersion($user, 'relationship_check');
-        $shop = $contribution->approve($admin);
+        $shop = HeritageShop::create([
+            ...$contribution->heritageShopPayload(),
+            'publish_status' => HeritageShop::STATUS_DRAFT,
+        ]);
+        $shop = $contribution->approve($shop, $admin);
 
         $this->assertSame($contribution->id, $version->heritage_shop_contribution_id);
         $this->assertSame($contribution->id, $shop->source_contribution_id);

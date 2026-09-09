@@ -1509,7 +1509,7 @@
 
     <section class="dashboard-intro" aria-labelledby="dashboard-intro-title" data-reveal>
         <div>
-            <p class="section-kicker">{{ __('WarisanMakan • Heritage Discovery PWA') }}</p>
+            <p class="section-kicker">{{ __('WarisanMakan • Heritage Discovery') }}</p>
             <h2 id="dashboard-intro-title">{{ __('Heritage Shop Discovery') }}</h2>
         </div>
         <p>{{ __('Browse featured vendors with founder stories and generations of flavour.') }} {{ __('Explore Malaysian heritage food culture, preserve local food stories, and follow new WarisanMakan modules as they open.') }}</p>
@@ -1592,7 +1592,7 @@
 
     <section class="closing-band" aria-labelledby="closing-title" data-reveal>
         <div>
-            <p class="section-kicker">{{ __('WarisanMakan • Heritage Discovery PWA') }}</p>
+            <p class="section-kicker">{{ __('WarisanMakan • Heritage Discovery') }}</p>
             <h2 id="closing-title">{{ __('Surprise discovery unlocked') }}</h2>
             <p>{{ __('Tap the box for a surprise heritage shop recommendation inspired by the spirit of discovery.') }}</p>
         </div>

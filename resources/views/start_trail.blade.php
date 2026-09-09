@@ -1081,11 +1081,22 @@
             if (currentLocation || locationRequestInFlight) return;
 
             locationRequestInFlight = true;
-            getCurrentPosition().then((position) => {
+            getCurrentPosition().then(async (position) => {
                 locationRequestInFlight = false;
                 if (!position) return;
 
                 currentLocation = position;
+
+                // Arrange the route once from the user's current location.
+                // Subsequent drag-and-drop changes keep their manual order
+                // for the remainder of this visit.
+                if (!hasOptimizedRouteOrder && routeData.length > 1 && travelMode !== 'TRANSIT') {
+                    hasOptimizedRouteOrder = true;
+                    const optimizedStops = await optimizeRouteOrder(currentLocation);
+                    saveRouteOrder(optimizedStops);
+                    showToast(window.foodTrailTranslations.routeOrdered);
+                }
+
                 renderTrailMap();
             });
         };
@@ -1294,8 +1305,32 @@
         const optimizeRouteOrder = async (origin) => {
             if (!origin || routeData.length < 2 || !directionsService) return routeData.slice();
 
-            const destination = getStopLabel(routeData[routeData.length - 1]);
-            const waypoints = routeData.slice(0, -1).map((item) => ({
+            // Directions can optimize waypoint order, but not its destination.
+            // Use the geocoded address positions shown on the map—not optional
+            // imported latitude/longitude fields—to choose the farthest stop.
+            const geocodedStops = await Promise.all(
+                routeData.map((item) => geocodeRouteItem(item, item.location))
+            );
+            const positionsById = new Map(
+                geocodedStops
+                    .filter((entry) => entry?.item?.id && entry.position)
+                    .map((entry) => [entry.item.id, entry.position])
+            );
+            const destinationStop = routeData.reduce((farthest, item) => {
+                const position = positionsById.get(item.id);
+                if (!position) return farthest;
+
+                const farthestPosition = positionsById.get(farthest.id);
+                const itemDistance = distanceBetween(origin, position);
+                const farthestDistance = farthestPosition
+                    ? distanceBetween(origin, farthestPosition)
+                    : -1;
+
+                return itemDistance > farthestDistance ? item : farthest;
+            }, routeData[routeData.length - 1]);
+            const waypointStops = routeData.filter((item) => item.id !== destinationStop.id);
+            const destination = getStopLabel(destinationStop);
+            const waypoints = waypointStops.map((item) => ({
                 location: getStopLabel(item),
                 stopover: true,
             }));
@@ -1311,9 +1346,8 @@
                 }, (result, status) => {
                     if (status === 'OK' && result?.routes?.[0]) {
                         const order = result.routes[0].waypoint_order || [];
-                        const waypointStops = routeData.slice(0, -1);
                         const optimized = order.map((index) => waypointStops[index]);
-                        optimized.push(routeData[routeData.length - 1]);
+                        optimized.push(destinationStop);
                         resolve(optimized.filter(Boolean));
                         return;
                     }

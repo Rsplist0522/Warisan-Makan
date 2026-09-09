@@ -205,11 +205,14 @@
         state.filteredRestaurants.forEach((restaurant) => {
             const isAdded = state.routeRestaurants.some((item) => item.id === restaurant.id);
             const isLiked = state.likedRestaurantIds.includes(restaurant.id);
+            const detailTags = (restaurant.tags || []).filter((tag) =>
+                String(tag).trim().toLowerCase() !== String(restaurant.category || '').trim().toLowerCase()
+            );
             const card = document.createElement('article');
             card.className = 'rounded-[28px] border border-[#E9D7BF] bg-[#FEFBF7] shadow-sm hover:shadow-md';
             card.innerHTML = `
-                <div class="grid gap-4 lg:grid-cols-[120px_1fr] p-5">
-                    <img src="${restaurant.picture}" alt="${restaurant.name}" class="h-28 w-full rounded-[24px] object-cover lg:h-full" />
+                <div class="space-y-4 p-5">
+                    <img src="${restaurant.picture}" alt="${restaurant.name}" class="aspect-video w-full rounded-[24px] bg-[#F3E2C7] object-cover" />
                     <div class="space-y-3">
                         <div class="flex items-start justify-between gap-3">
                             <div>
@@ -218,16 +221,19 @@
                             </div>
                             <button data-like-id="${restaurant.id}" class="text-sm font-semibold text-[#B4542A]">${isLiked ? '♥' : '♡'}</button>
                         </div>
+                        <div>
+                            <p data-description-id="${restaurant.id}" class="line-clamp-4 text-sm leading-6 text-[#6B5B4E]">${restaurant.description}</p>
+                            <button type="button" data-read-more-id="${restaurant.id}" aria-expanded="false" class="mt-2 text-sm font-semibold text-[#B8874A] transition hover:text-[#9c6f33]">Read more</button>
+                        </div>
                         <div class="flex flex-wrap gap-2 text-[11px] text-[#5A5047]">
                             <span class="rounded-full bg-[#F3E2C7] px-3 py-1">${restaurant.category}</span>
                             <span class="rounded-full bg-[#F3E2C7] px-3 py-1">${restaurant.price}</span>
                             <span class="rounded-full bg-[#F3E2C7] px-3 py-1">${restaurant.rating} ★</span>
                             <span class="rounded-full bg-[#F3E2C7] px-3 py-1">${restaurant.waitTime}</span>
                         </div>
-                        <p class="text-sm leading-6 text-[#6B5B4E]">${restaurant.description}</p>
-                        <div class="flex flex-wrap gap-2 text-sm text-[#6B5B4E]">${formatTags(restaurant.tags)}</div>
-                        <div class="flex items-center justify-between gap-3">
-                            <button data-add-id="${restaurant.id}" class="rounded-full bg-[#B8874A] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#9c6f33]">${isAdded ? t('added') : t('add')}</button>
+                        <div class="flex flex-wrap items-center justify-between gap-3 border-t border-[#E9D7BF] pt-4">
+                            ${detailTags.length ? `<div class="flex flex-wrap gap-2 text-sm text-[#6B5B4E]">${formatTags(detailTags)}</div>` : ''}
+                            <button data-add-id="${restaurant.id}" class="ml-auto rounded-full bg-[#B8874A] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#9c6f33]">${isAdded ? t('added') : t('add')}</button>
                         </div>
                     </div>
                 </div>
@@ -235,6 +241,8 @@
 
             const addButton = card.querySelector('[data-add-id]');
             const likeButton = card.querySelector('[data-like-id]');
+            const readMoreButton = card.querySelector('[data-read-more-id]');
+            const description = card.querySelector('[data-description-id]');
             addButton?.addEventListener('click', (event) => {
                 event.stopPropagation();
                 toggleRestaurantInRoute(restaurant.id);
@@ -243,6 +251,13 @@
             likeButton?.addEventListener('click', (event) => {
                 event.stopPropagation();
                 toggleRestaurantLike(restaurant.id);
+            });
+            readMoreButton?.addEventListener('click', (event) => {
+                event.stopPropagation();
+                const expanded = readMoreButton.getAttribute('aria-expanded') === 'true';
+                description?.classList.toggle('line-clamp-4', expanded);
+                readMoreButton.setAttribute('aria-expanded', String(!expanded));
+                readMoreButton.textContent = expanded ? 'Read more' : 'Show less';
             });
 
             card.addEventListener('click', () => selectRestaurant(restaurant.id));
@@ -312,7 +327,10 @@
                         <p class="mt-1 text-sm text-[#6B5B4E]">${t('waitTime', { value: state.selectedRestaurant.waitTime })}</p>
                     </div>
                 </div>
-                <p class="text-sm leading-6 text-[#6B5B4E]">${state.selectedRestaurant.description}</p>
+                <div>
+                    <p id="selectedRestaurantDescription" class="line-clamp-6 text-sm leading-6 text-[#6B5B4E]">${state.selectedRestaurant.description}</p>
+                    <button id="toggleSelectedRestaurantDescription" type="button" aria-expanded="false" class="mt-2 text-sm font-semibold text-[#B8874A] transition hover:text-[#9c6f33]">Read more</button>
+                </div>
                 <div class="flex flex-wrap gap-2 text-sm text-[#6B5B4E]">${formatTags(state.selectedRestaurant.tags)}</div>
                 <div class="flex flex-wrap gap-3">
                     <button id="addRouteButton" class="rounded-full ${isAdded ? 'bg-[#A2A296] hover:bg-[#8e8c7c]' : 'bg-[#B8874A] hover:bg-[#9c6f33]'} px-5 py-3 text-sm font-semibold text-white">${isAdded ? t('removeFromTrail') : t('addToTrail')}</button>
@@ -325,10 +343,21 @@
         const addButton = content.querySelector('#addRouteButton');
         const visitedButton = content.querySelector('#markVisitedButton');
         const loveButton = content.querySelector('#loveRestaurantButton');
+        const description = content.querySelector('#selectedRestaurantDescription');
+        const descriptionToggle = content.querySelector('#toggleSelectedRestaurantDescription');
 
         addButton?.addEventListener('click', () => toggleRestaurantInRoute(state.selectedRestaurant.id));
         visitedButton?.addEventListener('click', () => toggleRestaurantVisited(state.selectedRestaurant.id));
         loveButton?.addEventListener('click', () => toggleRestaurantLike(state.selectedRestaurant.id));
+        descriptionToggle?.addEventListener('click', () => {
+            const expanded = descriptionToggle.getAttribute('aria-expanded') === 'true';
+            description?.classList.toggle('line-clamp-6', expanded);
+            descriptionToggle.setAttribute('aria-expanded', String(!expanded));
+            descriptionToggle.textContent = expanded ? 'Read more' : 'Show less';
+            window.requestAnimationFrame(() => {
+                drawer.style.maxHeight = expanded ? '1200px' : `${drawer.scrollHeight + 32}px`;
+            });
+        });
         toggleRestaurantDrawer(true);
     };
 

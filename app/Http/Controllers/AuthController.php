@@ -91,13 +91,18 @@ class AuthController extends Controller
         abort_unless($email, 422, __('Google did not provide an email address.'));
 
         $user = User::firstOrNew(['email' => $email]);
-        $user->fill([
-            'name' => $googleUser->getName() ?: $googleUser->getNickname() ?: 'Google User',
-            'google_id' => $googleUser->getId(),
-        ]);
 
         if (! $user->exists) {
+            $user->name = $googleUser->getName()
+                ?: $googleUser->getNickname()
+                ?: 'Google User';
+
+            $user->google_id = $googleUser->getId();
             $user->password = Str::random(40);
+        } else {
+            // Existing user: keep the profile name edited inside WarisanMakan.
+            // Only update Google ID if necessary.
+            $user->google_id = $googleUser->getId();
         }
 
         $user->save();

@@ -67,7 +67,6 @@
     "Browse featured vendors with founder stories and generations of flavour.": "Lihat penjual pilihan dengan kisah pengasas dan cita rasa turun-temurun.",
     "Tap the box for a surprise heritage shop recommendation inspired by the spirit of discovery.": "Tekan kotak untuk cadangan kedai warisan mengejut yang diinspirasikan oleh semangat penemuan.",
     "Filter blind box:": "Tapis kotak misteri:",
-    "All categories": "Semua kategori",
     "Already opened": "Sudah dibuka",
     "Open the box": "Buka kotak",
     "Surprise discovery unlocked": "Penemuan mengejut dibuka",
@@ -991,6 +990,8 @@
     "Saved to favourites": "Disimpan ke kegemaran",
     "Saved to favourites.": "Disimpan ke kegemaran.",
     "Search by shop name, category, or state...": "Cari mengikut nama kedai, kategori, atau negeri...",
+    "Filter by category": "Tapis mengikut kategori",
+    "All categories": "Semua kategori",
     "Search visited shops": "Cari kedai dilawati",
     "Search, filter, and revisit the heritage shops you have checked in to.": "Cari, tapis, dan lawati semula kedai warisan tempat anda mendaftar masuk.",
     "See how far your food heritage journey has taken you.": "Lihat sejauh mana perjalanan warisan makanan anda telah membawa anda.",
@@ -1061,5 +1062,12 @@
     "information": "maklumat",
     "recently": "baru-baru ini",
     "travel": "perjalanan",
-    "walk": "berjalan kaki"
+    "walk": "berjalan kaki",
+    "Recommended Food Discoveries": "Cadangan Penemuan Makanan",
+    "Recommended foods from your latest Blind Box discovery at :shop.": "Cadangan makanan daripada penemuan Kotak Misteri terkini anda di :shop.",
+    "No recommended foods found for this shop.": "Tiada makanan cadangan ditemui untuk kedai ini.",
+    "Please check the shop details for more heritage information.": "Sila semak butiran kedai untuk maklumat warisan yang lebih lanjut.",
+    "Heritage Food": "Makanan Warisan",
+    "A heritage food recommendation from your Blind Box discovery.": "Cadangan makanan warisan daripada penemuan Kotak Misteri anda.",
+    "View Food Details": "Lihat Butiran Makanan"
 }

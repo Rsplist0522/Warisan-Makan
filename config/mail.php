@@ -79,6 +79,14 @@ return [
             'transport' => 'array',
         ],
 
+        'gmail_api' => [
+            'transport' => 'gmail_api',
+            'from' => [
+                'address' => env('GOOGLE_GMAIL_FROM'),
+                'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'WarisanMakan')),
+            ],
+        ],
+
         'failover' => [
             'transport' => 'failover',
             'mailers' => [
@@ -112,7 +120,7 @@ return [
 
     'from' => [
         'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
-        'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
+        'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'WarisanMakan')),
     ],
 
 ];

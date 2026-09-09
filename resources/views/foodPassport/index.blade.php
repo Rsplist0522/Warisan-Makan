@@ -60,9 +60,6 @@
             display: inline-flex;
             align-items: center;
             gap: 12px;
-            text-decoration: none;
-            font-weight: 700;
-            letter-spacing: 0.04em;
             text-transform: uppercase;
             font-size: 0.82rem;
             color: var(--primary);
@@ -285,9 +282,15 @@
 
         .content-grid {
             display: grid;
-            grid-template-columns: 1.15fr 0.85fr;
+            grid-template-columns: 1.25fr 0.75fr;
             gap: 22px;
             margin-top: 26px;
+            align-items: stretch;
+        }
+
+        .content-grid > .panel,
+        .content-grid > .check-in-panel {
+            height: 100%;
         }
 
         .panel {
@@ -299,6 +302,43 @@
 
         .panel-inner {
             padding: 22px 22px 18px;
+        }
+
+        .shop-tools {
+            display: grid;
+            grid-template-columns: minmax(120px, 1fr) auto auto auto;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .shop-search {
+            width: 100%;
+            min-width: 0;
+            min-height: 44px;
+            margin: 0;
+        }
+
+        .shop-tools .btn {
+            min-height: 44px;
+            padding: 12px;
+            white-space: nowrap;
+        }
+            .shop-tools .btn.active,
+            .shop-tools .btn:active {
+                background: linear-gradient(135deg, var(--primary), var(--primary-deep));
+                border-color: transparent;
+                color: #fff;
+                box-shadow: 0 10px 18px rgba(140,31,31,0.18);
+            }
+
+        .location-button {
+            width: 154px;
+            min-width: 154px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-align: center;
+            white-space: nowrap;
         }
 
         .section-header {
@@ -393,6 +433,15 @@
 
         .check-in-panel {
             padding: 22px;
+            min-width: 0;
+            min-height: 430px;
+            height: 100%;
+        }
+
+        .check-in-empty {
+            min-height: 310px;
+            margin: 16px 0 0;
+            color: var(--muted);
         }
 
         .selected-shop {
@@ -462,9 +511,28 @@
 
         .pagination {
             display: flex;
+            flex-wrap: wrap;
             justify-content: flex-end;
             gap: 8px;
             margin-top: 16px;
+            max-width: 100%;
+            overflow: hidden;
+        }
+
+        .shops-pagination {
+            justify-content: center;
+        }
+
+        .shops-pagination-mobile {
+            display: none;
+        }
+
+        .pagination-current {
+            display: none;
+            color: var(--muted) !important;
+            font-size: 0.78rem;
+            font-weight: 700;
+            white-space: nowrap;
         }
 
         .pagination a,
@@ -709,30 +777,30 @@
             margin-top: 18px;
             padding: 24px;
             border-radius: 22px;
-            background: linear-gradient(135deg, #8C1F1F 0%, #4A211C 58%, #2E1815 100%);
+            background: #2E1815;
             color: #FBF6EE;
             text-align: left;
             box-shadow: 0 18px 30px rgba(86,59,48,0.18);
+        }
+
+        .achievement-card-preview::after {
+            inset: 12px;
+            width: auto;
+            height: auto;
+            border: 1px solid rgba(242,211,123,0.42);
+            border-radius: 15px;
         }
 
         .achievement-card-preview::before,
         .achievement-card-preview::after {
             position: absolute;
             content: '';
-            width: 180px;
-            height: 180px;
-            border: 1px solid rgba(212,160,23,0.35);
-            border-radius: 50%;
+            pointer-events: none;
         }
 
         .achievement-card-preview::before {
-            top: -92px;
-            right: -54px;
-        }
-
-        .achievement-card-preview::after {
-            bottom: -120px;
-            left: -64px;
+            inset: 0;
+            background: radial-gradient(circle at 88% 8%, rgba(212,160,23,0.3), transparent 32%), linear-gradient(135deg, #8C1F1F 0%, #4A211C 58%, #2E1815 100%);
         }
 
         .achievement-card-kicker,
@@ -761,12 +829,13 @@
             place-items: center;
             width: 82px;
             height: 82px;
-            border: 2px solid rgba(212,160,23,0.75);
-            border-radius: 26px;
-            background: rgba(251,246,238,0.12);
+            border: 2px solid #F2D37B;
+            border-radius: 50%;
+            background: #8C1F1F;
             color: #F2D37B;
             font-size: 2.4rem;
             font-weight: 800;
+            box-shadow: 0 0 0 7px rgba(242,211,123,0.1);
         }
 
         .achievement-card-title {
@@ -821,6 +890,12 @@
 
         .share-download-btn:hover {
             background: rgba(212,160,23,0.2);
+        }
+
+        .share-download-btn:first-child {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
         }
 
         .badge-modal-badge-name {
@@ -885,7 +960,7 @@
             font-size: 0.88rem;
         }
 
-        @media (max-width: 900px) {
+        @media (max-width: 1100px) {
             .hero, .content-grid {
                 grid-template-columns: 1fr;
             }
@@ -896,10 +971,45 @@
         }
 
         @media (max-width: 640px) {
+            body {
+                overflow-x: hidden;
+            }
+
+            .passport-shell {
+                width: 100%;
+                padding: 16px 12px 30px;
+            }
+
             .topbar {
                 align-items: flex-start;
                 flex-direction: column;
                 gap: 12px;
+            }
+
+            .nav {
+                width: 100%;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+
+            .hero,
+            .content-grid,
+            .panel {
+                width: 100%;
+                min-width: 0;
+            }
+
+            .panel-inner,
+            .check-in-panel {
+                padding: 18px 16px;
+            }
+
+            .check-in-panel {
+                min-height: 0;
+            }
+
+            .check-in-empty {
+                min-height: 120px;
             }
 
             .hero-copy {
@@ -923,9 +1033,45 @@
                 grid-template-columns: 1fr;
             }
 
+            .shop-tools {
+                grid-template-columns: 1fr;
+                align-items: stretch;
+            }
+
+            .shop-search,
+            .shop-tools .btn {
+                width: 100%;
+            }
+
+            .location-button {
+                width: 100%;
+                min-width: 0;
+            }
+
             .mini-action {
                 grid-column: 1 / -1;
                 justify-self: start;
+            }
+
+            .shops-pagination-desktop {
+                display: none;
+            }
+
+            .shops-pagination-mobile {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 6px;
+            }
+
+            .shops-pagination-mobile a,
+            .shops-pagination-mobile span {
+                padding: 9px 11px;
+            }
+
+            .shops-pagination-mobile .pagination-page {
+                min-width: 38px;
+                text-align: center;
             }
         }
     </style>
@@ -986,6 +1132,19 @@
                             <span class="tag">{{ __('Live') }}</span>
                         </div>
 
+                        <form class="shop-tools" method="GET" action="{{ route('passport.index') }}#nearby">
+                            <input class="shop-search" type="search" name="shop_search" value="{{ request('shop_search') }}" placeholder="{{ __('Search shops or founders') }}" aria-label="{{ __('Search shops or founders') }}">
+                            @if (request('user_latitude') && request('user_longitude'))
+                                <input type="hidden" name="user_latitude" value="{{ request('user_latitude') }}">
+                                <input type="hidden" name="user_longitude" value="{{ request('user_longitude') }}">
+                            @endif
+                            <button type="submit" class="btn secondary {{ request('shop_search') ? 'active' : '' }}">{{ __('Search') }}</button>
+                            @if (request('shop_search'))
+                                <a href="{{ route('passport.index') }}#nearby" class="btn secondary">{{ __('Show all shops') }}</a>
+                            @endif
+                            <button type="button" id="btnUseLocation" class="btn secondary location-button {{ request('user_latitude') && request('user_longitude') && !request('shop_search') ? 'active' : '' }}">{{ __('Use My Location') }}</button>
+                        </form>
+
                         @if (!empty($shops))
                             <div class="shop-list" id="shopList">
                                 @foreach ($shops as $shop)
@@ -1004,37 +1163,100 @@
                             </div>
 
                             @if ($availableShops->total() > 0)
-                                <nav class="pagination shops-pagination" aria-label="{{ __('Available shops pages') }}">
+                                <nav class="pagination shops-pagination shops-pagination-desktop" aria-label="{{ __('Available shops pages') }}">
                                     @if ($availableShops->lastPage() > 1)
                                         @if ($availableShops->onFirstPage())
-                                            <span aria-disabled="true">{{ __('Previous') }}</span>
+                                            <span class="pagination-previous" aria-disabled="true">{{ __('Previous') }}</span>
                                         @else
-                                            <a href="{{ $availableShops->previousPageUrl() }}#nearby">{{ __('Previous') }}</a>
+                                            <a class="pagination-previous" href="{{ $availableShops->previousPageUrl() }}#nearby">{{ __('Previous') }}</a>
                                         @endif
 
-                                        @for ($page = 1; $page <= $availableShops->lastPage(); $page++)
-                                            @if ($page === $availableShops->currentPage())
-                                                <span class="active" aria-current="page">{{ $page }}</span>
+                                        <span class="pagination-current" aria-current="page">
+                                            {{ __('Page :current of :last', ['current' => $availableShops->currentPage(), 'last' => $availableShops->lastPage()]) }}
+                                        </span>
+
+                                        @php
+                                            $currentPage = $availableShops->currentPage();
+                                            $lastPage = $availableShops->lastPage();
+                                            $paginationPages = collect([1, 2, $currentPage - 1, $currentPage, $currentPage + 1, $lastPage - 1, $lastPage])
+                                                ->filter(fn ($page) => $page >= 1 && $page <= $lastPage)
+                                                ->unique()
+                                                ->sort()
+                                                ->values();
+                                            $previousPaginationPage = null;
+                                        @endphp
+                                        @foreach ($paginationPages as $page)
+                                            @if ($previousPaginationPage !== null && $page > $previousPaginationPage + 1)
+                                                <span class="pagination-ellipsis" aria-hidden="true">...</span>
+                                            @endif
+                                            @if ($page === $currentPage)
+                                                <span class="pagination-page active" aria-current="page">{{ $page }}</span>
                                             @else
-                                                <a href="{{ $availableShops->url($page) }}#nearby"
+                                                <a class="pagination-page" href="{{ $availableShops->url($page) }}#nearby"
                                                     aria-label="{{ __('Available shops page :page', ['page' => $page]) }}">
                                                     {{ $page }}
                                                 </a>
                                             @endif
-                                        @endfor
+                                            @php $previousPaginationPage = $page; @endphp
+                                        @endforeach
 
                                         @if ($availableShops->hasMorePages())
-                                            <a href="{{ $availableShops->nextPageUrl() }}#nearby">{{ __('Next') }}</a>
+                                            <a class="pagination-next" href="{{ $availableShops->nextPageUrl() }}#nearby">{{ __('Next') }}</a>
                                         @else
-                                            <span aria-disabled="true">{{ __('Next') }}</span>
+                                            <span class="pagination-next" aria-disabled="true">{{ __('Next') }}</span>
                                         @endif
                                     @else
-                                        <span class="active" aria-current="page">{{ $availableShops->currentPage() }}</span>
+                                        <span class="pagination-current" aria-current="page">
+                                            {{ __('Page :current of :last', ['current' => $availableShops->currentPage(), 'last' => $availableShops->lastPage()]) }}
+                                        </span>
+                                    @endif
+                                </nav>
+
+                                <nav class="pagination shops-pagination-mobile" aria-label="{{ __('Available shops pages') }}">
+                                    @if ($availableShops->onFirstPage())
+                                        <span aria-disabled="true">{{ __('Previous') }}</span>
+                                    @else
+                                        <a href="{{ $availableShops->previousPageUrl() }}#nearby">{{ __('Previous') }}</a>
+                                    @endif
+
+                                    @php
+                                        $currentPage = $availableShops->currentPage();
+                                        $lastPage = $availableShops->lastPage();
+                                        $mobilePaginationPages = collect([1, $currentPage - 1, $currentPage, $currentPage + 1, $lastPage])
+                                            ->filter(fn ($page) => $page >= 1 && $page <= $lastPage)
+                                            ->unique()
+                                            ->sort()
+                                            ->values();
+                                        $previousMobilePage = null;
+                                    @endphp
+                                    @foreach ($mobilePaginationPages as $page)
+                                        @if ($previousMobilePage !== null && $page > $previousMobilePage + 1)
+                                            <span class="pagination-ellipsis" aria-hidden="true">...</span>
+                                        @endif
+                                        @if ($page === $currentPage)
+                                            <span class="pagination-page active" aria-current="page">{{ $page }}</span>
+                                        @else
+                                            <a class="pagination-page" href="{{ $availableShops->url($page) }}#nearby"
+                                                aria-label="{{ __('Available shops page :page', ['page' => $page]) }}">{{ $page }}</a>
+                                        @endif
+                                        @php $previousMobilePage = $page; @endphp
+                                    @endforeach
+
+                                    @if ($availableShops->hasMorePages())
+                                        <a href="{{ $availableShops->nextPageUrl() }}#nearby">{{ __('Next') }}</a>
+                                    @else
+                                        <span aria-disabled="true">{{ __('Next') }}</span>
                                     @endif
                                 </nav>
                             @endif
+                        @elseif (request('shop_search'))
+                            <div class="shop-list" id="shopList" hidden></div>
+                            <p id="shopEmptyMessage" style="margin: 0; color: var(--muted);">
+                                {{ __('No heritage shops match your search. Try another name or founder.') }}
+                            </p>
                         @else
-                            <p style="margin: 0; color: var(--muted);">
+                            <div class="shop-list" id="shopList" hidden></div>
+                            <p id="shopEmptyMessage" style="margin: 0; color: var(--muted);">
                                 {{ __('No approved heritage shops with GPS coordinates are available for check-in yet. Add the shop location and approve it in the Heritage Shop module.') }}
                             </p>
                         @endif
@@ -1062,8 +1284,12 @@
 
                         <pre id="result" class="result-box">{{ __('Ready to check in. Select a shop and allow location access.') }}</pre>
                     @else
-                        <p style="margin: 16px 0 0; color: var(--muted);">
-                            {{ __('Check-in will be available after an approved Heritage Shop has latitude and longitude coordinates.') }}
+                        <p class="check-in-empty">
+                            @if (request('shop_search'))
+                                {{ __('Select an available shop from the list to check in. Clear your search or try another shop name.') }}
+                            @else
+                                {{ __('Only available heritage shops with approved locations can be checked in to.') }}
+                            @endif
                         </p>
                     @endif
                 </aside>
@@ -1126,15 +1352,19 @@
         const geolocationUnsupportedMessage = @json(__('Geolocation is not supported by this browser.'));
         const requestingLocationMessage = @json(__('Requesting location for your heritage check-in...'));
         const failedLocationMessage = @json(__('Failed to get location: :message'));
+        const sortingNearbyMessage = @json(__('Locating...'));
+        const locationReadyMessage = @json(__('Shops are now sorted by distance from your location.'));
 
-        const shops = @json($shops);
+        let shops = @json($shops);
         let activeShop = shops[0] || null;
 
         function setActiveShop(shop) {
             activeShop = shop;
 
-            document.getElementById('selectedShopName').textContent = shop.name;
-            document.getElementById('selectedShopFounder').textContent = shop.founder;
+            const selectedShopName = document.getElementById('selectedShopName');
+            const selectedShopFounder = document.getElementById('selectedShopFounder');
+            if (selectedShopName) selectedShopName.textContent = shop.name;
+            if (selectedShopFounder) selectedShopFounder.textContent = shop.founder;
 
             const featuredShopName = document.getElementById('featuredShopName');
             const featuredShopFounder = document.getElementById('featuredShopFounder');
@@ -1155,12 +1385,117 @@
             });
         }
 
+        function ensureCheckInControls(shop) {
+            if (document.getElementById('btnCheckIn')) {
+                setActiveShop(shop);
+                return;
+            }
+
+            const panel = document.getElementById('check-in');
+            if (!panel) return;
+
+            const controls = document.createElement('div');
+            controls.innerHTML = `
+                <div class="selected-shop">
+                    <div>
+                        <p class="label">Selected stop</p>
+                        <h3 id="selectedShopName"></h3>
+                        <p id="selectedShopFounder"></p>
+                    </div>
+                </div>
+                <div class="button-row">
+                    <button type="button" id="btnCheckIn" class="btn primary">Check In</button>
+                </div>
+                <pre id="result" class="result-box">Ready to check in. Select a shop and allow location access.</pre>
+            `;
+            panel.appendChild(controls);
+            out = document.getElementById('result');
+            setActiveShop(shop);
+            bindCheckInButton();
+        }
+
         document.querySelectorAll('.select-shop').forEach(button => {
             button.addEventListener('click', () => {
                 const article = button.closest('.shop-item');
                 const shop = shops.find(item => Number(item.id) === Number(article.dataset.id));
                 setActiveShop(shop);
             });
+        });
+
+        function renderShopItem(shop) {
+            const article = document.createElement('article');
+            article.className = 'shop-item';
+            article.dataset.id = shop.id;
+            article.innerHTML = `
+                <div class="shop-body">
+                    <h3>${shop.name}</h3>
+                    <p>${shop.founder}</p>
+                    <div class="shop-meta">
+                        <span>${shop.distance}</span>
+                        <span>${shop.status}</span>
+                    </div>
+                </div>
+                <button type="button" class="mini-action select-shop">Select</button>
+            `;
+            article.querySelector('.select-shop').addEventListener('click', () => setActiveShop(shop));
+            article.addEventListener('click', event => {
+                if (!event.target.closest('.select-shop')) setActiveShop(shop);
+            });
+            return article;
+        }
+
+        function distanceBetween(firstLatitude, firstLongitude, secondLatitude, secondLongitude) {
+            const earthRadius = 6371;
+            const latitudeDifference = (secondLatitude - firstLatitude) * Math.PI / 180;
+            const longitudeDifference = (secondLongitude - firstLongitude) * Math.PI / 180;
+            const latitude = firstLatitude * Math.PI / 180;
+            const secondLatitudeRadians = secondLatitude * Math.PI / 180;
+            const value = Math.sin(latitudeDifference / 2) ** 2
+                + Math.sin(longitudeDifference / 2) ** 2 * Math.cos(latitude) * Math.cos(secondLatitudeRadians);
+
+            return earthRadius * 2 * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value));
+        }
+
+        function activateShopTool(button) {
+            document.querySelectorAll('.shop-tools .btn').forEach(tool => {
+                tool.classList.toggle('active', tool === button);
+            });
+        }
+
+        document.querySelector('.shop-tools')?.addEventListener('submit', function (event) {
+            activateShopTool(event.submitter || this.querySelector('button[type="submit"]'));
+        });
+
+        document.querySelectorAll('.shop-tools a.btn').forEach(button => {
+            button.addEventListener('click', () => activateShopTool(button));
+        });
+
+        document.getElementById('btnUseLocation')?.addEventListener('click', function () {
+            if (!navigator.geolocation) {
+                setResult(geolocationUnsupportedMessage);
+                return;
+            }
+
+            const button = this;
+            activateShopTool(button);
+            button.disabled = true;
+            button.textContent = sortingNearbyMessage;
+
+            navigator.geolocation.getCurrentPosition(function (position) {
+                const userLatitude = position.coords.latitude;
+                const userLongitude = position.coords.longitude;
+                const locationUrl = new URL(window.location.href);
+                locationUrl.searchParams.delete('shop_search');
+                locationUrl.searchParams.set('user_latitude', userLatitude.toString());
+                locationUrl.searchParams.set('user_longitude', userLongitude.toString());
+                locationUrl.searchParams.set('shops_page', '1');
+                locationUrl.hash = 'nearby';
+                window.location.assign(locationUrl.toString());
+            }, function (error) {
+                button.disabled = false;
+                button.textContent = @json(__('Use My Location'));
+                setResult(failedLocationMessage.replace(':message', error.message || error.code));
+            }, { enableHighAccuracy: true, timeout: 10000 });
         });
 
         const sectionNavLinks = Array.from(document.querySelectorAll('[data-section-nav]'));
@@ -1189,7 +1524,7 @@
             setActiveSection(initialSection);
         }
 
-        const out = document.getElementById('result');
+        let out = document.getElementById('result');
         const badgeModal = document.getElementById('badgeModal');
         const badgeModalIcon = document.getElementById('badgeModalIcon');
         const badgeModalBadgeName = document.getElementById('badgeModalBadgeName');
@@ -1201,6 +1536,12 @@
         let reloadAfterBadgeModal = false;
 
         function setResult(value) {
+            if (!out) {
+                const emptyMessage = document.getElementById('shopEmptyMessage');
+                if (emptyMessage) emptyMessage.textContent = typeof value === 'string' ? value : value.message || unexpectedErrorMessage;
+                return;
+            }
+
             if (typeof value === 'string') {
                 out.textContent = value;
                 return;
@@ -1307,77 +1648,115 @@
             const context = canvas.getContext('2d');
             const badge = activeBadgeForShare;
             const story = format === 'story';
+            const panelY = story ? 500 : 170;
+            const panelHeight = story ? 980 : 740;
+            const centerX = width / 2;
 
             context.fillStyle = '#2E1815';
             context.fillRect(0, 0, width, height);
             const gradient = context.createLinearGradient(0, 0, width, height);
             gradient.addColorStop(0, '#8C1F1F');
-            gradient.addColorStop(0.58, '#4A211C');
+            gradient.addColorStop(0.55, '#5B2820');
             gradient.addColorStop(1, '#2E1815');
             context.fillStyle = gradient;
-            context.fillRect(28, 28, width - 56, height - 56);
+            context.fillRect(34, 34, width - 68, height - 68);
 
-            context.strokeStyle = 'rgba(242,211,123,0.38)';
-            context.lineWidth = 3;
+            context.strokeStyle = 'rgba(242,211,123,0.34)';
+            context.lineWidth = 2;
+            context.strokeRect(52, 52, width - 104, height - 104);
             context.beginPath();
-            context.arc(width - 80, 92, 180, 0, Math.PI * 2);
+            context.arc(width - 60, 100, 210, 0, Math.PI * 2);
             context.stroke();
             context.beginPath();
-            context.arc(56, height - 80, 180, 0, Math.PI * 2);
+            context.arc(60, height - 90, 230, 0, Math.PI * 2);
             context.stroke();
 
             context.fillStyle = 'rgba(251,246,238,0.78)';
             context.font = '800 26px Arial, sans-serif';
-            context.letterSpacing = '4px';
-            context.fillText('WARISAN MAKAN  ·  HERITAGE PASSPORT', 78, story ? 118 : 100);
-
-            const centerY = story ? 720 : 490;
-            context.fillStyle = 'rgba(251,246,238,0.12)';
-            context.fillRect(78, centerY - 230, width - 156, story ? 520 : 440);
-            context.strokeStyle = 'rgba(242,211,123,0.75)';
-            context.lineWidth = 5;
-            context.strokeRect(78, centerY - 230, width - 156, story ? 520 : 440);
-
+            context.fillText('WARISAN MAKAN  /  HERITAGE PASSPORT', 82, story ? 130 : 112);
             context.fillStyle = '#F2D37B';
-            context.font = story ? '800 116px Arial, sans-serif' : '800 100px Arial, sans-serif';
+            context.font = '800 22px Arial, sans-serif';
+            context.fillText(story ? 'A NEW CHAPTER IN YOUR FOOD JOURNEY' : 'ACHIEVEMENT UNLOCKED', 82, story ? 176 : 158);
+
+            context.save();
+            context.shadowColor = 'rgba(25,12,9,0.3)';
+            context.shadowBlur = 28;
+            context.shadowOffsetY = 14;
+            context.fillStyle = '#FBF6EE';
+            context.fillRect(80, panelY, width - 160, panelHeight);
+            context.restore();
+            context.strokeStyle = 'rgba(212,160,23,0.72)';
+            context.lineWidth = 4;
+            context.strokeRect(96, panelY + 16, width - 192, panelHeight - 32);
+
+            const sealY = panelY + 150;
+            context.fillStyle = '#8C1F1F';
+            context.beginPath();
+            context.arc(centerX, sealY, 92, 0, Math.PI * 2);
+            context.fill();
+            context.strokeStyle = '#D4A017';
+            context.lineWidth = 8;
+            context.stroke();
+            context.fillStyle = '#F2D37B';
+            context.font = '800 92px Arial, sans-serif';
             context.textAlign = 'center';
-            context.fillText(badge.icon || '★', width / 2, centerY - 54);
+            context.fillText(badge.icon || '★', centerX, sealY + 32);
+
+            context.fillStyle = '#8C1F1F';
+            context.font = '800 22px Arial, sans-serif';
+            context.fillText('MILESTONE UNLOCKED', centerX, panelY + 300);
+            context.fillStyle = '#32241F';
             context.font = story ? '700 58px Georgia, serif' : '700 52px Georgia, serif';
-            wrapCanvasText(context, badge.name, width / 2, centerY + 52, width - 240, 70, 2);
-            context.fillStyle = 'rgba(251,246,238,0.92)';
-            context.font = story ? '32px Arial, sans-serif' : '28px Arial, sans-serif';
-            wrapCanvasText(context, badge.description || @json(__('A new heritage-food milestone.')), width / 2, centerY + 150, width - 260, 42, 3);
+            wrapCanvasText(context, badge.name, centerX, panelY + 380, width - 260, 68, 2);
+            context.fillStyle = '#7A6A63';
+            context.font = story ? '30px Arial, sans-serif' : '28px Arial, sans-serif';
+            wrapCanvasText(context, badge.description || @json(__('A new heritage-food milestone.')), centerX, panelY + 530, width - 270, 42, 3);
 
-            context.textAlign = 'center';
+            context.fillStyle = '#8C1F1F';
+            context.font = '800 25px Arial, sans-serif';
+            context.fillText(badge.progress ? 'HERITAGE VISITS  /  ' + badge.progress : 'A NEW STORY ADDED TO MY FOOD JOURNEY', centerX, panelY + panelHeight - 92);
+
+            context.fillStyle = 'rgba(251,246,238,0.9)';
+            context.font = story ? '30px Arial, sans-serif' : '28px Arial, sans-serif';
+            context.fillText('Every dish has a story. Discover yours.', centerX, height - (story ? 170 : 116));
             context.fillStyle = '#F2D37B';
-            context.font = story ? '800 30px Arial, sans-serif' : '800 26px Arial, sans-serif';
-            context.fillText(badge.progress ? 'MILESTONE  ' + badge.progress + '  VISITS' : 'A NEW STORY ADDED TO MY FOOD JOURNEY', width / 2, centerY + (story ? 260 : 238));
-
-            context.fillStyle = 'rgba(251,246,238,0.82)';
-            context.font = story ? '30px Arial, sans-serif' : '26px Arial, sans-serif';
-            context.fillText('Every dish has a story. Discover yours.', width / 2, height - (story ? 150 : 98));
-            context.fillStyle = 'rgba(251,246,238,0.58)';
             context.font = '22px Arial, sans-serif';
-            context.fillText('warisan makan  ·  explore local heritage food', width / 2, height - (story ? 100 : 58));
+            context.fillText('warisan makan  /  explore local heritage food', centerX, height - (story ? 112 : 68));
             context.textAlign = 'start';
 
             return canvas;
         }
 
-        function downloadAchievementCard(format) {
+        async function downloadAchievementCard(format) {
+            const isTouchDevice = 'ontouchstart' in window || (window.navigator.maxTouchPoints || 0) > 0;
+            if (isTouchDevice && await shareAchievementFile(format)) {
+                return true;
+            }
+
             const canvas = drawAchievementCard(format);
             if (!canvas) {
-                return;
+                return false;
             }
 
             const slug = (activeBadgeForShare.name || 'badge').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+            if (!blob) {
+                return false;
+            }
+
+            const objectUrl = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.download = 'warisan-makan-' + slug + '-' + format + '.png';
-            link.href = canvas.toDataURL('image/png');
+            link.href = objectUrl;
+            link.style.display = 'none';
+            document.body.appendChild(link);
             link.click();
+            link.remove();
+            window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
             shareStatus.textContent = format === 'story'
                 ? @json(__('Story card downloaded. Upload it to Instagram Story or WhatsApp Status.'))
                 : @json(__('Square card downloaded. It is ready for your social feed.'));
+            return true;
         }
 
         async function shareAchievementFile(format) {
@@ -1417,26 +1796,32 @@
                 }
 
                 if (channel === 'download-square') {
-                    downloadAchievementCard('square');
+                    await downloadAchievementCard('square');
                     return;
                 }
 
                 if (channel === 'download-story') {
-                    downloadAchievementCard('story');
+                    await downloadAchievementCard('story');
                     return;
                 }
 
                 if (channel === 'instagram') {
+                    if (await shareAchievementFile('story')) {
+                        return;
+                    }
                     await copyShareText();
-                    downloadAchievementCard('story');
+                    await downloadAchievementCard('story');
                     window.open('https://www.instagram.com/', '_blank', 'noopener');
                     shareStatus.textContent = @json(__('Instagram opened. The story card was downloaded and the caption was copied—upload the PNG after logging in.'));
                     return;
                 }
 
                 if (channel === 'facebook') {
+                    if (await shareAchievementFile('square')) {
+                        return;
+                    }
                     await copyShareText();
-                    downloadAchievementCard('square');
+                    await downloadAchievementCard('square');
                     const url = 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(window.location.href) + '&quote=' + encodeURIComponent(badgeShareText);
                     window.open(url, '_blank', 'noopener');
                     shareStatus.textContent = @json(__('Facebook opened. The square card was downloaded and the caption was copied—attach the PNG if needed.'));
@@ -1455,7 +1840,7 @@
                     const whatsappUrl = isTouchDevice
                         ? 'https://wa.me/?text=' + encodeURIComponent(badgeShareText)
                         : 'https://web.whatsapp.com/send?text=' + encodeURIComponent(badgeShareText);
-                    downloadAchievementCard('square');
+                    await downloadAchievementCard('square');
                     const whatsappWindow = window.open(whatsappUrl, '_blank', 'noopener');
                     await copyShareText();
                     if (!whatsappWindow) {
@@ -1590,7 +1975,8 @@
             });
         }
 
-        document.getElementById('btnCheckIn')?.addEventListener('click', function () {
+        function bindCheckInButton() {
+            document.getElementById('btnCheckIn')?.addEventListener('click', function () {
             if (!activeShop) {
                 setResult(selectHeritageShopMessage);
                 return;
@@ -1613,6 +1999,9 @@
             }, function (error) {
                 setResult(failedLocationMessage.replace(':message', error.message || error.code));
             }, { enableHighAccuracy: true, timeout: 10000 });
-        });
+            });
+        }
+
+        bindCheckInButton();
     </script>
 @endsection

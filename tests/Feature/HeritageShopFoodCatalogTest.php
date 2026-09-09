@@ -54,8 +54,8 @@ class HeritageShopFoodCatalogTest extends TestCase
         $this->assertSame('Kuih Lapis', $item->name);
         $this->assertNotNull($item->image_path);
         $this->assertTrue(Storage::disk('public')->exists($item->image_path));
-        $this->assertStringContainsString('Kuih Lapis', (string) $this->get(route('heritage-shops.show', ['id' => $shop->id]))->getContent());
-        $this->get(route('heritage-shops.food-images.show', [$shop, $item]))->assertOk();
+        $this->assertStringContainsString('Kuih Lapis', (string) $this->actingAs($admin)->get(route('heritage-shops.show', ['id' => $shop->id]))->getContent());
+        $this->actingAs($admin)->get(route('heritage-shops.food-images.show', [$shop, $item]))->assertOk();
     }
 
         public function test_food_catalog_rejects_a_dish_photo_over_the_shared_one_mb_limit(): void
@@ -118,12 +118,16 @@ class HeritageShopFoodCatalogTest extends TestCase
             ->assertSee(route('heritage-shops.show', ['id' => $shop->id]), false)
             ->assertSee(route('heritage-shops.menu', $shop), false);
 
-        $this->get(route('heritage-shops.show', ['id' => $shop->id]))
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('heritage-shops.show', ['id' => $shop->id]))
             ->assertOk()
             ->assertSee('Heritage information')
             ->assertSee('Heritage foods &amp; menu', false);
 
-        $this->get(route('heritage-shops.menu', $shop))
+        $this->actingAs($user)
+            ->get(route('heritage-shops.menu', $shop))
             ->assertOk()
             ->assertSee('Menu &amp; heritage stories', false)
             ->assertSee('Signature Heritage Dish')
@@ -145,7 +149,8 @@ class HeritageShopFoodCatalogTest extends TestCase
             'is_active' => true,
         ]);
 
-        $this->get(route('heritage-shops.food-items.show', [$shop, $item]))
+        $this->actingAs(User::factory()->create())
+            ->get(route('heritage-shops.food-items.show', [$shop, $item]))
             ->assertOk()
             ->assertSee('Laksa Warisan')
             ->assertSee('Why this dish matters')
@@ -160,8 +165,10 @@ class HeritageShopFoodCatalogTest extends TestCase
         $item = $shop->foodItems()->create(['name' => 'Draft Dish', 'image_path' => 'heritage-shops/food-items/draft.jpg', 'is_active' => true]);
         Storage::disk('public')->put($item->image_path, 'image-bytes');
 
-        $this->get(route('heritage-shops.show', ['id' => $shop->id]))->assertNotFound();
-        $this->get(route('heritage-shops.food-images.show', [$shop, $item]))->assertNotFound();
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->get(route('heritage-shops.show', ['id' => $shop->id]))->assertNotFound();
+        $this->actingAs($user)->get(route('heritage-shops.food-images.show', [$shop, $item]))->assertNotFound();
     }
 
     public function test_food_item_operations_are_scoped_to_the_current_shop(): void
@@ -180,7 +187,8 @@ class HeritageShopFoodCatalogTest extends TestCase
     {
         $shop = HeritageShop::create(['shop_name' => 'No Menu Yet', 'publish_status' => HeritageShop::STATUS_PUBLISHED]);
 
-        $this->get(route('heritage-shops.show', ['id' => $shop->id]))
+        $this->actingAs(User::factory()->create())
+            ->get(route('heritage-shops.show', ['id' => $shop->id]))
             ->assertOk()
             ->assertSee('The menu is still being documented')
             ->assertSee('0 recorded items');

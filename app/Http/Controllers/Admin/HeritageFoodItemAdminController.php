@@ -96,7 +96,7 @@ class HeritageFoodItemAdminController extends Controller
             $this->syncLegacyJson($heritageShop);
         });
 
-        return back()->with('success', 'Food item archived from the menu.');
+        return back()->with('success', 'Food item deleted from the menu successfully.');
     }
 
     private function syncLegacyJson(HeritageShop $heritageShop): void

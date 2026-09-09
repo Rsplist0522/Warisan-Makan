@@ -8,8 +8,8 @@
         const csrfToken = @json(csrf_token());
         const loginUrl = @json(auth()->user()->isAdmin() ? route('admin.login') : route('login'));
         const inactivityTimeout = @json((int) (auth()->user()->isAdmin()
-            ? config('session.admin_inactivity_timeout', 30)
-            : config('session.user_inactivity_timeout', 30)));
+            ? config('session.admin_inactivity_timeout', 300)
+            : config('session.user_inactivity_timeout', 300)));
         const heartbeatInterval = Math.min(60000, Math.max(10000, Math.floor(inactivityTimeout * 1000 / 3)));
         let lastHeartbeatAt = 0;
         let heartbeatInFlight = false;
@@ -118,10 +118,17 @@
             const targetUrl = new URL(form.action || window.location.href, window.location.href);
             if (targetUrl.origin !== window.location.origin || form.target && form.target !== '_self') return;
 
+            const submitter = event.submitter instanceof HTMLElement ? event.submitter : null;
+
             event.preventDefault();
+            event.stopImmediatePropagation();
             checkSessionBeforeNavigation(() => {
                 form.dataset.sessionNavigationChecked = 'true';
-                form.requestSubmit();
+                if (submitter && submitter.form === form) {
+                    form.requestSubmit(submitter);
+                } else {
+                    form.requestSubmit();
+                }
             });
         }, true);
 

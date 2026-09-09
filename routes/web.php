@@ -193,6 +193,9 @@ Route::prefix('admin')
 // Blind Box routes
 Route::get('/blind-box', [BlindBoxController::class, 'index'])->middleware(['auth', 'user.inactivity'])->name('blind-box.index');
 Route::post('/blind-box/draw', [BlindBoxController::class, 'draw'])->middleware(['auth', 'user.inactivity'])->name('blind-box.draw');
+Route::get('/blind-box/favourites', [BlindBoxController::class, 'favourites'])->middleware(['auth', 'user.inactivity'])->name('blind-box.favourites');
+Route::post('/blind-box/favourites', [BlindBoxController::class, 'saveFavourite'])->middleware(['auth', 'user.inactivity'])->name('blind-box.favourites.store');
+Route::delete('/blind-box/favourites/{favourite}', [BlindBoxController::class, 'removeFavourite'])->middleware(['auth', 'user.inactivity'])->name('blind-box.favourites.destroy');
 Route::post('/chat', [ChatController::class, 'respond'])->name('chat.respond');
 
 // Module-only shop check-in page (public for development)
@@ -227,7 +230,7 @@ Route::get('/start_trail', function () {
 })->middleware(['auth', 'user.inactivity']);
 
 Route::get('/heritage-shops', [HeritageShopController::class, 'index'])
-    ->middleware(['system.access', 'user.inactivity'])
+    ->middleware('user.inactivity')
     ->name('heritage-shops.index');
 Route::get('/heritage-shops/{heritageShop}/menu', [HeritageShopController::class, 'menu'])
     ->whereNumber('heritageShop')

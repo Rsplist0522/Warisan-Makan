@@ -278,6 +278,9 @@ class CommunityContributionController extends Controller
             'establishment_year',
             'heritage_story',
             'address',
+            'city',
+            'state',
+            'postal_code',
         ])->filter(fn (string $field) => blank($contribution->{$field}));
 
         if ($missing->isNotEmpty()) {
@@ -450,7 +453,7 @@ class CommunityContributionController extends Controller
             'address' => ['required_if:submission_action,submit', 'nullable', 'string', 'max:500'],
             'city' => ['nullable', 'string', 'max:100'],
             'state' => ['nullable', 'string', 'max:100'],
-            'postal_code' => ['nullable', 'string', 'max:20'],
+            'postal_code' => ['nullable', 'string', 'max:20', 'regex:/^[0-9]+$/'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'supporting_media' => ['nullable', 'array'],

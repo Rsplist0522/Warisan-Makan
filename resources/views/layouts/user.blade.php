@@ -613,9 +613,9 @@
             </header>
 
             <main class="page-shell">
-                @if (session('success'))
+                @if (session('success') || session('status'))
                     <div class="status-banner success" role="status">
-                        {{ session('success') }}
+                        {{ session('success') ?? session('status') }}
                     </div>
                 @endif
 

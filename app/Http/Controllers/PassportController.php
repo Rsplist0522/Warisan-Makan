@@ -27,7 +27,14 @@ class PassportController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        $passportData = $this->buildPassportSummary($user);
+        $userLatitude = $this->validCoordinate($request->query('user_latitude'), -90, 90);
+        $userLongitude = $this->validCoordinate($request->query('user_longitude'), -180, 180);
+        $passportData = $this->buildPassportSummary(
+            $user,
+            trim((string) $request->query('shop_search', '')),
+            $userLatitude,
+            $userLongitude
+        );
 
         return view('foodPassport.index', [
             'shops' => $passportData['shops'],
@@ -101,10 +108,10 @@ class PassportController extends Controller
         ]);
     }
 
-    private function buildPassportSummary(?User $user): array
+    private function buildPassportSummary(?User $user, string $shopSearch = '', ?float $userLatitude = null, ?float $userLongitude = null): array
     {
         $shopsPage = LengthAwarePaginator::resolveCurrentPage('shops_page');
-        $availableShops = $this->getActiveShops($shopsPage);
+        $availableShops = $this->getActiveShops($shopsPage, $shopSearch, $userLatitude, $userLongitude);
         $totalShops = $availableShops->total();
         $shopsForView = $availableShops->items();
 
@@ -230,7 +237,7 @@ class PassportController extends Controller
         });
     }
 
-    private function getActiveShops(int $page): LengthAwarePaginator
+    private function getActiveShops(int $page, string $shopSearch = '', ?float $userLatitude = null, ?float $userLongitude = null): LengthAwarePaginator
     {
         $shops = HeritageShop::query()
             ->where(function ($query) {
@@ -240,8 +247,22 @@ class PassportController extends Controller
             ->whereNotNull('latitude')
             ->whereNotNull('longitude')
             ->with('images')
-            ->orderBy('shop_name')
-            ->paginate(3, ['id', 'shop_name', 'founder_name', 'latitude', 'longitude'], 'shops_page', $page);
+            ->when($shopSearch !== '', function ($query) use ($shopSearch) {
+                $query->where(function ($searchQuery) use ($shopSearch) {
+                    $searchQuery->where('shop_name', 'like', "%{$shopSearch}%")
+                        ->orWhere('founder_name', 'like', "%{$shopSearch}%");
+                });
+            })
+            ->when($userLatitude !== null && $userLongitude !== null, function ($query) use ($userLatitude, $userLongitude) {
+                $query->selectRaw(
+                    '*, (6371 * 2 * ASIN(SQRT(POWER(SIN(RADIANS(latitude - ?) / 2), 2) + COS(RADIANS(?)) * COS(RADIANS(latitude)) * POWER(SIN(RADIANS(longitude - ?) / 2), 2)))) as distance_in_kilometres',
+                    [$userLatitude, $userLatitude, $userLongitude]
+                )->orderBy('distance_in_kilometres');
+            }, function ($query) {
+                $query->orderBy('shop_name');
+            })
+            ->paginate(3, ['*'], 'shops_page', $page)
+            ->withQueryString();
 
         $shops->setCollection($shops->getCollection()->map(function (HeritageShop $shop): array {
             return [
@@ -250,13 +271,26 @@ class PassportController extends Controller
                 'founder' => $shop->founder_name ?? 'Local founder',
                 'lat' => $shop->latitude,
                 'lng' => $shop->longitude,
-                'distance' => 'Nearby',
+                'distance' => isset($shop->distance_in_kilometres)
+                    ? number_format((float) $shop->distance_in_kilometres, 1) . ' km away'
+                    : 'Nearby',
                 'status' => 'Participating',
                 'image' => $this->shopImage($shop),
             ];
         })->values());
 
         return $shops;
+    }
+
+    private function validCoordinate(mixed $coordinate, float $minimum, float $maximum): ?float
+    {
+        if (!is_numeric($coordinate)) {
+            return null;
+        }
+
+        $value = (float) $coordinate;
+
+        return $value >= $minimum && $value <= $maximum ? $value : null;
     }
 
     private function visitedLocationsForUser(User $user, int $page): LengthAwarePaginator

@@ -6,6 +6,7 @@
 @section('user-topbar-actions')
 <a class="user-topbar-link" href="{{ route('heritage-shops.index') }}">{{ __('Heritage Shops') }}</a>
 <a class="user-topbar-link" href="{{ route('foodtrails.index') }}">{{ __('Food Trail') }}</a>
+<a class="user-topbar-link" href="{{ route('blind-box.favourites') }}">&#9825; {{ __('My Favourites') }}</a>
 @endsection
 
 @push('head')
@@ -479,6 +480,7 @@
                 <p class="lead">{{ __('Discover forgotten food stories, celebrate traditional vendors, and let every visit feel like a cultural expedition.') }}</p>
                 <div class="button-row">
                     <a class="btn btn-primary" href="#blind-box">✨ {{ __('Try Blind Box') }}</a>
+                    <a class="btn btn-secondary" href="{{ route('blind-box.favourites') }}" title="{{ __('View Favourites') }}" aria-label="{{ __('View Favourites') }}">&#9825; {{ __('View Favourites') }}</a>
                     <a class="btn btn-secondary" href="/">{{ __('Go to main page') }}</a>
                 </div>
             </div>
@@ -653,6 +655,7 @@
         initialDraw: @json($currentDraw),
         alreadyDrew: @json($alreadyDrew),
         periodKey: @json($periodInfo['key']),
+        favouritesStoreUrl: '{{ route('blind-box.favourites.store') }}',
     };
 
     const BLIND_BOX_TEXT = {
@@ -682,6 +685,10 @@
         heritage: @json(__('Heritage')),
         discoverHeritageShop: @json(__('Discover a heritage shop today!')),
         tryBlindBoxDiscover: @json(__('Try the Blind Box to discover more!')),
+        viewFavourites: @json(__('View Favourites')),
+        saveFavourite: @json(__('Save to favourites')),
+        savedFavourite: @json(__('Saved to favourites')),
+        removeFavourite: @json(__('Remove from favourites')),
     };
 
     const BLIND_BOX_PERIODS = {
@@ -901,9 +908,17 @@ const mysteryShops = @json(array_map(function($shop) {
                             <span class="meta-chip">🍱 ${shop.category || BLIND_BOX_TEXT.heritage}</span>
                             <span class="meta-chip">📍 ${shop.state || BLIND_BOX_TEXT.malaysia}</span>
                         </div>
-                        <div class="cta-row" style="display: flex; gap: 15px;">
+                        <div class="cta-row" style="display: flex; gap: 15px; flex-wrap: wrap;">
                             <a class="cta-btn cta-primary" style="padding: 16px 30px; font-size: 1.1rem; border-radius: 15px; background: var(--red-dark); color: white; font-weight: 700;" href="${BLIND_BOX_CONFIG.foodtrailUrl}">${BLIND_BOX_TEXT.exploreTrails}</a>
                             <a class="cta-btn cta-outline" style="padding: 16px 30px; font-size: 1.1rem; border-radius: 15px; border: 2px solid var(--red-dark); color: var(--red-dark); font-weight: 700;" href="${detailUrl}">${BLIND_BOX_TEXT.viewDetails}</a>
+                        </div>
+                        ${shop.draw_id ? `
+                            <div class="favourite-action-row" style="margin-top: 14px;">
+                                <button type="button" class="cta-btn cta-outline favourite-toggle" data-draw-id="${shop.draw_id}" data-favourited="${shop.is_favourited ? '1' : '0'}" style="padding: 12px 20px; font-size: 1rem; border-radius: 15px; border: 2px solid var(--red-dark); color: var(--red-dark); font-weight: 700;">
+                                    ${shop.is_favourited ? '&#9829;' : '&#9825;'} <span class="favourite-label">${shop.is_favourited ? BLIND_BOX_TEXT.savedFavourite : BLIND_BOX_TEXT.saveFavourite}</span>
+                                </button>
+                            </div>
+                        ` : ''}
                         </div>
                     </div>
                 </div>
@@ -911,6 +926,26 @@ const mysteryShops = @json(array_map(function($shop) {
                     ${BLIND_BOX_TEXT.discoveredGem.replace(':period', `<strong>${periodKey}</strong>`)}
                 </p>
             `;
+
+            const favouriteButton = result.querySelector('.favourite-toggle');
+            favouriteButton?.addEventListener('click', async () => {
+                favouriteButton.disabled = true;
+                const response = await fetch(BLIND_BOX_CONFIG.favouritesStoreUrl, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': BLIND_BOX_CONFIG.csrfToken,
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ draw_id: favouriteButton.dataset.drawId }),
+                });
+                const data = await response.json();
+                favouriteButton.dataset.favourited = data.is_favourited ? '1' : '0';
+                favouriteButton.innerHTML = data.is_favourited
+                    ? `&#9829; <span class="favourite-label">${BLIND_BOX_TEXT.removeFavourite}</span>`
+                    : `&#9825; <span class="favourite-label">${BLIND_BOX_TEXT.saveFavourite}</span>`;
+                favouriteButton.disabled = false;
+            });
         }
 
         if (BLIND_BOX_CONFIG.alreadyDrew && BLIND_BOX_CONFIG.initialDraw) {

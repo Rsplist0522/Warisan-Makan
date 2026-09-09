@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\BlindBoxDraw;
+use App\Models\BlindBoxFavourite;
 use App\Models\HeritageShop;
 use App\Services\BlindBoxCatalogManager;
 use App\Services\HeritageShopCatalog;
@@ -95,6 +96,14 @@ class BlindBoxController extends Controller
         $existingDraw = $this->findExistingDraw($request, $period);
         $alreadyDrew = $existingDraw !== null;
         $currentDraw = $existingDraw?->toDrawArray();
+
+        if ($currentDraw !== null) {
+            $currentDraw['is_favourited'] = BlindBoxFavourite::query()
+                ->where('user_id', $request->user()->id)
+                ->where('shop_name', $existingDraw->shop_name)
+                ->whereNull('removed_at')
+                ->exists();
+        }
 
         // Historical draws may contain the old catalogue-position ID instead
         // of the HeritageShop ID. Confirm that both ID and name refer to the
@@ -214,6 +223,72 @@ class BlindBoxController extends Controller
             'period' => $period,
             'period_info' => $this->periodInfo($period),
         ]);
+    }
+
+    public function favourites(Request $request)
+    {
+        $favourites = BlindBoxFavourite::query()
+            ->where('user_id', $request->user()->id)
+            ->whereNull('removed_at')
+            ->latest()
+            ->get();
+
+        return view('blind-box.favourites', compact('favourites'));
+    }
+
+    public function saveFavourite(Request $request)
+    {
+        $validated = $request->validate([
+            'draw_id' => ['required', 'integer'],
+        ]);
+
+        $draw = BlindBoxDraw::query()
+            ->whereKey($validated['draw_id'])
+            ->where('user_id', $request->user()->id)
+            ->firstOrFail();
+
+        $attributes = [
+            'user_id' => $request->user()->id,
+            'shop_name' => $draw->shop_name,
+        ];
+        $favourite = BlindBoxFavourite::firstOrNew($attributes);
+
+        if ($favourite->exists && $favourite->removed_at === null) {
+            $favourite->removed_at = now();
+            $favourite->save();
+
+            return response()->json([
+                'message' => __('Removed from favourites.'),
+                'is_favourited' => false,
+            ]);
+        }
+
+        $favourite->fill([
+            'blind_box_draw_id' => $draw->id,
+            'shop_source_id' => $draw->shop_source_id,
+            'category' => $draw->category,
+            'state' => $draw->state,
+            'year' => $draw->year,
+            'description' => $draw->description,
+            'image' => $draw->image,
+            'address' => $draw->address,
+            'removed_at' => null,
+        ]);
+        $favourite->save();
+
+        return response()->json([
+            'message' => __('Saved to favourites.'),
+            'is_favourited' => true,
+        ]);
+    }
+
+    public function removeFavourite(Request $request, BlindBoxFavourite $favourite)
+    {
+        abort_unless($favourite->user_id === $request->user()->id, 403);
+
+        $favourite->update(['removed_at' => now()]);
+
+        return redirect()->route('blind-box.favourites');
     }
 
     /**

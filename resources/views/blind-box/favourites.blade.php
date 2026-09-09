@@ -616,7 +616,7 @@
                     type="text" 
                     id="favSearchInput" 
                     class="fav-search-input" 
-                    placeholder="{{ __('       Search by shop name, category, or state...') }}" 
+                    placeholder="{{ __('Search by shop name, category, or state...') }}"
                     autocomplete="off"
                 >
             </div>
@@ -798,4 +798,3 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 @endpush
-

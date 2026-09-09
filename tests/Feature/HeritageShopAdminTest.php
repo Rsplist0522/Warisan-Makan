@@ -237,7 +237,8 @@ class HeritageShopAdminTest extends TestCase
             'publish_status' => HeritageShop::STATUS_PUBLISHED,
         ]);
 
-        $this->get(route('heritage-shops.show', ['id' => $shop->id]))
+        $this->actingAs(User::factory()->create())
+            ->get(route('heritage-shops.show', ['id' => $shop->id]))
             ->assertOk()
             ->assertSee('Nasi Lemak')
             ->assertSee('Ayam Goreng')
@@ -370,7 +371,8 @@ class HeritageShopAdminTest extends TestCase
             'publish_status' => HeritageShop::STATUS_PUBLISHED,
         ]);
 
-        $this->get(route('heritage-shops.show', ['id' => $shop->id]))
+        $this->actingAs(User::factory()->create())
+            ->get(route('heritage-shops.show', ['id' => $shop->id]))
             ->assertOk()
             ->assertSee('Operating information')
             ->assertSee('Sunday', false)

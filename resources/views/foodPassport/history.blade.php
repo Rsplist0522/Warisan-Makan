@@ -48,7 +48,7 @@
 <div class="passport-page">
     <div class="passport-page-header">
         <div class="passport-title-panel">
-            <h1>{{ __('Review Passport History') }}</h1>
+            <h1>{{ __('Passport History') }}</h1>
             <p>{{ __('Search, filter, and revisit the heritage shops you have checked in to.') }}</p>
         </div>
         <div class="passport-actions-panel">

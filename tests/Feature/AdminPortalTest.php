@@ -2,8 +2,11 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
 use App\Models\Badge;
+use App\Models\CorrectionRequest;
+use App\Models\HeritageShop;
+use App\Models\HeritageShopContribution;
+use App\Models\User;
 use App\Models\UserBadge;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -127,10 +130,75 @@ class AdminPortalTest extends TestCase
             ->assertSee('Users & Roles')
             ->assertSee(route('admin.users.index'), false)
             ->assertSee(route('admin.dashboard'), false)
-            ->assertSee('0 in review')
+            ->assertSee('0 pending submissions')
+            ->assertSee('0 pending correction requests')
             ->assertSee('0 trails')
             ->assertSee('active shops')
             ->assertSee('inactive shops');
+    }
+
+    public function test_admin_dashboard_community_contribution_card_shows_actionable_queue_counts_with_one_action(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $user = User::factory()->create();
+        $shop = HeritageShop::create([
+            'shop_name' => 'Capital Cafe',
+            'publish_status' => HeritageShop::STATUS_PUBLISHED,
+        ]);
+
+        HeritageShopContribution::create([
+            'user_id' => $user->id,
+            'contribution_title' => 'Pending shop',
+            'shop_name' => 'Pending shop',
+            'status' => HeritageShopContribution::STATUS_PENDING_REVIEW,
+            'submitted_at' => now(),
+        ]);
+        HeritageShopContribution::create([
+            'user_id' => $user->id,
+            'contribution_title' => 'Under review shop',
+            'shop_name' => 'Under review shop',
+            'status' => HeritageShopContribution::STATUS_UNDER_REVIEW,
+            'submitted_at' => now(),
+        ]);
+        HeritageShopContribution::create([
+            'user_id' => $user->id,
+            'contribution_title' => 'Revision requested shop',
+            'shop_name' => 'Revision requested shop',
+            'status' => HeritageShopContribution::STATUS_REVISION_REQUIRED,
+            'submitted_at' => now(),
+        ]);
+
+        foreach ([
+            CorrectionRequest::STATUS_PENDING,
+            CorrectionRequest::STATUS_UNDER_REVIEW,
+            CorrectionRequest::STATUS_NEEDS_INFORMATION,
+            CorrectionRequest::STATUS_APPROVED,
+            CorrectionRequest::STATUS_REJECTED,
+        ] as $status) {
+            CorrectionRequest::create([
+                'user_id' => $user->id,
+                'heritage_shop_id' => $shop->id,
+                'field_name' => 'contact_number',
+                'current_value' => '012-3456789',
+                'suggested_value' => '012-9876543',
+                'reason' => 'Updated number',
+                'status' => $status,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        $response = $this->actingAs($admin)
+            ->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertSee('2 pending submissions')
+            ->assertSee('3 pending correction requests')
+            ->assertSee('Manage Contributions')
+            ->assertSee(route('admin.community-contributions.submissions'), false)
+            ->assertDontSee('Review Submissions')
+            ->assertDontSee('Review Corrections');
+
+        $this->assertSame(1, substr_count($response->getContent(), 'Manage Contributions'));
     }
 
     public function test_admin_can_activate_and_deactivate_regular_users(): void

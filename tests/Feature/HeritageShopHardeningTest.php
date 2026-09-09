@@ -35,10 +35,20 @@ class HeritageShopHardeningTest extends TestCase
         $this->assertTrue(Storage::disk('public')->exists($image->path));
 
         auth()->guard()->logout();
+        $this->get(route('guest.continue'))
+            ->assertRedirect(route('user.dashboard'));
         $this->get(route('heritage-shops.images.show', [
             'heritageShop' => $shop->id,
             'image' => $image->id,
         ]))
+            ->assertOk()
+            ->assertHeader('content-type', 'image/jpeg');
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('heritage-shops.images.show', [
+                'heritageShop' => $shop->id,
+                'image' => $image->id,
+            ]))
             ->assertOk()
             ->assertHeader('content-type', 'image/jpeg');
     }
@@ -72,7 +82,13 @@ class HeritageShopHardeningTest extends TestCase
         $this->get(route('heritage-shops.images.show', [
             'heritageShop' => $shop->id,
             'image' => $image->id,
-        ]))->assertOk();
+        ]))->assertRedirect(route('login'));
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('heritage-shops.images.show', [
+                'heritageShop' => $shop->id,
+                'image' => $image->id,
+            ]))->assertOk();
     }
 
     public function test_guest_and_non_admin_cannot_use_the_heritage_shop_admin_area(): void

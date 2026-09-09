@@ -613,9 +613,9 @@
             </header>
 
             <main class="page-shell">
-                @if (session('success'))
+                @if (session('success') || session('status'))
                     <div class="status-banner success" role="status">
-                        {{ session('success') }}
+                        {{ session('success') ?? session('status') }}
                     </div>
                 @endif
 
@@ -634,6 +634,10 @@
             </main>
         </section>
     </div>
+
+    @include('partials.login-required-modal')
+    @include('partials.session-expired-modal', ['sessionExpiredLoginUrl' => route('login')])
+    @include('partials.session-activity-heartbeat')
 
     <script>
     (() => {

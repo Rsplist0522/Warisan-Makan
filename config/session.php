@@ -36,7 +36,7 @@ return [
 
     'user_inactivity_timeout' => 30,
 
-    'admin_inactivity_timeout' => 60,
+    'admin_inactivity_timeout' => 70,
 
     'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', false),
 

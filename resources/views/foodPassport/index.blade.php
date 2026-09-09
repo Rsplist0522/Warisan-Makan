@@ -1340,7 +1340,7 @@
                 <button type="button" class="share-download-btn" data-share="download-story">{{ __('Download story card') }}</button>
             </div>
             <p id="shareStatus" class="share-status" aria-live="polite"></p>
-            <p class="share-note">{{ __('Instagram and Facebook may ask you to log in and upload the downloaded card. WhatsApp can attach the card automatically on supported devices.') }}</p>
+            <p class="share-note">{{ __('On supported phones, choose Instagram, Facebook, or WhatsApp from the system share sheet. Desktop browsers download the card for manual upload.') }}</p>
             <button type="button" class="btn primary badge-modal-continue" data-close-badge-modal>{{ __('Continue exploring') }}</button>
         </div>
     </div>
@@ -1809,25 +1809,53 @@
                 }
 
                 if (channel === 'instagram') {
-                    const instagramWindow = window.open('', '_blank');
-                    await copyShareText();
-                    await downloadAchievementCard('story');
-                    if (instagramWindow) {
-                        instagramWindow.location.href = 'https://www.instagram.com/';
+                    shareStatus.textContent = @json(__('Choose Instagram from your phone share sheet.'));
+                    const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+                    const instagramWindow = isMobileDevice ? null : window.open('', '_blank');
+
+                    if (isMobileDevice) {
+                        try {
+                            if (await shareAchievementFile('story')) return;
+                        } catch (error) {
+                            if (error && error.name === 'AbortError') {
+                                shareStatus.textContent = @json(__('Sharing cancelled.'));
+                                return;
+                            }
+                            console.warn('Native Instagram sharing was unavailable:', error);
+                        }
                     }
-                    shareStatus.textContent = @json(__('Instagram opened. The story card was downloaded and the caption was copied—upload the PNG after logging in.'));
+
+                    try { await copyShareText(); } catch (error) { console.warn('Caption copy failed:', error); }
+                    try { await downloadAchievementCard('story'); } catch (error) { console.warn('Story card download failed:', error); }
+                    if (instagramWindow) instagramWindow.location.href = 'https://www.instagram.com/';
+                    else window.location.assign('https://www.instagram.com/');
+                    shareStatus.textContent = @json(__('Instagram opened. Upload the downloaded story card if native sharing was unavailable.'));
                     return;
                 }
 
                 if (channel === 'facebook') {
-                    const facebookWindow = window.open('', '_blank');
-                    await copyShareText();
-                    await downloadAchievementCard('square');
-                    const url = 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(window.location.href) + '&quote=' + encodeURIComponent(badgeShareText);
-                    if (facebookWindow) {
-                        facebookWindow.location.href = url;
+                    shareStatus.textContent = @json(__('Choose Facebook from your phone share sheet.'));
+                    const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+                    const facebookWindow = isMobileDevice ? null : window.open('', '_blank');
+
+                    if (isMobileDevice) {
+                        try {
+                            if (await shareAchievementFile('square')) return;
+                        } catch (error) {
+                            if (error && error.name === 'AbortError') {
+                                shareStatus.textContent = @json(__('Sharing cancelled.'));
+                                return;
+                            }
+                            console.warn('Native Facebook sharing was unavailable:', error);
+                        }
                     }
-                    shareStatus.textContent = @json(__('Facebook opened. The square card was downloaded and the caption was copied—attach the PNG if needed.'));
+
+                    const facebookUrl = 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(window.location.href) + '&quote=' + encodeURIComponent(badgeShareText);
+                    try { await copyShareText(); } catch (error) { console.warn('Caption copy failed:', error); }
+                    try { await downloadAchievementCard('square'); } catch (error) { console.warn('Post card download failed:', error); }
+                    if (facebookWindow) facebookWindow.location.href = facebookUrl;
+                    else window.location.assign(facebookUrl);
+                    shareStatus.textContent = @json(__('Facebook opened. Upload the downloaded post card if native sharing was unavailable.'));
                     return;
                 }
 

@@ -56,7 +56,7 @@
     <section class="passport-page-panel"><h2>{{ __('Your progress') }}</h2><div class="statistics-grid"><div class="statistics-card"><strong>{{ $stats['visited'] ?? 0 }}</strong><span>{{ __('Visited shops') }}</span></div><div class="statistics-card"><strong>{{ $stats['completion'] ?? 0 }}%</strong><span>{{ __('Completion') }}</span></div><div class="statistics-card"><strong>{{ $stats['stamps'] ?? 0 }}</strong><span>{{ __('Stamps') }}</span></div><div class="statistics-card"><strong>{{ $stats['badges'] ?? 0 }}</strong><span>{{ __('Badges unlocked') }}</span></div></div><div class="progress-track"><div style="width:{{ min(100,max(0,(int)($stats['completion'] ?? 0))) }}%;"></div></div></section>
     <section class="passport-page-panel"><h2>{{ __('Passport achievements') }}</h2><div class="badge-grid">@foreach ($badges as $badge)<article class="badge-card {{ $badge['earned'] ? 'badge-card-shareable' : '' }}" @if($badge['earned']) role="button" tabindex="0" data-badge-share data-badge-name="{{ $badge['name'] }}" data-badge-description="{{ $badge['description'] }}" data-badge-icon="{{ $badge['icon'] }}" data-badge-progress="{{ $badge['progress'] }}" @endif><div class="badge-crest">{{ $badge['icon'] }}</div><h3>{{ __($badge['name']) }}</h3><p>{{ __($badge['description']) }}</p><p class="badge-status" style="color:{{ $badge['earned'] ? '#3E6C4F' : '#675B54' }}">{{ $badge['earned'] ? __('Unlocked') : __('Need :count visits',['count'=>(int)$badge['threshold']]) }}</p><div class="badge-share-slot">@if($badge['earned'])<button type="button" class="badge-share-button" data-open-badge-share>{{ __('Share') }}</button>@endif</div></article>@endforeach</div></section>
 </div>
-<div id="badgeModal" class="badge-modal" hidden><div class="badge-modal-backdrop" data-close-badge-modal></div><div class="badge-modal-card"><button type="button" class="badge-modal-close" data-close-badge-modal>&times;</button><h2>{{ __('Achievement unlocked') }}</h2><p>{{ __('Save this moment and share your heritage-food journey.') }}</p><div class="achievement-card-preview"><div>{{ __('Warisan Makan · Heritage Passport') }}</div><div id="badgeModalIcon" class="achievement-card-icon">★</div><h3 id="badgeModalBadgeName" class="achievement-card-title">{{ __('Your new badge') }}</h3><p id="badgeModalBadgeDescription">{{ __('The badge you unlock will appear here.') }}</p></div><p>{{ __('Share your achievement') }}</p><div class="share-actions"><button type="button" class="share-btn" data-share="instagram">{{ __('Prepare Instagram Story') }}</button><button type="button" class="share-btn" data-share="facebook">{{ __('Prepare Facebook Post') }}</button><button type="button" class="share-btn" data-share="whatsapp">{{ __('Share to WhatsApp') }}</button><button type="button" class="share-btn" data-share="copy">{{ __('Copy caption') }}</button></div><div class="share-download-actions"><button type="button" class="share-download-btn" data-share="download-square">{{ __('Download square card') }}</button><button type="button" class="share-download-btn" data-share="download-story">{{ __('Download story card') }}</button></div><p id="shareStatus"></p><button type="button" class="badge-modal-continue" data-close-badge-modal>{{ __('Continue exploring') }}</button></div></div>
+<div id="badgeModal" class="badge-modal" hidden><div class="badge-modal-backdrop" data-close-badge-modal></div><div class="badge-modal-card"><button type="button" class="badge-modal-close" data-close-badge-modal>&times;</button><h2>{{ __('Achievement unlocked') }}</h2><p>{{ __('Save this moment and share your heritage-food journey.') }}</p><div class="achievement-card-preview"><div>{{ __('Warisan Makan · Heritage Passport') }}</div><div id="badgeModalIcon" class="achievement-card-icon">★</div><h3 id="badgeModalBadgeName" class="achievement-card-title">{{ __('Your new badge') }}</h3><p id="badgeModalBadgeDescription">{{ __('The badge you unlock will appear here.') }}</p></div><p>{{ __('Share your achievement') }}</p><div class="share-actions"><button type="button" class="share-btn" data-share="instagram">{{ __('Prepare Instagram Story') }}</button><button type="button" class="share-btn" data-share="facebook">{{ __('Prepare Facebook Post') }}</button><button type="button" class="share-btn" data-share="whatsapp">{{ __('Share to WhatsApp') }}</button><button type="button" class="share-btn" data-share="copy">{{ __('Copy caption') }}</button></div><div class="share-download-actions"><button type="button" class="share-download-btn" data-share="download-square">{{ __('Download square card') }}</button><button type="button" class="share-download-btn" data-share="download-story">{{ __('Download story card') }}</button></div><p class="share-note">{{ __('On supported phones, choose Instagram, Facebook, or WhatsApp from the system share sheet. Desktop browsers download the card for manual upload.') }}</p><p id="shareStatus"></p><button type="button" class="badge-modal-continue" data-close-badge-modal>{{ __('Continue exploring') }}</button></div></div>
 @endsection
 
 @push('scripts')
@@ -208,17 +208,51 @@
             if (channel === 'download-square') return download('square');
             if (channel === 'download-story') return download('story');
             if (channel === 'instagram') {
-                const instagramWindow = window.open('', '_blank');
-                await copy();
-                await download('story');
+                status.textContent = @json(__('Choose Instagram from your phone share sheet.'));
+                const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+                const instagramWindow = isMobileDevice ? null : window.open('', '_blank');
+
+                if (isMobileDevice) {
+                    try {
+                        if (await shareAchievementFile('story')) return;
+                    } catch (error) {
+                        if (error && error.name === 'AbortError') {
+                            status.textContent = @json(__('Sharing cancelled.'));
+                            return;
+                        }
+                        console.warn('Native Instagram sharing was unavailable:', error);
+                    }
+                }
+
+                try { await copy(); } catch (error) { console.warn('Caption copy failed:', error); }
+                try { await download('story'); } catch (error) { console.warn('Story card download failed:', error); }
                 if (instagramWindow) instagramWindow.location.href = 'https://www.instagram.com/';
+                else window.location.assign('https://www.instagram.com/');
+                status.textContent = @json(__('Instagram opened. Upload the downloaded story card if native sharing was unavailable.'));
                 return;
             }
             if (channel === 'facebook') {
-                const facebookWindow = window.open('', '_blank');
-                await copy();
-                await download('square');
-                if (facebookWindow) facebookWindow.location.href = 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(location.href) + '&quote=' + encodeURIComponent(shareText);
+                status.textContent = @json(__('Choose Facebook from your phone share sheet.'));
+                const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+                const facebookWindow = isMobileDevice ? null : window.open('', '_blank');
+                if (isMobileDevice) {
+                    try {
+                        if (await shareAchievementFile('square')) return;
+                    } catch (error) {
+                        if (error && error.name === 'AbortError') {
+                            status.textContent = @json(__('Sharing cancelled.'));
+                            return;
+                        }
+                        console.warn('Native Facebook sharing was unavailable:', error);
+                    }
+                }
+
+                const facebookUrl = 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(location.href) + '&quote=' + encodeURIComponent(shareText);
+                try { await copy(); } catch (error) { console.warn('Caption copy failed:', error); }
+                try { await download('square'); } catch (error) { console.warn('Post card download failed:', error); }
+                if (facebookWindow) facebookWindow.location.href = facebookUrl;
+                else window.location.assign(facebookUrl);
+                status.textContent = @json(__('Facebook opened. Upload the downloaded post card if native sharing was unavailable.'));
                 return;
             }
             if (channel === 'whatsapp') {

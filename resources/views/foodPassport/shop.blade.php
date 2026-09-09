@@ -107,7 +107,7 @@
         <button type="button" class="share-download-btn" data-share="download-story">Download story card</button>
       </div>
       <p id="shareStatus" class="share-status" aria-live="polite"></p>
-      <p class="share-note">Instagram and Facebook may ask you to log in and upload the downloaded card. WhatsApp can attach the card automatically on supported devices.</p>
+      <p class="share-note">On supported phones, choose Instagram, Facebook, or WhatsApp from the system share sheet. Desktop browsers download the card for manual upload.</p>
       <button type="button" class="badge-modal-continue" data-close-badge-modal>Continue exploring</button>
     </div>
   </div>
@@ -365,18 +365,52 @@
         return;
       }
       if(channel === 'instagram'){
-        await copyShareText();
-        await downloadAchievementCard('story');
-        window.location.assign('https://www.instagram.com/');
-        shareStatus.textContent = 'Instagram opened. The story card was downloaded and the caption was copied—upload the PNG after logging in.';
+        shareStatus.textContent = 'Choose Instagram from your phone share sheet.';
+        const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        const instagramWindow = isMobileDevice ? null : window.open('', '_blank');
+
+        if(isMobileDevice){
+          try{
+            if(await shareAchievementFile('story')) return;
+          }catch(error){
+            if(error && error.name === 'AbortError'){
+              shareStatus.textContent = 'Sharing cancelled.';
+              return;
+            }
+            console.warn('Native Instagram sharing was unavailable:', error);
+          }
+        }
+
+        try{ await copyShareText(); }catch(error){ console.warn('Caption copy failed:', error); }
+        try{ await downloadAchievementCard('story'); }catch(error){ console.warn('Story card download failed:', error); }
+        if(instagramWindow) instagramWindow.location.href = 'https://www.instagram.com/';
+        else window.location.assign('https://www.instagram.com/');
+        shareStatus.textContent = 'Instagram opened. Upload the downloaded story card if native sharing was unavailable.';
         return;
       }
       if(channel === 'facebook'){
-        await copyShareText();
-        await downloadAchievementCard('square');
-        const url = 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(window.location.href) + '&quote=' + encodeURIComponent(badgeShareText);
-        window.location.assign(url);
-        shareStatus.textContent = 'Facebook opened. The square card was downloaded and the caption was copied—attach the PNG if needed.';
+        shareStatus.textContent = 'Choose Facebook from your phone share sheet.';
+        const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        const facebookWindow = isMobileDevice ? null : window.open('', '_blank');
+
+        if(isMobileDevice){
+          try{
+            if(await shareAchievementFile('square')) return;
+          }catch(error){
+            if(error && error.name === 'AbortError'){
+              shareStatus.textContent = 'Sharing cancelled.';
+              return;
+            }
+            console.warn('Native Facebook sharing was unavailable:', error);
+          }
+        }
+
+        const facebookUrl = 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(window.location.href) + '&quote=' + encodeURIComponent(badgeShareText);
+        try{ await copyShareText(); }catch(error){ console.warn('Caption copy failed:', error); }
+        try{ await downloadAchievementCard('square'); }catch(error){ console.warn('Post card download failed:', error); }
+        if(facebookWindow) facebookWindow.location.href = facebookUrl;
+        else window.location.assign(facebookUrl);
+        shareStatus.textContent = 'Facebook opened. Upload the downloaded post card if native sharing was unavailable.';
         return;
       }
       if(channel === 'whatsapp'){

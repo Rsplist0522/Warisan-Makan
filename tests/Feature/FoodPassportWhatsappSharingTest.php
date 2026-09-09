@@ -11,7 +11,7 @@ class FoodPassportWhatsappSharingTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_food_passport_badge_pages_offer_native_mobile_sharing_with_whatsapp_fallbacks(): void
+    public function test_food_passport_badge_pages_offer_native_mobile_social_sharing_with_web_fallbacks(): void
     {
         $user = User::factory()->create(['role' => 'user']);
         $shop = HeritageShop::query()->create([
@@ -30,6 +30,10 @@ class FoodPassportWhatsappSharingTest extends TestCase
                 ->assertSee('Share to WhatsApp')
                 ->assertSee('navigator.share', false)
                 ->assertSee('navigator.canShare({ files: [file] })', false)
+                ->assertSee("shareAchievementFile('story')", false)
+                ->assertSee("shareAchievementFile('square')", false)
+                ->assertSee('https://www.instagram.com/', false)
+                ->assertSee('https://www.facebook.com/sharer/sharer.php', false)
                 ->assertSee('https://wa.me/?text=', false)
                 ->assertSee('https://web.whatsapp.com/send?text=', false);
         }

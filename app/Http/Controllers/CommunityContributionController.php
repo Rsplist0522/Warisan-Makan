@@ -19,7 +19,7 @@ use Throwable;
 
 class CommunityContributionController extends Controller
 {
-    private const MAX_SUPPORTING_MEDIA = 6;
+    private const MAX_SUPPORTING_MEDIA = 10;
 
     public function index(): View
     {
@@ -418,6 +418,8 @@ class CommunityContributionController extends Controller
 
     private function validateContribution(Request $request, ?HeritageShopContribution $contribution = null): array
     {
+        $maxSupportingImageKb = (int) config('heritage_shop.max_image_kb', 2048);
+
         $validated = $request->validate([
             'submission_action' => ['required', Rule::in(['draft', 'submit'])],
             'submission_token' => ['nullable', 'uuid'],
@@ -457,9 +459,12 @@ class CommunityContributionController extends Controller
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'supporting_media' => ['nullable', 'array'],
-            'supporting_media.*' => ['file', 'mimes:jpg,jpeg,png,webp,mp4,mov,avi', 'max:20480'],
+            'supporting_media.*' => ['file', 'mimes:jpg,jpeg,png,webp', 'max:'.$maxSupportingImageKb],
             'remove_media' => ['nullable', 'array'],
             'remove_media.*' => ['integer'],
+        ], [
+            'supporting_media.*.mimes' => __('Supporting media must be a JPG, JPEG, PNG, or WEBP image. Videos are not supported.'),
+            'supporting_media.*.max' => __('Each supporting image must be 2 MB or smaller.'),
         ]);
 
         $this->validateOperatingHoursPayload($validated['operating_hours'] ?? [], 'operating_hours');
@@ -509,7 +514,7 @@ class CommunityContributionController extends Controller
         $availableSlots = max(0, self::MAX_SUPPORTING_MEDIA - $retainedExistingCount);
         $message = $retainedExistingCount > 0
             ? trans_choice(
-                'You can upload up to :max supporting media files in total. You already have :count saved file selected to keep, so you can add up to :available more.|You can upload up to :max supporting media files in total. You already have :count saved files selected to keep, so you can add up to :available more.',
+                'You can upload up to :max supporting images in total. You already have :count saved image selected to keep, so you can add up to :available more.|You can upload up to :max supporting images in total. You already have :count saved images selected to keep, so you can add up to :available more.',
                 $retainedExistingCount,
                 [
                     'max' => self::MAX_SUPPORTING_MEDIA,
@@ -517,12 +522,12 @@ class CommunityContributionController extends Controller
                     'available' => $availableSlots,
                 ]
             )
-            : __('You can upload up to :max supporting media files in total.', [
+            : __('You can upload up to :max supporting images in total.', [
                 'max' => self::MAX_SUPPORTING_MEDIA,
             ]);
 
         throw ValidationException::withMessages([
-            'supporting_media' => $message.' '.__('Remove an existing file or select fewer new files.'),
+            'supporting_media' => $message.' '.__('Remove an existing image or select fewer new images.'),
         ]);
     }
 
@@ -843,7 +848,7 @@ class CommunityContributionController extends Controller
 
                 if ($objectKey === false) {
                     throw ValidationException::withMessages([
-                        'supporting_media' => 'The media file could not be uploaded. Please try again.',
+                        'supporting_media' => 'The supporting image could not be uploaded. Please try again.',
                     ]);
                 }
 
@@ -878,7 +883,7 @@ class CommunityContributionController extends Controller
 
     private function mediaType(UploadedFile $file): string
     {
-        return str_starts_with((string) $file->getMimeType(), 'video/') ? 'video' : 'image';
+        return 'image';
     }
 
     private function existingContributionForToken(Request $request, string $submissionToken): ?HeritageShopContribution

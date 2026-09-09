@@ -59,12 +59,31 @@ class CommunityContributionTest extends TestCase
         $response = $this->actingAs($user)->get(route('community-contribution.create'));
 
         $response->assertOk()
+            ->assertSee('accept="image/jpeg,image/png,image/webp"', false)
+            ->assertSee('data-max-supporting-media="10"', false)
             ->assertSee('let selectedSupportingFiles = [];', false)
             ->assertSee('const transfer = new DataTransfer();', false)
             ->assertSee('selectedSupportingFiles = [...selectedSupportingFiles, ...uniqueIncomingFiles];', false)
             ->assertSee('updateSupportingMediaCounts();', false)
             ->assertSee('id="media-slot-summary"', false)
             ->assertSee('id="media-slot-detail"', false);
+    }
+
+    public function test_supporting_media_form_text_describes_ten_image_two_mb_limit(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('community-contribution.create'))
+            ->assertOk()
+            ->assertSee('Supporting images')
+            ->assertSee('Add supporting images')
+            ->assertSee('Up to 10 images in total. JPG, JPEG, PNG, or WEBP; maximum 2 MB per image.')
+            ->assertSee(':count of :total images selected.', false)
+            ->assertSee('Maximum supporting images reached.')
+            ->assertDontSee('Add images or videos')
+            ->assertDontSee('MP4')
+            ->assertDontSee('20 MB');
     }
 
     public function test_food_item_optional_wording_is_not_shown_on_food_item_labels(): void
@@ -449,27 +468,27 @@ class CommunityContributionTest extends TestCase
         );
     }
 
-    public function test_new_contribution_can_upload_exactly_six_supporting_media_files(): void
+    public function test_new_contribution_can_upload_exactly_ten_supporting_images(): void
     {
         Storage::fake(config('filesystems.media_disk'));
         $user = User::factory()->create();
         $data = $this->validContributionData();
-        $data['supporting_media'] = $this->fakeSupportingMediaFiles(6);
+        $data['supporting_media'] = $this->fakeSupportingMediaFiles(10);
 
         $this->actingAs($user)
             ->post(route('community-contribution.store'), $data)
             ->assertSessionHasNoErrors();
 
         $contribution = HeritageShopContribution::firstOrFail();
-        $this->assertSame(6, $contribution->media()->count());
+        $this->assertSame(10, $contribution->media()->count());
     }
 
-    public function test_new_contribution_cannot_upload_more_than_six_supporting_media_files(): void
+    public function test_new_contribution_cannot_upload_more_than_ten_supporting_images(): void
     {
         Storage::fake(config('filesystems.media_disk'));
         $user = User::factory()->create();
         $data = $this->validContributionData();
-        $data['supporting_media'] = $this->fakeSupportingMediaFiles(7);
+        $data['supporting_media'] = $this->fakeSupportingMediaFiles(11);
 
         $this->actingAs($user)
             ->post(route('community-contribution.store'), $data)
@@ -479,7 +498,7 @@ class CommunityContributionTest extends TestCase
         $this->assertDatabaseCount('media', 0);
     }
 
-    public function test_edit_contribution_with_two_existing_media_can_add_four_new_files(): void
+    public function test_edit_contribution_with_two_existing_media_can_add_eight_new_images(): void
     {
         Storage::fake(config('filesystems.media_disk'));
         $user = User::factory()->create();
@@ -487,17 +506,17 @@ class CommunityContributionTest extends TestCase
         $data = [
             ...$this->validContributionData(),
             'submission_action' => 'draft',
-            'supporting_media' => $this->fakeSupportingMediaFiles(4, 'new'),
+            'supporting_media' => $this->fakeSupportingMediaFiles(8, 'new'),
         ];
 
         $this->actingAs($user)
             ->put(route('community-contribution.update', $draft), $data)
             ->assertSessionHasNoErrors();
 
-        $this->assertSame(6, $draft->fresh()->media()->count());
+        $this->assertSame(10, $draft->fresh()->media()->count());
     }
 
-    public function test_edit_contribution_with_two_existing_media_cannot_add_five_new_files(): void
+    public function test_edit_contribution_with_two_existing_media_cannot_add_nine_new_images(): void
     {
         Storage::fake(config('filesystems.media_disk'));
         $user = User::factory()->create();
@@ -506,7 +525,7 @@ class CommunityContributionTest extends TestCase
         $data = [
             ...$this->validContributionData(),
             'submission_action' => 'draft',
-            'supporting_media' => $this->fakeSupportingMediaFiles(5, 'new'),
+            'supporting_media' => $this->fakeSupportingMediaFiles(9, 'new'),
         ];
 
         $this->actingAs($user)
@@ -519,7 +538,7 @@ class CommunityContributionTest extends TestCase
         }
     }
 
-    public function test_edit_contribution_can_remove_one_existing_media_and_add_five_new_files(): void
+    public function test_edit_contribution_can_remove_one_existing_media_and_add_nine_new_images(): void
     {
         Storage::fake(config('filesystems.media_disk'));
         $user = User::factory()->create();
@@ -529,7 +548,7 @@ class CommunityContributionTest extends TestCase
             ...$this->validContributionData(),
             'submission_action' => 'draft',
             'remove_media' => [$mediaToRemove->id],
-            'supporting_media' => $this->fakeSupportingMediaFiles(5, 'new'),
+            'supporting_media' => $this->fakeSupportingMediaFiles(9, 'new'),
         ];
 
         $this->actingAs($user)
@@ -537,12 +556,12 @@ class CommunityContributionTest extends TestCase
             ->assertSessionHasNoErrors();
 
         $draft->refresh();
-        $this->assertSame(6, $draft->media()->count());
+        $this->assertSame(10, $draft->media()->count());
         $this->assertSoftDeleted('media', ['id' => $mediaToRemove->id]);
         $this->assertFalse(Storage::disk(config('filesystems.media_disk'))->exists($mediaToRemove->r2_object_key));
     }
 
-    public function test_edit_contribution_can_remove_both_existing_media_and_add_six_new_files(): void
+    public function test_edit_contribution_can_remove_both_existing_media_and_add_ten_new_images(): void
     {
         Storage::fake(config('filesystems.media_disk'));
         $user = User::factory()->create();
@@ -552,14 +571,14 @@ class CommunityContributionTest extends TestCase
             ...$this->validContributionData(),
             'submission_action' => 'draft',
             'remove_media' => $removeIds,
-            'supporting_media' => $this->fakeSupportingMediaFiles(6, 'new'),
+            'supporting_media' => $this->fakeSupportingMediaFiles(10, 'new'),
         ];
 
         $this->actingAs($user)
             ->put(route('community-contribution.update', $draft), $data)
             ->assertSessionHasNoErrors();
 
-        $this->assertSame(6, $draft->fresh()->media()->count());
+        $this->assertSame(10, $draft->fresh()->media()->count());
         foreach ($removeIds as $id) {
             $this->assertSoftDeleted('media', ['id' => $id]);
         }
@@ -601,7 +620,7 @@ class CommunityContributionTest extends TestCase
             ->put(route('community-contribution.update', $draft), [
                 ...$this->validContributionData(),
                 'submission_action' => 'draft',
-                'supporting_media' => $this->fakeSupportingMediaFiles(5, 'new'),
+                'supporting_media' => $this->fakeSupportingMediaFiles(9, 'new'),
             ])
             ->assertSessionHasErrors('supporting_media');
 
@@ -619,7 +638,7 @@ class CommunityContributionTest extends TestCase
             ->put(route('community-contribution.update', $draft), [
                 ...$this->validContributionData(),
                 'submission_action' => 'submit',
-                'supporting_media' => $this->fakeSupportingMediaFiles(5, 'new'),
+                'supporting_media' => $this->fakeSupportingMediaFiles(9, 'new'),
             ])
             ->assertSessionHasErrors('supporting_media');
 
@@ -640,7 +659,7 @@ class CommunityContributionTest extends TestCase
         $this->actingAs($user)
             ->put(route('community-contribution.update', $revision), [
                 ...$this->validContributionData(),
-                'supporting_media' => $this->fakeSupportingMediaFiles(5, 'new'),
+                'supporting_media' => $this->fakeSupportingMediaFiles(9, 'new'),
             ])
             ->assertSessionHasErrors('supporting_media');
 
@@ -666,7 +685,7 @@ class CommunityContributionTest extends TestCase
         $this->actingAs($user)
             ->put(route('community-contribution.update', $withdrawn->fresh()), [
                 ...$this->validContributionData(),
-                'supporting_media' => $this->fakeSupportingMediaFiles(5, 'new'),
+                'supporting_media' => $this->fakeSupportingMediaFiles(9, 'new'),
             ])
             ->assertSessionHasErrors('supporting_media');
 
@@ -3927,13 +3946,89 @@ class CommunityContributionTest extends TestCase
         $this->assertDatabaseCount('media', 0);
     }
 
+    public function test_supporting_media_accepts_allowed_image_types(): void
+    {
+        Storage::fake(config('filesystems.media_disk'));
+        $user = User::factory()->create();
+
+        foreach ([
+            'jpg' => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'png' => 'image/png',
+            'webp' => 'image/webp',
+        ] as $extension => $mimeType) {
+            $data = $this->validContributionData();
+            $data['supporting_media'] = [
+                UploadedFile::fake()->create("supporting-image.{$extension}", 64, $mimeType),
+            ];
+
+            $this->actingAs($user)
+                ->post(route('community-contribution.store'), $data)
+                ->assertSessionHasNoErrors();
+        }
+
+        $this->assertDatabaseCount('heritage_shop_contributions', 4);
+        $this->assertDatabaseCount('media', 4);
+    }
+
+    public function test_supporting_media_rejects_video_file_types(): void
+    {
+        Storage::fake(config('filesystems.media_disk'));
+        $user = User::factory()->create();
+
+        foreach ([
+            'mp4' => 'video/mp4',
+            'mov' => 'video/quicktime',
+            'avi' => 'video/x-msvideo',
+        ] as $extension => $mimeType) {
+            $data = $this->validContributionData();
+            $data['supporting_media'] = [
+                UploadedFile::fake()->create("supporting-video.{$extension}", 64, $mimeType),
+            ];
+
+            $this->actingAs($user)
+                ->post(route('community-contribution.store'), $data)
+                ->assertSessionHasErrors('supporting_media.0');
+        }
+
+        $this->assertDatabaseCount('heritage_shop_contributions', 0);
+        $this->assertDatabaseCount('media', 0);
+    }
+
+    public function test_supporting_media_accepts_two_mb_image_and_rejects_larger_image(): void
+    {
+        Storage::fake(config('filesystems.media_disk'));
+        $user = User::factory()->create();
+
+        $withinLimit = $this->validContributionData();
+        $withinLimit['supporting_media'] = [
+            UploadedFile::fake()->create('two-mb.jpg', 2048, 'image/jpeg'),
+        ];
+
+        $this->actingAs($user)
+            ->post(route('community-contribution.store'), $withinLimit)
+            ->assertSessionHasNoErrors();
+
+        $oversized = $this->validContributionData();
+        $oversized['supporting_media'] = [
+            UploadedFile::fake()->create('too-large.jpg', 2049, 'image/jpeg'),
+        ];
+
+        $this->actingAs($user)
+            ->post(route('community-contribution.store'), $oversized)
+            ->assertSessionHasErrors('supporting_media.0');
+
+        $this->assertDatabaseCount('heritage_shop_contributions', 1);
+        $this->assertDatabaseCount('media', 1);
+    }
+
     public function test_oversized_and_fake_extension_media_are_rejected_server_side(): void
     {
         Storage::fake(config('filesystems.media_disk'));
         $user = User::factory()->create();
         $oversized = $this->validContributionData();
         $oversized['supporting_media'] = [
-            UploadedFile::fake()->create('too-large.jpg', 20481, 'image/jpeg'),
+            UploadedFile::fake()->create('too-large.jpg', 2049, 'image/jpeg'),
         ];
 
         $this->actingAs($user)
@@ -4138,7 +4233,7 @@ class CommunityContributionTest extends TestCase
         return $shop;
     }
 
-    public function test_valid_supporting_video_is_stored_as_video_media(): void
+    public function test_supporting_video_is_rejected_and_not_stored_as_contribution_media(): void
     {
         Storage::fake(config('filesystems.media_disk'));
         $user = User::factory()->create();
@@ -4149,13 +4244,10 @@ class CommunityContributionTest extends TestCase
 
         $this->actingAs($user)
             ->post(route('community-contribution.store'), $data)
-            ->assertSessionHasNoErrors();
+            ->assertSessionHasErrors('supporting_media.0');
 
-        $media = HeritageShopContribution::firstOrFail()->media()->firstOrFail();
-
-        $this->assertSame('video', $media->media_type);
-        $this->assertSame('video/mp4', $media->mime_type);
-        $this->assertTrue(Storage::disk(config('filesystems.media_disk'))->exists($media->r2_object_key));
+        $this->assertDatabaseCount('heritage_shop_contributions', 0);
+        $this->assertDatabaseCount('media', 0);
     }
 
     public function test_new_contributions_receive_unique_public_ids(): void

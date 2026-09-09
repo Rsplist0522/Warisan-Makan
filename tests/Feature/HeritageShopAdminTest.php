@@ -509,4 +509,32 @@ class HeritageShopAdminTest extends TestCase
             ])->assertStatus(422)
             ->assertJsonPath('message', fn (string $message): bool => str_contains($message, 'not supported'));
     }
+
+    public function test_list_discovery_rejects_an_invalid_url_with_a_clear_user_facing_error(): void
+    {
+        Http::fake();
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)
+            ->postJson(route('admin.heritage-shops.discover'), ['url' => 'ddd'])
+            ->assertStatus(422)
+            ->assertJsonPath('errors.url.0', 'Please enter a valid URL starting with http:// or https://.');
+
+        Http::assertNothingSent();
+    }
+
+    public function test_list_discovery_hides_technical_crawler_errors_from_the_user(): void
+    {
+        Http::fake([
+            'https://authorized.example/directory' => Http::response('<!DOCTYPE html>', 500),
+        ]);
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)
+            ->postJson(route('admin.heritage-shops.discover'), ['url' => 'https://authorized.example/directory'])
+            ->assertStatus(422)
+            ->assertExactJson([
+                'message' => 'We could not process this list page. Please verify the URL and try again.',
+            ]);
+    }
 }

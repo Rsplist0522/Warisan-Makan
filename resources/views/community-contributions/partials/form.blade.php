@@ -29,7 +29,7 @@
     $submissionToken = old('submission_token', $contribution?->submission_token ?? $formToken ?? (string) \Illuminate\Support\Str::uuid());
     $isWithdrawnResubmission = $contribution?->status === \App\Models\HeritageShopContribution::STATUS_DRAFT
         && $contribution?->withdrawn_at !== null;
-    $maxSupportingMedia = $maxSupportingMedia ?? 6;
+    $maxSupportingMedia = $maxSupportingMedia ?? 10;
     $existingMediaCount = $existingMedia->count();
     $isClosed = function (array $schedule): bool {
         $closed = filter_var($schedule['closed'] ?? false, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? false;
@@ -577,7 +577,7 @@
         data-existing-media-count="{{ $existingMediaCount }}"
         data-max-supporting-media="{{ $maxSupportingMedia }}"
     >
-        <h2 class="section-title">{{ __('Supporting media') }}</h2>
+        <h2 class="section-title">{{ __('Supporting images') }}</h2>
 
         <div class="media-count-panel" aria-live="polite">
             <strong id="media-slot-summary"></strong>
@@ -585,15 +585,11 @@
         </div>
 
         @if ($existingMedia->isNotEmpty())
-            <h3 class="media-subheading">{{ __('Existing media (:count)', ['count' => $existingMediaCount]) }}</h3>
-            <div class="media-grid" aria-label="{{ __('Existing media') }}">
+            <h3 class="media-subheading">{{ __('Existing images (:count)', ['count' => $existingMediaCount]) }}</h3>
+            <div class="media-grid" aria-label="{{ __('Existing images') }}">
                 @foreach ($existingMedia as $media)
                     <div class="media-card" data-existing-media-card>
-                        @if ($media->media_type === 'video')
-                            <video controls preload="metadata"><source src="{{ $media->url }}"></video>
-                        @else
-                            <img src="{{ $media->url }}" alt="{{ __('Previously uploaded supporting media') }}">
-                        @endif
+                        <img src="{{ $media->url }}" alt="{{ __('Previously uploaded supporting image') }}">
                         <label class="remove-media">
                             <input
                                 class="checkbox-input"
@@ -603,7 +599,7 @@
                                 data-remove-media
                                 @checked(in_array($media->id, array_map('intval', old('remove_media', [])), true))
                             >
-                            <span data-remove-media-label>{{ __('Remove this file') }}</span>
+                            <span data-remove-media-label>{{ __('Remove this image') }}</span>
                         </label>
                         <p class="media-removal-status">{{ __('Marked for removal') }}</p>
                     </div>
@@ -612,14 +608,14 @@
         @endif
 
         <div class="field full">
-            <label for="supporting_media">{{ __('Add images or videos') }}</label>
-            <input id="supporting_media" name="supporting_media[]" type="file" accept=".jpg,.jpeg,.png,.webp,.mp4,.mov,.avi" multiple data-supporting-media-input>
-            <p class="help-text">{{ __('Up to 6 files in total. JPG, JPEG, PNG, WEBP, MP4, MOV, or AVI; maximum 20 MB per file.') }}</p>
+            <label for="supporting_media">{{ __('Add supporting images') }}</label>
+            <input id="supporting_media" name="supporting_media[]" type="file" accept="image/jpeg,image/png,image/webp" multiple data-supporting-media-input>
+            <p class="help-text">{{ __('Up to 10 images in total. JPG, JPEG, PNG, or WEBP; maximum 2 MB per image.') }}</p>
             <p id="media-limit-error" class="field-error media-limit-error" hidden></p>
             @error('supporting_media') <p class="field-error">{{ $message }}</p> @enderror
             @error('supporting_media.*') <p class="field-error">{{ $message }}</p> @enderror
         </div>
-        <h3 id="new-media-title" class="media-subheading new-media-title" hidden>{{ __('New files selected') }}</h3>
+        <h3 id="new-media-title" class="media-subheading new-media-title" hidden>{{ __('New images selected') }}</h3>
         <div id="media-preview" class="media-grid" aria-live="polite"></div>
     </section>
 
@@ -679,12 +675,12 @@
 
 @push('scripts')
 <script>
-    const newFilesSelectedMessage = @json(
-        __(':count new file(s) selected. Files are uploaded only when you save or submit the form.')
+    const newImagesSelectedMessage = @json(
+        __(':count new image(s) selected. Images are uploaded only when you save or submit the form.')
     );
 
-    const mediaFilesSelectedMessage = @json(__(':count of :total files selected.'));
-    const canAddMoreFilesMessage = @json(__('You can add up to :count more :files.'));
+    const mediaImagesSelectedMessage = @json(__(':count of :total images selected.'));
+    const canAddMoreImagesMessage = @json(__('You can add up to :count more :images.'));
 
     (() => {
         const shell = document.getElementById('food-items-shell');
@@ -785,11 +781,11 @@
         const form = document.querySelector('form.form-grid');
         const hourRows = document.querySelectorAll('.soft-card-row');
         const postalCodeInput = document.getElementById('postal_code');
-        const maxSupportingMedia = Number(mediaPanel?.dataset.maxSupportingMedia || 6);
+        const maxSupportingMedia = Number(mediaPanel?.dataset.maxSupportingMedia || 10);
         const existingMediaCount = Number(mediaPanel?.dataset.existingMediaCount || 0);
         let selectedSupportingFiles = [];
 
-        const pluralizeFile = (count) => count === 1 ? 'file' : 'files';
+        const pluralizeImage = (count) => count === 1 ? 'image' : 'images';
         const supportingFileKey = (file) => [
             file.name,
             file.size,
@@ -837,7 +833,7 @@
                 if (label) {
                     label.textContent = checkbox.checked
                         ? @json(__('Undo removal'))
-                        : @json(__('Remove this file'));
+                        : @json(__('Remove this image'));
                 }
             });
         };
@@ -847,17 +843,17 @@
             const remaining = remainingSupportingMediaSlots();
 
             if (mediaSlotSummary) {
-                mediaSlotSummary.textContent = mediaFilesSelectedMessage
+                mediaSlotSummary.textContent = mediaImagesSelectedMessage
                     .replace(':count', used)
                     .replace(':total', maxSupportingMedia);
             }
 
             if (mediaSlotDetail) {
                 mediaSlotDetail.textContent = remaining === 0
-                    ? @json(__('Maximum supporting media files reached.'))
-                    : canAddMoreFilesMessage
+                    ? @json(__('Maximum supporting images reached.'))
+                    : canAddMoreImagesMessage
                         .replace(':count', remaining)
-                        .replace(':files', pluralizeFile(remaining));
+                        .replace(':images', pluralizeImage(remaining));
             }
 
             input?.toggleAttribute('data-maximum-reached', remaining === 0);
@@ -874,28 +870,20 @@
                 card.className = 'media-card new-media-card';
                 const url = URL.createObjectURL(file);
 
-                if (file.type.startsWith('image/')) {
-                    const image = document.createElement('img');
-                    image.src = url;
-                    image.alt = file.name;
-                    image.onload = () => URL.revokeObjectURL(url);
-                    card.appendChild(image);
-                } else {
-                    const video = document.createElement('video');
-                    video.src = url;
-                    video.controls = true;
-                    video.onloadedmetadata = () => URL.revokeObjectURL(url);
-                    card.appendChild(video);
-                }
+                const image = document.createElement('img');
+                image.src = url;
+                image.alt = file.name;
+                image.onload = () => URL.revokeObjectURL(url);
+                card.appendChild(image);
 
                 const button = document.createElement('button');
                 button.type = 'button';
                 button.className = 'new-media-remove';
-                button.textContent = @json(__('Remove new file'));
+                button.textContent = @json(__('Remove new image'));
                 button.addEventListener('click', () => {
                     selectedSupportingFiles.splice(index, 1);
                     const synced = syncSupportingMediaInput();
-                    setMediaError(synced ? '' : @json(__('Your browser cleared the selected files. Please choose them again.')));
+                    setMediaError(synced ? '' : @json(__('Your browser cleared the selected images. Please choose them again.')));
                     renderSupportingMediaPreview();
                     updateSupportingMediaCounts();
                 });
@@ -906,7 +894,7 @@
             if (selectedSupportingFiles.length) {
                 const note = document.createElement('p');
                 note.className = 'preview-note';
-                note.textContent = newFilesSelectedMessage.replace(':count', selectedSupportingFiles.length);
+                note.textContent = newImagesSelectedMessage.replace(':count', selectedSupportingFiles.length);
                 preview?.appendChild(note);
             }
         };
@@ -915,7 +903,7 @@
             checkbox.addEventListener('change', () => {
                 if (! checkbox.checked && usedSupportingMediaCount() > maxSupportingMedia) {
                     checkbox.checked = true;
-                    setMediaError(@json(__('Remove a newly selected file before keeping this saved file.')));
+                    setMediaError(@json(__('Remove a newly selected image before keeping this saved image.')));
                 } else {
                     setMediaError('');
                 }
@@ -1113,10 +1101,10 @@
             if (uniqueIncomingFiles.length > availableSlots) {
                 const keptExisting = retainedExistingMediaCount();
                 const savedContext = keptExisting > 0
-                    ? `You already have ${keptExisting} saved ${pluralizeFile(keptExisting)} selected to keep. `
+                    ? `You already have ${keptExisting} saved ${pluralizeImage(keptExisting)} selected to keep. `
                     : '';
 
-                setMediaError(`${savedContext}You can add up to ${availableSlots} more ${pluralizeFile(availableSlots)}.`);
+                setMediaError(`${savedContext}You can add up to ${availableSlots} more ${pluralizeImage(availableSlots)}.`);
                 syncSupportingMediaInput();
                 renderSupportingMediaPreview();
                 updateSupportingMediaCounts();

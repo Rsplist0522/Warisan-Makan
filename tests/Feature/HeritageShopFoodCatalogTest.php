@@ -138,6 +138,7 @@ class HeritageShopFoodCatalogTest extends TestCase
     public function test_published_food_item_has_a_dedicated_story_page(): void
 
     {
+        Storage::fake('public');
         $shop = HeritageShop::create(['shop_name' => 'Story Kitchen', 'publish_status' => HeritageShop::STATUS_PUBLISHED]);
         $item = $shop->foodItems()->create([
             'name' => 'Laksa Warisan',
@@ -146,16 +147,33 @@ class HeritageShopFoodCatalogTest extends TestCase
             'heritage_significance' => 'The recipe is taught from one generation to the next.',
             'availability' => 'Saturday mornings',
             'price' => 'RM 9.00',
+            'image_path' => 'heritage-shops/food-items/laksa-warisan.jpg',
             'is_active' => true,
         ]);
+        Storage::disk('public')->put($item->image_path, 'image-bytes');
+        $user = User::factory()->create();
 
-        $this->actingAs(User::factory()->create())
+        $this->actingAs($user)
             ->get(route('heritage-shops.food-items.show', [$shop, $item]))
             ->assertOk()
             ->assertSee('Laksa Warisan')
             ->assertSee('Why this dish matters')
             ->assertSee('The recipe is taught from one generation to the next.')
-            ->assertSee('Explore full menu');
+            ->assertSee('Explore full menu')
+            ->assertSee('data-image-enlarge', false)
+            ->assertSee('data-image-lightbox', false);
+
+        $this->actingAs($user)
+            ->get(route('heritage-shops.show', ['id' => $shop->id]))
+            ->assertOk()
+            ->assertSee('data-image-enlarge', false)
+            ->assertSee('data-image-lightbox', false);
+
+        $this->actingAs($user)
+            ->get(route('heritage-shops.menu', $shop))
+            ->assertOk()
+            ->assertSee('data-image-enlarge', false)
+            ->assertSee('data-image-lightbox', false);
     }
 
     public function test_food_item_photo_and_record_are_private_when_shop_is_not_published(): void

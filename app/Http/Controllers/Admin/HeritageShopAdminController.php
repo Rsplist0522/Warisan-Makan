@@ -322,8 +322,10 @@ class HeritageShopAdminController extends Controller
 
             return response()->json($discovery);
         } catch (Throwable $exception) {
+            report($exception);
+
             return response()->json([
-                'message' => $exception->getMessage() ?: 'The list page could not be discovered safely.',
+                'message' => 'We could not process this list page. Please verify the URL and try again.',
             ], 422);
         }
     }

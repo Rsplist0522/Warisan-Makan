@@ -38,6 +38,7 @@
         .back-link:hover, .back-link:focus-visible { text-decoration:underline; outline:2px solid rgba(163,58,45,.3); outline-offset:4px; }
         .story-card { display:grid; grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr); overflow:hidden; border:1px solid var(--line); border-radius:22px; background:#fffdf9; box-shadow:0 24px 60px rgba(76,43,25,.11); }
         .story-visual { min-height:460px; background:linear-gradient(145deg,#e9d9c6,#f8f1e8); }
+        .story-visual .enlargeable-image { height:100%; min-height:460px; }
         .story-visual img { width:100%; height:100%; min-height:460px; object-fit:cover; display:block; }
         .visual-empty { display:grid; min-height:460px; place-items:center; padding:30px; color:var(--muted); text-align:center; }
         .visual-empty span { display:block; margin-bottom:8px; color:var(--gold); font-size:2.7rem; }
@@ -60,7 +61,7 @@
         .context { margin-top:18px; padding:19px 21px; border:1px solid var(--line); border-radius:14px; background:rgba(255,253,249,.75); }
         .context p { margin:0; color:var(--muted); font-size:.82rem; }
         .context strong { color:var(--accent); }
-        @media (max-width:760px) { .shell { grid-template-columns:1fr; } .sidebar { padding:16px 18px; } .nav-label, .sidebar-footer { display:none; } .nav { display:flex; flex-wrap:wrap; margin-top:14px; } .nav-item { padding:7px 9px; } .topbar { align-items:start; } .story-card { grid-template-columns:1fr; } .story-visual, .story-visual img, .visual-empty { min-height:280px; height:280px; } }
+        @media (max-width:760px) { .shell { grid-template-columns:1fr; } .sidebar { padding:16px 18px; } .nav-label, .sidebar-footer { display:none; } .nav { display:flex; flex-wrap:wrap; margin-top:14px; } .nav-item { padding:7px 9px; } .topbar { align-items:start; } .story-card { grid-template-columns:1fr; } .story-visual, .story-visual .enlargeable-image, .story-visual img, .visual-empty { min-height:280px; height:280px; } }
     </style>
 @endpush
 
@@ -70,7 +71,12 @@
                 <article class="story-card">
                     <div class="story-visual">
                         @if ($foodItem->image_path)
-                            <img src="{{ route('heritage-shops.food-images.show', [$shop, $foodItem]) }}" alt="{{ $foodItem->name }} at {{ $shop->shop_name }}" onerror="this.remove()">
+                            <x-enlargeable-image
+                                :src="route('heritage-shops.food-images.show', [$shop, $foodItem])"
+                                :alt="$foodItem->name.' at '.$shop->shop_name"
+                                :loading="null"
+                                fetchpriority="high"
+                            />
                         @else
                             <div class="visual-empty"><div><span>✦</span><strong>Food photo coming soon</strong><br>We are preserving the story first, then the perfect picture.</div></div>
                         @endif
@@ -97,5 +103,6 @@
                     </div>
                 </article>
                 <div class="context"><p><strong>Preservation note.</strong> This record is shown from the published HeritageShop catalog. Food heritage includes the people, techniques, memories, and community practices connected to what is served—not only the product itself.</p></div>
+                <x-image-lightbox />
 </div>
 @endsection

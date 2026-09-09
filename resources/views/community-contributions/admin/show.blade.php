@@ -38,7 +38,7 @@
                 @include('community-contributions.partials.food-items-hours', ['contribution' => $contribution])
 
                 <section class="panel">
-                    <h2>Supporting media</h2>
+                    <h2>Supporting images</h2>
                     @if ($contribution->media->isNotEmpty())
                         @if ($contribution->status === \App\Models\HeritageShopContribution::STATUS_UNDER_REVIEW)
                             <p class="muted">Select at least one suitable image to publish. The Heritage Shop gallery allows up to {{ config('heritage_shop.max_gallery_images', 10) }} JPG, JPEG, PNG, or WebP images, each no larger than {{ round(config('heritage_shop.max_image_kb', 2048) / 1024, 1) }} MB.</p>
@@ -52,11 +52,7 @@
                                 @endphp
                                 <article class="media-card review-media-card">
                                     <a class="review-media-preview" href="{{ $media->url }}" target="_blank" rel="noopener">
-                                        @if ($media->media_type === 'video')
-                                            <video controls preload="metadata"><source src="{{ $media->url }}"></video>
-                                        @else
-                                            <img src="{{ $media->url }}" alt="Supporting evidence">
-                                        @endif
+                                        <img src="{{ $media->url }}" alt="Supporting evidence">
                                     </a>
                                     @if ($contribution->status === \App\Models\HeritageShopContribution::STATUS_UNDER_REVIEW && $isPublishableImage)
                                         <label class="publish-media-option">
@@ -72,7 +68,7 @@
                             @endforeach
                         </div>
                     @else
-                        <p class="muted">No supporting media was uploaded.</p>
+                        <p class="muted">No supporting images were uploaded.</p>
                     @endif
                 </section>
             </div>

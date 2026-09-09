@@ -161,11 +161,7 @@
                             </div>
                         </div>
                         <div class="record-actions">
-                            @if ($shop->isPubliclyVisible())
-                                <a class="button secondary small" href="{{ route('heritage-shops.show', $shop) }}" target="_blank" rel="noopener noreferrer">View Heritage Shop</a>
-                            @else
-                                <a class="button secondary small" href="{{ route('admin.heritage-shops.preview', $shop) }}" target="_blank" rel="noopener noreferrer">Preview</a>
-                            @endif
+                            <a class="button secondary small" href="{{ route('admin.heritage-shops.preview', $shop) }}">{{ $shop->isPubliclyVisible() ? 'View Heritage Shop' : 'Preview' }}</a>
                             <a class="button secondary small" href="{{ route('admin.heritage-shops.food-items.index', $shop) }}">Manage Food Catalog</a>
                                                         <a class="button primary small" href="{{ route('admin.heritage-shops.edit', $shop) }}">Edit</a>
                             <form class="shop-delete-form" method="POST" action="{{ route('admin.heritage-shops.destroy', $shop) }}" data-shop-name="{{ $shop->shop_name }}" style="display:inline;">
@@ -282,6 +278,18 @@
         status.style.display = 'block';
     };
 
+    const invalidUrlMessage = 'Please enter a valid URL starting with http:// or https://.';
+    const requestFailureMessage = 'We could not process this list page. Please verify the URL and try again.';
+    const sessionExpiredMessage = 'Your session has expired. Refresh the page, sign in again, and retry.';
+    const isHttpUrl = (value) => {
+        try {
+            const parsed = new URL(value);
+            return ['http:', 'https:'].includes(parsed.protocol) && Boolean(parsed.hostname);
+        } catch {
+            return false;
+        }
+    };
+
     const renderResults = (data) => {
         discoveredItems = Array.isArray(data.items) ? data.items : [];
         listSource.value = String(data.source_url || urlInput.value || '');
@@ -331,23 +339,36 @@
 
     button.addEventListener('click', async () => {
         const url = urlInput.value.trim();
-        if (!url) { setStatus('error', 'Enter a permitted list-page URL first.'); return; }
+        if (!isHttpUrl(url)) { setStatus('error', invalidUrlMessage); urlInput.focus(); return; }
         button.disabled = true;
         button.textContent = 'Finding…';
         setStatus('success', 'Checking the permitted list page and preparing a review preview…');
+        let failureMessage = requestFailureMessage;
         try {
             const response = await fetch('{{ route('admin.heritage-shops.discover') }}', {
                 method: 'POST',
                 headers: {'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':'{{ csrf_token() }}'},
                 body: JSON.stringify({url, limit: Number(limitInput.value)})
             });
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.message || 'The list page could not be discovered safely.');
+            const contentType = response.headers.get('content-type') || '';
+            const data = contentType.includes('application/json')
+                ? await response.json().catch(() => null)
+                : null;
+
+            if ([401, 403, 419].includes(response.status) || response.redirected) {
+                failureMessage = sessionExpiredMessage;
+                throw new Error('session-expired');
+            }
+            if (!response.ok) {
+                failureMessage = data?.errors?.url?.[0] || data?.message || requestFailureMessage;
+                throw new Error('discovery-failed');
+            }
+            if (!data || typeof data !== 'object') throw new Error('invalid-response');
             renderResults(data);
-        } catch (error) {
+        } catch {
             results.style.display = 'none';
             importForm.style.display = 'none';
-            setStatus('error', error.message || 'The discovery request failed.');
+            setStatus('error', failureMessage);
         } finally {
             button.disabled = false;
             button.textContent = 'Find shops';

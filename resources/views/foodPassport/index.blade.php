@@ -1806,24 +1806,44 @@
                     shareStatus.textContent = @json(__('Preparing your WhatsApp achievement card...'));
                     const isMobileDevice =
                         /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+                    const whatsappWindow = isMobileDevice ? null : window.open('', '_blank');
+
+                    if (isMobileDevice) {
+                        try {
+                            if (await shareAchievementFile('square')) return;
+                        } catch (error) {
+                            if (error && error.name === 'AbortError') {
+                                shareStatus.textContent = @json(__('Sharing cancelled.'));
+                                return;
+                            }
+                            console.warn('Native achievement sharing was unavailable:', error);
+                        }
+                    }
+
                     const whatsappUrl = isMobileDevice
                         ? 'https://wa.me/?text=' + encodeURIComponent(badgeShareText)
                         : 'https://web.whatsapp.com/send?text=' + encodeURIComponent(badgeShareText);
-                    console.log('WhatsApp URL:', whatsappUrl);
 
-                    try{
+                    try {
                         await downloadAchievementCard('square');
-                    } catch (downloadError){
-                        console.error('Could not download achievement card:', downloadError);
-                    } 
+                    } catch (downloadError) {
+                        console.warn('Could not download achievement card:', downloadError);
+                    }
 
-                    try{
+                    try {
                         await copyShareText();
-                    } catch (copyError){
+                    } catch (copyError) {
                         console.warn('Could not copy share text:', copyError);
                     }
 
-                    window.location.assign(whatsappUrl);
+                    if (whatsappWindow) {
+                        whatsappWindow.location.href = whatsappUrl;
+                    } else {
+                        window.location.assign(whatsappUrl);
+                    }
+                    shareStatus.textContent = isMobileDevice
+                        ? @json(__('WhatsApp opened. Attach the downloaded card if it was not included automatically.'))
+                        : @json(__('WhatsApp Web opened. Attach the downloaded card to your message.'));
 
                     return;
                 }

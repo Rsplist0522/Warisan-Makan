@@ -334,23 +334,42 @@
       }
       if(channel === 'whatsapp'){
         shareStatus.textContent = 'Preparing your WhatsApp achievement card...';
-        const whatsappWindow = window.open('', '_blank');
+        const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        const whatsappWindow = isMobileDevice ? null : window.open('', '_blank');
 
-        const isTouchDevice = 'ontouchstart' in window || (window.navigator.maxTouchPoints || 0) > 0;
-        const whatsappUrl = isTouchDevice
+        if(isMobileDevice){
+          try{
+            if(await shareAchievementFile('square')) return;
+          }catch(error){
+            if(error && error.name === 'AbortError'){
+              shareStatus.textContent = 'Sharing cancelled.';
+              return;
+            }
+            console.warn('Native achievement sharing was unavailable:', error);
+          }
+        }
+
+        const whatsappUrl = isMobileDevice
           ? 'https://wa.me/?text=' + encodeURIComponent(badgeShareText)
           : 'https://web.whatsapp.com/send?text=' + encodeURIComponent(badgeShareText);
-        await downloadAchievementCard('square');
+
+        try{
+          await downloadAchievementCard('square');
+        }catch(error){
+          console.warn('Achievement card download failed:', error);
+        }
+
+        try{
+          await copyShareText();
+        }catch(error){
+          console.warn('Caption copy failed:', error);
+        }
+
         if(whatsappWindow) whatsappWindow.location.href = whatsappUrl;
         else window.location.assign(whatsappUrl);
-        await copyShareText();
-        if(!whatsappWindow){
-          shareStatus.textContent = 'The card was downloaded and the caption was copied, but the browser blocked WhatsApp. Allow pop-ups or open WhatsApp Web manually.';
-        }else{
-          shareStatus.textContent = isTouchDevice
-            ? 'WhatsApp opened. Attach the downloaded card if your device did not include it automatically.'
-            : 'WhatsApp Web opened. The square card was downloaded and the caption was copied—attach the PNG in the chat.';
-        }
+        shareStatus.textContent = isMobileDevice
+          ? 'WhatsApp opened. Attach the downloaded card if it was not included automatically.'
+          : 'WhatsApp Web opened. Attach the downloaded card to your message.';
       }
     }catch(error){
       if(error && error.name === 'AbortError'){

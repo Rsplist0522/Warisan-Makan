@@ -182,6 +182,27 @@
             return true;
         }
 
+        async function shareAchievementFile(format) {
+            if (!navigator.share || !navigator.canShare || typeof File === 'undefined') {
+                return false;
+            }
+
+            const blob = await new Promise(resolve => canvasFor(format).toBlob(resolve, 'image/png'));
+            if (!blob) return false;
+
+            const slug = (badge.name || 'badge').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+            const file = new File([blob], 'warisan-makan-' + slug + '-' + format + '.png', { type: 'image/png' });
+            if (!navigator.canShare({ files: [file] })) return false;
+
+            await navigator.share({
+                files: [file],
+                title: badge.name + ' · Warisan Makan',
+                text: shareText
+            });
+            status.textContent = @json(__('Achievement card shared successfully.'));
+            return true;
+        }
+
         async function share(channel) {
             if (channel === 'copy') return copy();
             if (channel === 'download-square') return download('square');
@@ -201,14 +222,43 @@
                 return;
             }
             if (channel === 'whatsapp') {
-                const whatsappWindow = window.open('', '_blank');
-                await download('square');
-                await copy();
-                const whatsappUrl = ('ontouchstart' in window || navigator.maxTouchPoints > 0)
+                status.textContent = @json(__('Preparing your WhatsApp achievement card...'));
+                const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+                const whatsappWindow = isMobileDevice ? null : window.open('', '_blank');
+
+                if (isMobileDevice) {
+                    try {
+                        if (await shareAchievementFile('square')) return;
+                    } catch (error) {
+                        if (error && error.name === 'AbortError') {
+                            status.textContent = @json(__('Sharing cancelled.'));
+                            return;
+                        }
+                        console.warn('Native achievement sharing was unavailable:', error);
+                    }
+                }
+
+                const whatsappUrl = isMobileDevice
                     ? 'https://wa.me/?text=' + encodeURIComponent(shareText)
                     : 'https://web.whatsapp.com/send?text=' + encodeURIComponent(shareText);
+
+                try {
+                    await download('square');
+                } catch (error) {
+                    console.warn('Achievement card download failed:', error);
+                }
+
+                try {
+                    await copy();
+                } catch (error) {
+                    console.warn('Caption copy failed:', error);
+                }
+
                 if (whatsappWindow) whatsappWindow.location.href = whatsappUrl;
                 else window.location.assign(whatsappUrl);
+                status.textContent = isMobileDevice
+                    ? @json(__('WhatsApp opened. Attach the downloaded card if it was not included automatically.'))
+                    : @json(__('WhatsApp Web opened. Attach the downloaded card to your message.'));
             }
         }
 

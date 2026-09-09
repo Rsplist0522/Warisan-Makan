@@ -305,18 +305,30 @@
     return canvas;
   }
 
-  function downloadAchievementCard(format){
+  async function downloadAchievementCard(format){
+    const isTouchDevice = 'ontouchstart' in window || (window.navigator.maxTouchPoints || 0) > 0;
+    if(isTouchDevice && await shareAchievementFile(format)) return true;
+
     const canvas = drawAchievementCard(format);
-    if(!canvas) return;
+    if(!canvas) return false;
 
     const slug = (activeBadgeForShare.name || 'badge').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+    if(!blob) return false;
+
+    const objectUrl = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.download = 'warisan-makan-' + slug + '-' + format + '.png';
-    link.href = canvas.toDataURL('image/png');
+    link.href = objectUrl;
+    link.style.display = 'none';
+    document.body.appendChild(link);
     link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
     shareStatus.textContent = format === 'story'
       ? 'Story card downloaded. Upload it to Instagram Story or WhatsApp Status.'
       : 'Square card downloaded. It is ready for your social feed.';
+    return true;
   }
 
   async function shareAchievementFile(format){
@@ -347,23 +359,25 @@
         return;
       }
       if(channel === 'download-square'){
-        downloadAchievementCard('square');
+        await downloadAchievementCard('square');
         return;
       }
       if(channel === 'download-story'){
-        downloadAchievementCard('story');
+        await downloadAchievementCard('story');
         return;
       }
       if(channel === 'instagram'){
+        if(await shareAchievementFile('story')) return;
         await copyShareText();
-        downloadAchievementCard('story');
+        await downloadAchievementCard('story');
         window.open('https://www.instagram.com/', '_blank', 'noopener');
         shareStatus.textContent = 'Instagram opened. The story card was downloaded and the caption was copied—upload the PNG after logging in.';
         return;
       }
       if(channel === 'facebook'){
+        if(await shareAchievementFile('square')) return;
         await copyShareText();
-        downloadAchievementCard('square');
+        await downloadAchievementCard('square');
         const url = 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(window.location.href) + '&quote=' + encodeURIComponent(badgeShareText);
         window.open(url, '_blank', 'noopener');
         shareStatus.textContent = 'Facebook opened. The square card was downloaded and the caption was copied—attach the PNG if needed.';
@@ -381,7 +395,7 @@
         const whatsappUrl = isTouchDevice
           ? 'https://wa.me/?text=' + encodeURIComponent(badgeShareText)
           : 'https://web.whatsapp.com/send?text=' + encodeURIComponent(badgeShareText);
-        downloadAchievementCard('square');
+        await downloadAchievementCard('square');
         const whatsappWindow = window.open(whatsappUrl, '_blank', 'noopener');
         await copyShareText();
         if(!whatsappWindow){

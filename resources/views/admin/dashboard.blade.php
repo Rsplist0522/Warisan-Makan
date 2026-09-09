@@ -38,8 +38,14 @@
         $trailCount = \App\Models\FoodTrailSuggestion::query()->count();
         $blindBoxCatalog = app(\App\Services\BlindBoxCatalogManager::class);
         $blindBoxShopCount = count($blindBoxCatalog->activeShops());
-        $activeUserCount = \App\Models\User::query()->where('status', '!=', 'inactive')->count();
-        $inactiveUserCount = \App\Models\User::query()->where('status', 'inactive')->count();
+        $activeUserCount = \App\Models\User::query()
+            ->where('role', '!=', 'admin')
+            ->where('status', '!=', 'inactive')
+            ->count();
+        $inactiveUserCount = \App\Models\User::query()
+            ->where('role', '!=', 'admin')
+            ->where('status', 'inactive')
+            ->count();
         $inactiveBlindBoxShopCount = count($blindBoxCatalog->availableShops());
     @endphp
     <section class="welcome">

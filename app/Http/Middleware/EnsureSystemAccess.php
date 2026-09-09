@@ -14,7 +14,15 @@ class EnsureSystemAccess
             return $next($request);
         }
 
-        if ($request->session()->get('guest_mode') === true && $request->routeIs('home', 'user.dashboard', 'heritage-shops.index')) {
+        if (
+            $request->session()->get('guest_mode') === true &&
+            $request->routeIs(
+                'home',
+                'user.dashboard',
+                'heritage-shops.index',
+                'heritage-shops.images.show'
+            )
+        ) {
             return $next($request);
         }
 

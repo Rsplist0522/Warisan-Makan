@@ -239,7 +239,7 @@ Route::get('/heritage-shops/{heritageShop}/menu', [HeritageShopController::class
 Route::get('/heritage-shops/{heritageShop}/images/{image}', [HeritageShopController::class, 'image'])
     ->whereNumber('heritageShop')
     ->whereNumber('image')
-    ->middleware(['auth', 'user.inactivity'])
+    ->middleware(['system.access', 'user.inactivity'])
     ->name('heritage-shops.images.show');
 Route::get('/heritage-shops/{heritageShop}/food-items/{foodItem}', [HeritageShopController::class, 'foodItem'])
     ->whereNumber('heritageShop')

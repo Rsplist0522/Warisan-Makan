@@ -65,6 +65,7 @@ class StoreHeritageShopRequest extends FormRequest
         $validator->after(function (Validator $validator): void {
             $this->validateDuplicateIdentity($validator);
             $this->validateQuickFoodItemNames($validator);
+            $this->validatePrimaryImage($validator);
 
             if ($this->input('publish_status') === HeritageShop::STATUS_PUBLISHED) {
                 $this->validatePublishedImage($validator);
@@ -90,6 +91,7 @@ class StoreHeritageShopRequest extends FormRequest
             'existing_images.*' => ['integer'],
             'remove_images' => ['nullable', 'array'],
             'remove_images.*' => ['integer'],
+            'primary_image_id' => ['nullable', 'integer'],
             'menu_items_json' => ['nullable', 'json', 'max:50000'],
             'crawler_images' => ['nullable', 'array'],
             'crawler_images.*' => [
@@ -204,6 +206,23 @@ class StoreHeritageShopRequest extends FormRequest
 
         if ($retainedCount + $replacementFiles->count() + $uploadedCount + $crawlerCount < 1) {
             $validator->errors()->add('images', 'A published heritage shop must have at least one valid shop image.');
+        }
+    }
+
+    private function validatePrimaryImage(Validator $validator): void
+    {
+        $imageId = $this->integer('primary_image_id');
+        if (! $imageId) {
+            return;
+        }
+
+        $shop = $this->route('heritageShop');
+        if (! $shop instanceof HeritageShop || ! $shop->images()->whereKey($imageId)->exists()) {
+            $validator->errors()->add('primary_image_id', 'The selected primary image does not belong to this shop.');
+        }
+
+        if (in_array($imageId, array_map('intval', (array) $this->input('remove_images', [])), true)) {
+            $validator->errors()->add('primary_image_id', 'Choose a different primary image before removing this one.');
         }
     }
 }

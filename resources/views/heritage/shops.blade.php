@@ -113,6 +113,8 @@
         .button.secondary { border-color: var(--wm-line); color: var(--wm-ink); background: #fff; }
         .filter-actions { display: flex; gap: 8px; align-items: end; }
         .result-summary { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 0 0 14px; color: var(--wm-muted); font-size: .86rem; }
+        .active-filters { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:-5px 0 16px; color:var(--wm-muted); font-size:.78rem; }
+        .active-filter { display:inline-flex; min-height:34px; align-items:center; padding:6px 10px; border:1px solid var(--wm-line); border-radius:999px; color:var(--wm-accent); background:#fff; font-weight:800; text-decoration:none; }
         .shop-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
         .shop-card { overflow: hidden; display: flex; flex-direction: column; min-width: 0; transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
         .shop-card:hover { transform: translateY(-4px); border-color: rgba(163, 58, 45, .25); box-shadow: 0 20px 42px rgba(77, 48, 34, .12); }
@@ -304,6 +306,28 @@
         });
     </script>
     @endguest
+    <script>
+        document.addEventListener('click', async (event) => {
+            const button = event.target.closest('[data-copy-address]');
+            if (!button) return;
+            const address = button.dataset.copyAddress || '';
+            try {
+                await navigator.clipboard.writeText(address);
+            } catch (error) {
+                const field = document.createElement('textarea');
+                field.value = address;
+                field.style.position = 'fixed';
+                field.style.opacity = '0';
+                document.body.appendChild(field);
+                field.select();
+                document.execCommand('copy');
+                field.remove();
+            }
+            button.textContent = '{{ __('Address copied') }}';
+            document.querySelector('[data-copy-status]')?.replaceChildren('{{ __('Address copied to clipboard.') }}');
+            window.setTimeout(() => { button.textContent = '{{ __('Copy address') }}'; }, 1800);
+        });
+    </script>
 @endpush
 
 @section('content')
@@ -335,20 +359,7 @@
                         </header>
 
                         <div class="detail-grid">
-                            <div>
-                                @if ($primaryImageUrl)
-                                    <img class="detail-main-image" src="{{ $primaryImageUrl }}" alt="{{ $shop->shop_name }} heritage food shop" onerror="this.remove()">
-                                @else
-                                    <div class="detail-placeholder" role="img" aria-label="No image available for {{ $shop->shop_name }}">No image available</div>
-                                @endif
-                                @if ($shop->images->count() > 1)
-                                    <div class="gallery" aria-label="{{ __('Additional images') }}">
-                                        @foreach ($shop->images->skip(1) as $image)
-                                            <img src="{{ $imageService->url($image) }}" alt="{{ __('Additional view of :shop', ['shop' => $shop->shop_name]) }}" loading="lazy" onerror="this.remove()">
-                                        @endforeach
-                                    </div>
-                                @endif
-                            </div>
+                            <x-heritage-image-gallery :images="$shop->images" :shop-name="$shop->shop_name" :image-service="$imageService" />
 
                             <div>
                                 <section class="info-section">
@@ -373,7 +384,18 @@
                                     <h2>{{ __('Visit information') }}</h2>
                                     <dl class="definition-list">
                                         @if ($shop->address || $shop->city || $shop->state || $shop->postal_code)
-                                            <div><dt>{{ __('Address') }}</dt><dd>{{ collect([$shop->address, $shop->city, $shop->state, $shop->postal_code])->filter()->implode(', ') }}</dd></div>
+                                            @php
+                                                $fullAddress = collect([$shop->address, $shop->city, $shop->state, $shop->postal_code])->filter()->implode(', ');
+                                                $mapDestination = filled($shop->latitude) && filled($shop->longitude) ? $shop->latitude.','.$shop->longitude : $fullAddress;
+                                            @endphp
+                                            <div>
+                                                <dt>{{ __('Address') }}</dt><dd>{{ $fullAddress }}</dd>
+                                                <div class="card-actions" style="margin-top:10px;">
+                                                    <a class="button primary" href="https://www.google.com/maps/dir/?api=1&amp;destination={{ urlencode($mapDestination) }}" target="_blank" rel="noopener noreferrer">{{ __('Get directions') }}</a>
+                                                    <button class="button secondary" type="button" data-copy-address="{{ $fullAddress }}">{{ __('Copy address') }}</button>
+                                                </div>
+                                                <span class="sr-only" data-copy-status aria-live="polite"></span>
+                                            </div>
                                         @endif
                                         @if ($shop->operating_hours)
                                             <div>
@@ -386,6 +408,8 @@
                                                     @endforelse
                                                 </dd>
                                             </div>
+                                        @else
+                                            <div><dt>{{ __('Operating information') }}</dt><dd>{{ __('Hours have not been provided yet.') }}</dd></div>
                                         @endif
                                         @if ($shop->contact_number)
                                             <div><dt>{{ __('Contact') }}</dt><dd>{{ $shop->contact_number }}</dd></div>
@@ -546,6 +570,15 @@
                         </form>
                     </section>
 
+                    @if ($search || $category || $state)
+                        <div class="active-filters" aria-label="{{ __('Active filters') }}">
+                            <strong>{{ __('Active filters:') }}</strong>
+                            @if ($search)<a class="active-filter" href="{{ route('heritage-shops.index', request()->except(['search', 'page'])) }}">{{ __('Search: :value', ['value' => $search]) }} ×</a>@endif
+                            @if ($category)<a class="active-filter" href="{{ route('heritage-shops.index', request()->except(['category', 'page'])) }}">{{ __('Category: :value', ['value' => $category]) }} ×</a>@endif
+                            @if ($state)<a class="active-filter" href="{{ route('heritage-shops.index', request()->except(['state', 'page'])) }}">{{ __('State: :value', ['value' => $state]) }} ×</a>@endif
+                        </div>
+                    @endif
+
                     @if ($shops->isEmpty())
                         <section class="empty-state" aria-live="polite">
                             <h2>{{ __('No heritage shops found') }}</h2>
@@ -555,8 +588,9 @@
                             @endif
                         </section>
                     @else
-                        <div class="result-summary"><span>{{ __('Showing :count of :total published records.', [
-                            'count' => $shops->count(),
+                        <div class="result-summary"><span>{{ __('Showing :first–:last of :total published records.', [
+                            'first' => $shops->firstItem(),
+                            'last' => $shops->lastItem(),
                             'total' => $shops->total()
                         ]) }}</span><span>{{ __('Images are shown when a verified gallery is available.') }}</span></div>
                         <section class="shop-grid" aria-label="Heritage shop records">
@@ -579,6 +613,7 @@
                                         <h2>{{ $shop->shop_name }}</h2>
                                         <p class="description">{{ \Illuminate\Support\Str::limit($shop->heritage_story ?: 'Heritage information is being prepared.', 150) }}</p>
                                         <div class="card-facts">
+                                            @if ($shop->establishment_year)<div><strong>{{ __('Established:') }}</strong> {{ $shop->establishment_year }}</div>@endif
                                             <div><strong>{{ __('Location:') }}</strong> {{ $shop->location ?: 'Not provided' }}</div>
                                             @if ($operatingHoursSummary !== '')<div><strong>{{ __('Hours:') }}</strong> {{ \Illuminate\Support\Str::limit($operatingHoursSummary, 140) }}</div>@endif
                                         </div>

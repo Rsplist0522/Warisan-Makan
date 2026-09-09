@@ -67,7 +67,7 @@
         <div class="status-banner success">{{ session('success') }}</div>
     @endif
 
-    <form method="POST" action="{{ $mode === 'create' ? route('admin.heritage-shops.store') : route('admin.heritage-shops.update', $shop) }}" enctype="multipart/form-data">
+    <form id="heritage-shop-form" method="POST" action="{{ $mode === 'create' ? route('admin.heritage-shops.store') : route('admin.heritage-shops.update', $shop) }}" enctype="multipart/form-data">
         @csrf
         @foreach ((array) old('crawler_images', []) as $crawlerImage)
             <input type="hidden" name="crawler_images[]" value="{{ $crawlerImage }}">
@@ -231,14 +231,16 @@
                             <p style="font-weight:800; margin-bottom:10px;">Current gallery</p>
                             <div style="display:grid; gap:12px;">
                                 @foreach ($shop->images as $image)
-                                    <div style="padding:10px; border:1px solid var(--line); border-radius:12px; background:#fff;">
-                                                                                <img src="{{ $imageService->url($image) }}" alt="Shop gallery image" style="width:100%; height:150px; object-fit:cover; border-radius:8px; margin-bottom:8px;" onerror="this.replaceWith(Object.assign(document.createElement('div'), {textContent:'Image unavailable', className:'muted'}))">
+                                    <div class="existing-image-card" style="padding:10px; border:1px solid var(--line); border-radius:12px; background:#fff;">
+                                        <img class="existing-image-preview" src="{{ $imageService->url($image) }}" alt="Shop gallery image {{ $loop->iteration }}" style="width:100%; height:150px; object-fit:cover; border-radius:8px; margin-bottom:8px;" onerror="this.replaceWith(Object.assign(document.createElement('div'), {textContent:'Image unavailable', className:'muted'}))">
 
                                         <div class="actions" style="margin-top:8px;">
-                                            <label class="button secondary small" style="cursor:pointer;">
-                                                <input type="checkbox" name="remove_images[]" value="{{ $image->id }}" style="margin-right:6px;" @checked(in_array($image->id, (array) old('remove_images', [])))> Remove
+                                            <label class="button secondary small primary-image-choice" style="cursor:pointer;">
+                                                <input type="radio" name="primary_image_id" value="{{ $image->id }}" @checked((int) old('primary_image_id', $shop->images->firstWhere('is_primary', true)?->id ?? $shop->images->first()?->id) === $image->id)> Primary
                                             </label>
-                                            <label class="button small" style="border:1px solid var(--line); background:#fff; cursor:pointer;">
+                                            <button class="button secondary small image-remove-toggle" type="button">Remove</button>
+                                            <input class="image-remove-checkbox" type="checkbox" name="remove_images[]" value="{{ $image->id }}" hidden @checked(in_array($image->id, (array) old('remove_images', [])))>
+                                            <label class="button small image-replace-label" style="border:1px solid var(--line); background:#fff; cursor:pointer;">
                                                 Replace
                                                 <input type="file" name="replace_images[{{ $image->id }}]" accept="image/jpeg,image/png,image/webp" style="display:none;">
                                             </label>
@@ -262,9 +264,19 @@
                         </select>
                                         </div>
                     <p class="help-text field-guidance" id="publish-status-help" style="margin-top:10px;">Only <strong>Published</strong> records appear in public discovery. Draft and Archived records remain admin-only. Published records require a Heritage story, Address, City, and at least one valid gallery image.</p>
+                    @error('primary_image_id')
+                        <p class="field-error" role="alert">{{ $message }}</p>
+                    @enderror
+                    <div class="publishing-readiness" data-publishing-readiness aria-live="polite">
+                        <strong>Publishing readiness</strong>
+                        <span data-ready-field="shop_name">Shop name</span>
+                        <span data-ready-field="heritage_story">Heritage story</span>
+                        <span data-ready-field="location">Address and city</span>
+                        <span data-ready-field="image">Gallery image</span>
+                    </div>
                     <div class="actions" style="margin-top:16px;">
 
-                        <button class="button primary" type="submit">{{ $mode === 'create' ? 'Save shop' : 'Update shop' }}</button>
+                        <button class="button primary" type="submit" data-save-button data-idle-label="{{ $mode === 'create' ? 'Create Shop' : 'Save Changes' }}">{{ $mode === 'create' ? 'Create Shop' : 'Save Changes' }}</button>
                     </div>
                 </section>
             </aside>
@@ -279,6 +291,13 @@
         .required-marker { color: #a33a2d; font-weight: 900; }
         .field-error { margin: 0; color: #a33a2d; font-size: .76rem; font-weight: 800; line-height: 1.4; }
         .field input[aria-invalid="true"], .field textarea[aria-invalid="true"], .field select[aria-invalid="true"] { border-color: rgba(163,54,54,.55); box-shadow: 0 0 0 3px rgba(163,54,54,.1); }
+        .publishing-readiness { display:grid; gap:7px; margin-top:14px; padding:12px; border:1px solid var(--line); border-radius:12px; background:#fffaf2; }
+        .publishing-readiness span { color:#8b3d31; font-size:.76rem; font-weight:800; }
+        .publishing-readiness span::before { content:'Needs: '; }
+        .publishing-readiness span.is-ready { color:#286345; }
+        .publishing-readiness span.is-ready::before { content:'Ready: '; }
+        .existing-image-card.is-marked-for-removal { opacity:.58; background:#f7eeee !important; }
+        .existing-image-card.is-marked-for-removal .existing-image-preview { filter:grayscale(1); }
         .autofill-field {
             border: 1px solid rgba(163, 54, 54, .35) !important;
             box-shadow: 0 0 0 4px rgba(163, 54, 54, .08);
@@ -358,6 +377,7 @@
     </style>
 
     <script>
+        const heritageShopForm = document.getElementById('heritage-shop-form');
         const crawlButton = document.getElementById('crawl-button');
         const crawlStatus = document.getElementById('crawl-status');
         const crawlUrlInput = document.getElementById('crawl_url');
@@ -367,6 +387,19 @@
         const maxImageLabel = '{{ number_format(config('heritage_shop.max_image_kb', 1024) / 1024, 2) }} MB';
         const publishStatusInput = document.getElementById('publish_status');
         const publishRequiredFields = ['heritage_story', 'address', 'city'];
+
+        function updatePublishingReadiness() {
+            if (!document.querySelector('[data-publishing-readiness]')) return;
+            const remainingImages = Array.from(document.querySelectorAll('.image-remove-checkbox')).filter((input) => !input.checked).length;
+            const hasImage = remainingImages > 0 || (uploadInput?.files?.length ?? 0) > 0 || document.querySelectorAll('input[name="crawler_images[]"]').length > 0;
+            const ready = {
+                shop_name: Boolean(document.getElementById('shop_name')?.value.trim()),
+                heritage_story: Boolean(document.getElementById('heritage_story')?.value.trim()),
+                location: Boolean(document.getElementById('address')?.value.trim() && document.getElementById('city')?.value.trim()),
+                image: hasImage,
+            };
+            Object.entries(ready).forEach(([key, value]) => document.querySelector('[data-ready-field="' + key + '"]')?.classList.toggle('is-ready', value));
+        }
 
         function syncPublishedRequirements() {
             const isPublished = publishStatusInput?.value === 'published';
@@ -380,6 +413,7 @@
 
         publishStatusInput?.addEventListener('change', syncPublishedRequirements);
         syncPublishedRequirements();
+        ['shop_name', 'heritage_story', 'address', 'city'].forEach((id) => document.getElementById(id)?.addEventListener('input', updatePublishingReadiness));
 
         const menuItemsContainer = document.getElementById('menu-items-container');
         const addMenuItemButton = document.getElementById('add-menu-item');
@@ -612,6 +646,8 @@
                 return;
             }
 
+            crawlButton.disabled = true;
+            crawlButton.textContent = 'Fetching...';
             setCrawlStatus('success', 'Fetching shop data...');
             try {
                 const response = await fetch('{{ route('admin.heritage-shops.crawl') }}', {
@@ -649,6 +685,10 @@
                     : 'Source data filled blank fields. No unsupported values were invented; please review before saving.') + researchNote);
             } catch (error) {
                 setCrawlStatus('error', error.message || 'The crawl request failed.');
+            } finally {
+                crawlButton.disabled = false;
+                crawlButton.textContent = 'Fetch / Crawl';
+                updatePublishingReadiness();
             }
         });
 
@@ -669,16 +709,17 @@
                 const preview = document.getElementById('upload-preview');
                 preview.replaceChildren();
                 imageUploadError.style.display = 'none';
-                const oversizedFiles = Array.from(uploadInput.files).filter((file) => file.size > maxImageBytes);
+                const selectedFiles = Array.from(uploadInput.files);
+                const invalidFiles = selectedFiles.filter((file) => file.size > maxImageBytes || !['image/jpeg', 'image/png', 'image/webp'].includes(file.type));
 
-                if (oversizedFiles.length) {
-                    imageUploadError.textContent = 'The image must not be larger than ' + maxImageLabel + '.';
+                if (invalidFiles.length || selectedFiles.length > 10) {
+                    imageUploadError.textContent = 'Use up to 10 JPG, PNG, or WebP images, each no larger than ' + maxImageLabel + '.';
                     imageUploadError.style.display = 'block';
                     uploadInput.value = '';
                     return;
                 }
 
-                Array.from(uploadInput.files).forEach((file) => {
+                selectedFiles.forEach((file) => {
                     const wrapper = document.createElement('div');
                     wrapper.style.border = '1px solid var(--line)';
                     wrapper.style.borderRadius = '12px';
@@ -695,21 +736,53 @@
                     wrapper.appendChild(img);
                     preview.appendChild(wrapper);
                 });
+                updatePublishingReadiness();
             });
         }
 
         document.querySelectorAll('input[name^="replace_images["]').forEach((input) => {
             input.addEventListener('change', () => {
                 const file = input.files?.[0];
-                if (file && file.size > maxImageBytes) {
-                    imageUploadError.textContent = 'The image must not be larger than ' + maxImageLabel + '.';
+                if (file && (file.size > maxImageBytes || !['image/jpeg', 'image/png', 'image/webp'].includes(file.type))) {
+                    imageUploadError.textContent = 'Use a JPG, PNG, or WebP image no larger than ' + maxImageLabel + '.';
                     imageUploadError.style.display = 'block';
                     input.value = '';
                 } else {
                     imageUploadError.style.display = 'none';
+                    const preview = input.closest('.existing-image-card')?.querySelector('.existing-image-preview');
+                    if (file && preview) preview.src = URL.createObjectURL(file);
                 }
             });
         });
+
+        document.querySelectorAll('.existing-image-card').forEach((card) => {
+            const checkbox = card.querySelector('.image-remove-checkbox');
+            const toggle = card.querySelector('.image-remove-toggle');
+            const sync = () => {
+                card.classList.toggle('is-marked-for-removal', checkbox.checked);
+                toggle.textContent = checkbox.checked ? 'Undo removal' : 'Remove';
+                card.querySelector('input[name="primary_image_id"]')?.toggleAttribute('disabled', checkbox.checked);
+                updatePublishingReadiness();
+            };
+            toggle?.addEventListener('click', () => { checkbox.checked = !checkbox.checked; sync(); });
+            sync();
+        });
+
+        let formIsDirty = false;
+        heritageShopForm?.addEventListener('input', () => { formIsDirty = true; });
+        heritageShopForm?.addEventListener('change', () => { formIsDirty = true; updatePublishingReadiness(); });
+        heritageShopForm?.addEventListener('submit', () => {
+            formIsDirty = false;
+            const saveButton = heritageShopForm.querySelector('[data-save-button]');
+            if (saveButton) { saveButton.disabled = true; saveButton.textContent = 'Saving...'; }
+        });
+        window.addEventListener('beforeunload', (event) => {
+            if (!formIsDirty) return;
+            event.preventDefault();
+            event.returnValue = '';
+        });
+        document.querySelector('[aria-invalid="true"]')?.focus();
+        updatePublishingReadiness();
 
     </script>
 @endsection

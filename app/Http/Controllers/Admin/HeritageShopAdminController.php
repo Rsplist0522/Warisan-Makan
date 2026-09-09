@@ -83,7 +83,16 @@ class HeritageShopAdminController extends Controller
             ->orderBy('state')
             ->pluck('state');
 
-        return view('admin.heritage-shops.index', compact('shops', 'categories', 'states', 'search', 'category', 'state', 'sort'))
+        $registrySummary = [
+            'total' => HeritageShop::query()->count(),
+            'published' => HeritageShop::query()->where('publish_status', HeritageShop::STATUS_PUBLISHED)->count(),
+            'draft' => HeritageShop::query()->where('publish_status', HeritageShop::STATUS_DRAFT)->count(),
+            'archived' => HeritageShop::query()->where('publish_status', HeritageShop::STATUS_ARCHIVED)->count(),
+            'missing_images' => HeritageShop::query()->whereDoesntHave('images')->count(),
+            'missing_food_items' => HeritageShop::query()->whereDoesntHave('foodItems')->count(),
+        ];
+
+        return view('admin.heritage-shops.index', compact('shops', 'categories', 'states', 'search', 'category', 'state', 'sort', 'registrySummary'))
             ->with('imageService', $this->imageService);
     }
 
@@ -130,7 +139,9 @@ class HeritageShopAdminController extends Controller
         }
 
         return redirect()->route('admin.heritage-shops.edit', $shop)
-            ->with('success', 'Heritage shop saved successfully.');
+            ->with('success', $shop->publish_status === HeritageShop::STATUS_PUBLISHED
+                ? 'Heritage shop created and published successfully.'
+                : 'Heritage shop created as '.strtolower($shop->publish_status ?: HeritageShop::STATUS_DRAFT).'.');
     }
 
     public function edit(HeritageShop $heritageShop): View
@@ -192,6 +203,7 @@ class HeritageShopAdminController extends Controller
                 if (array_key_exists('food_items', $data)) {
                     $this->foodItemSync->syncQuickItems($lockedShop, $data['food_items']);
                 }
+                $this->applyPrimaryImage($lockedShop, $request->integer('primary_image_id'));
                 $this->removeRequestedImageIds($lockedShop, $request->input('remove_images', []), $oldPaths);
                 $this->replaceRequestedImages($lockedShop, $request->file('replace_images', []), $newPaths, $oldPaths);
 
@@ -206,8 +218,16 @@ class HeritageShopAdminController extends Controller
         $this->auditLogger->record($request->user(), $shop, 'heritage_shop.updated', $oldValues, $shop->getAttributes());
         $this->recordPublicationTransition($request, $shop, $oldValues);
 
+        $oldStatus = $oldValues['publish_status'] ?? HeritageShop::STATUS_DRAFT;
+        $success = match (true) {
+            $oldStatus !== HeritageShop::STATUS_PUBLISHED && $shop->publish_status === HeritageShop::STATUS_PUBLISHED => 'Heritage shop published successfully.',
+            $oldStatus === HeritageShop::STATUS_PUBLISHED && $shop->publish_status === HeritageShop::STATUS_DRAFT => 'Heritage shop unpublished and returned to Draft.',
+            $shop->publish_status === HeritageShop::STATUS_ARCHIVED && $oldStatus !== HeritageShop::STATUS_ARCHIVED => 'Heritage shop archived successfully.',
+            default => 'Heritage shop changes saved successfully.',
+        };
+
         return redirect()->route('admin.heritage-shops.edit', $shop)
-            ->with('success', 'Heritage shop updated successfully.');
+            ->with('success', $success);
     }
 
     public function destroy(Request $request, HeritageShop $heritageShop): RedirectResponse
@@ -618,6 +638,16 @@ class HeritageShopAdminController extends Controller
             }
 
         }
+    }
+
+    private function applyPrimaryImage(HeritageShop $shop, ?int $imageId): void
+    {
+        if (! $imageId || ! $shop->images()->whereKey($imageId)->exists()) {
+            return;
+        }
+
+        $shop->images()->update(['is_primary' => false]);
+        $shop->images()->whereKey($imageId)->update(['is_primary' => true]);
     }
 
     private function normalizeOperatingHours(mixed $value): ?array

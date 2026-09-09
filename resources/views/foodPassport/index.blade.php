@@ -324,6 +324,13 @@
             padding: 12px;
             white-space: nowrap;
         }
+            .shop-tools .btn.active,
+            .shop-tools .btn:active {
+                background: linear-gradient(135deg, var(--primary), var(--primary-deep));
+                border-color: transparent;
+                color: #fff;
+                box-shadow: 0 10px 18px rgba(140,31,31,0.18);
+            }
 
         .location-button {
             width: 154px;
@@ -514,6 +521,18 @@
 
         .shops-pagination {
             justify-content: center;
+        }
+
+        .shops-pagination-mobile {
+            display: none;
+        }
+
+        .pagination-current {
+            display: none;
+            color: var(--muted) !important;
+            font-size: 0.78rem;
+            font-weight: 700;
+            white-space: nowrap;
         }
 
         .pagination a,
@@ -1026,6 +1045,27 @@
                 grid-column: 1 / -1;
                 justify-self: start;
             }
+
+            .shops-pagination-desktop {
+                display: none;
+            }
+
+            .shops-pagination-mobile {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 6px;
+            }
+
+            .shops-pagination-mobile a,
+            .shops-pagination-mobile span {
+                padding: 9px 11px;
+            }
+
+            .shops-pagination-mobile .pagination-page {
+                min-width: 38px;
+                text-align: center;
+            }
         }
     </style>
 @endpush
@@ -1091,11 +1131,11 @@
                                 <input type="hidden" name="user_latitude" value="{{ request('user_latitude') }}">
                                 <input type="hidden" name="user_longitude" value="{{ request('user_longitude') }}">
                             @endif
-                            <button type="submit" class="btn secondary">{{ __('Search') }}</button>
+                            <button type="submit" class="btn secondary {{ request('shop_search') ? 'active' : '' }}">{{ __('Search') }}</button>
                             @if (request('shop_search'))
                                 <a href="{{ route('passport.index') }}#nearby" class="btn secondary">{{ __('Show all shops') }}</a>
                             @endif
-                            <button type="button" id="btnUseLocation" class="btn secondary location-button">{{ __('Use My Location') }}</button>
+                            <button type="button" id="btnUseLocation" class="btn secondary location-button {{ request('user_latitude') && request('user_longitude') && !request('shop_search') ? 'active' : '' }}">{{ __('Use My Location') }}</button>
                         </form>
 
                         @if (!empty($shops))
@@ -1116,36 +1156,89 @@
                             </div>
 
                             @if ($availableShops->total() > 0)
-                                <nav class="pagination shops-pagination" aria-label="{{ __('Available shops pages') }}">
+                                <nav class="pagination shops-pagination shops-pagination-desktop" aria-label="{{ __('Available shops pages') }}">
                                     @if ($availableShops->lastPage() > 1)
                                         @if ($availableShops->onFirstPage())
-                                            <span aria-disabled="true">{{ __('Previous') }}</span>
+                                            <span class="pagination-previous" aria-disabled="true">{{ __('Previous') }}</span>
                                         @else
-                                            <a href="{{ $availableShops->previousPageUrl() }}#nearby">{{ __('Previous') }}</a>
+                                            <a class="pagination-previous" href="{{ $availableShops->previousPageUrl() }}#nearby">{{ __('Previous') }}</a>
                                         @endif
 
+                                        <span class="pagination-current" aria-current="page">
+                                            {{ __('Page :current of :last', ['current' => $availableShops->currentPage(), 'last' => $availableShops->lastPage()]) }}
+                                        </span>
+
                                         @php
-                                            $paginationStart = min($availableShops->currentPage(), max(1, $availableShops->lastPage() - 4));
-                                            $paginationEnd = min($availableShops->lastPage(), $paginationStart + 4);
+                                            $currentPage = $availableShops->currentPage();
+                                            $lastPage = $availableShops->lastPage();
+                                            $paginationPages = collect([1, 2, $currentPage - 1, $currentPage, $currentPage + 1, $lastPage - 1, $lastPage])
+                                                ->filter(fn ($page) => $page >= 1 && $page <= $lastPage)
+                                                ->unique()
+                                                ->sort()
+                                                ->values();
+                                            $previousPaginationPage = null;
                                         @endphp
-                                        @for ($page = $paginationStart; $page <= $paginationEnd; $page++)
-                                            @if ($page === $availableShops->currentPage())
-                                                <span class="active" aria-current="page">{{ $page }}</span>
+                                        @foreach ($paginationPages as $page)
+                                            @if ($previousPaginationPage !== null && $page > $previousPaginationPage + 1)
+                                                <span class="pagination-ellipsis" aria-hidden="true">...</span>
+                                            @endif
+                                            @if ($page === $currentPage)
+                                                <span class="pagination-page active" aria-current="page">{{ $page }}</span>
                                             @else
-                                                <a href="{{ $availableShops->url($page) }}#nearby"
+                                                <a class="pagination-page" href="{{ $availableShops->url($page) }}#nearby"
                                                     aria-label="{{ __('Available shops page :page', ['page' => $page]) }}">
                                                     {{ $page }}
                                                 </a>
                                             @endif
-                                        @endfor
+                                            @php $previousPaginationPage = $page; @endphp
+                                        @endforeach
 
                                         @if ($availableShops->hasMorePages())
-                                            <a href="{{ $availableShops->nextPageUrl() }}#nearby">{{ __('Next') }}</a>
+                                            <a class="pagination-next" href="{{ $availableShops->nextPageUrl() }}#nearby">{{ __('Next') }}</a>
                                         @else
-                                            <span aria-disabled="true">{{ __('Next') }}</span>
+                                            <span class="pagination-next" aria-disabled="true">{{ __('Next') }}</span>
                                         @endif
                                     @else
-                                        <span class="active" aria-current="page">{{ $availableShops->currentPage() }}</span>
+                                        <span class="pagination-current" aria-current="page">
+                                            {{ __('Page :current of :last', ['current' => $availableShops->currentPage(), 'last' => $availableShops->lastPage()]) }}
+                                        </span>
+                                    @endif
+                                </nav>
+
+                                <nav class="pagination shops-pagination-mobile" aria-label="{{ __('Available shops pages') }}">
+                                    @if ($availableShops->onFirstPage())
+                                        <span aria-disabled="true">{{ __('Previous') }}</span>
+                                    @else
+                                        <a href="{{ $availableShops->previousPageUrl() }}#nearby">{{ __('Previous') }}</a>
+                                    @endif
+
+                                    @php
+                                        $currentPage = $availableShops->currentPage();
+                                        $lastPage = $availableShops->lastPage();
+                                        $mobilePaginationPages = collect([1, $currentPage - 1, $currentPage, $currentPage + 1, $lastPage])
+                                            ->filter(fn ($page) => $page >= 1 && $page <= $lastPage)
+                                            ->unique()
+                                            ->sort()
+                                            ->values();
+                                        $previousMobilePage = null;
+                                    @endphp
+                                    @foreach ($mobilePaginationPages as $page)
+                                        @if ($previousMobilePage !== null && $page > $previousMobilePage + 1)
+                                            <span class="pagination-ellipsis" aria-hidden="true">...</span>
+                                        @endif
+                                        @if ($page === $currentPage)
+                                            <span class="pagination-page active" aria-current="page">{{ $page }}</span>
+                                        @else
+                                            <a class="pagination-page" href="{{ $availableShops->url($page) }}#nearby"
+                                                aria-label="{{ __('Available shops page :page', ['page' => $page]) }}">{{ $page }}</a>
+                                        @endif
+                                        @php $previousMobilePage = $page; @endphp
+                                    @endforeach
+
+                                    @if ($availableShops->hasMorePages())
+                                        <a href="{{ $availableShops->nextPageUrl() }}#nearby">{{ __('Next') }}</a>
+                                    @else
+                                        <span aria-disabled="true">{{ __('Next') }}</span>
                                     @endif
                                 </nav>
                             @endif
@@ -1356,6 +1449,20 @@
             return earthRadius * 2 * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value));
         }
 
+        function activateShopTool(button) {
+            document.querySelectorAll('.shop-tools .btn').forEach(tool => {
+                tool.classList.toggle('active', tool === button);
+            });
+        }
+
+        document.querySelector('.shop-tools')?.addEventListener('submit', function (event) {
+            activateShopTool(event.submitter || this.querySelector('button[type="submit"]'));
+        });
+
+        document.querySelectorAll('.shop-tools a.btn').forEach(button => {
+            button.addEventListener('click', () => activateShopTool(button));
+        });
+
         document.getElementById('btnUseLocation')?.addEventListener('click', function () {
             if (!navigator.geolocation) {
                 setResult(geolocationUnsupportedMessage);
@@ -1363,6 +1470,7 @@
             }
 
             const button = this;
+            activateShopTool(button);
             button.disabled = true;
             button.textContent = sortingNearbyMessage;
 
@@ -1590,20 +1698,36 @@
             return canvas;
         }
 
-        function downloadAchievementCard(format) {
+        async function downloadAchievementCard(format) {
+            const isTouchDevice = 'ontouchstart' in window || (window.navigator.maxTouchPoints || 0) > 0;
+            if (isTouchDevice && await shareAchievementFile(format)) {
+                return true;
+            }
+
             const canvas = drawAchievementCard(format);
             if (!canvas) {
-                return;
+                return false;
             }
 
             const slug = (activeBadgeForShare.name || 'badge').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+            if (!blob) {
+                return false;
+            }
+
+            const objectUrl = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.download = 'warisan-makan-' + slug + '-' + format + '.png';
-            link.href = canvas.toDataURL('image/png');
+            link.href = objectUrl;
+            link.style.display = 'none';
+            document.body.appendChild(link);
             link.click();
+            link.remove();
+            window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
             shareStatus.textContent = format === 'story'
                 ? @json(__('Story card downloaded. Upload it to Instagram Story or WhatsApp Status.'))
                 : @json(__('Square card downloaded. It is ready for your social feed.'));
+            return true;
         }
 
         async function shareAchievementFile(format) {
@@ -1643,26 +1767,32 @@
                 }
 
                 if (channel === 'download-square') {
-                    downloadAchievementCard('square');
+                    await downloadAchievementCard('square');
                     return;
                 }
 
                 if (channel === 'download-story') {
-                    downloadAchievementCard('story');
+                    await downloadAchievementCard('story');
                     return;
                 }
 
                 if (channel === 'instagram') {
+                    if (await shareAchievementFile('story')) {
+                        return;
+                    }
                     await copyShareText();
-                    downloadAchievementCard('story');
+                    await downloadAchievementCard('story');
                     window.open('https://www.instagram.com/', '_blank', 'noopener');
                     shareStatus.textContent = @json(__('Instagram opened. The story card was downloaded and the caption was copied—upload the PNG after logging in.'));
                     return;
                 }
 
                 if (channel === 'facebook') {
+                    if (await shareAchievementFile('square')) {
+                        return;
+                    }
                     await copyShareText();
-                    downloadAchievementCard('square');
+                    await downloadAchievementCard('square');
                     const url = 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(window.location.href) + '&quote=' + encodeURIComponent(badgeShareText);
                     window.open(url, '_blank', 'noopener');
                     shareStatus.textContent = @json(__('Facebook opened. The square card was downloaded and the caption was copied—attach the PNG if needed.'));
@@ -1681,7 +1811,7 @@
                     const whatsappUrl = isTouchDevice
                         ? 'https://wa.me/?text=' + encodeURIComponent(badgeShareText)
                         : 'https://web.whatsapp.com/send?text=' + encodeURIComponent(badgeShareText);
-                    downloadAchievementCard('square');
+                    await downloadAchievementCard('square');
                     const whatsappWindow = window.open(whatsappUrl, '_blank', 'noopener');
                     await copyShareText();
                     if (!whatsappWindow) {

@@ -5,15 +5,15 @@
 
 @section('content')
     <style>
-        #restaurantOptions { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:10px; max-height:360px; overflow:auto; padding:4px; }
+        #restaurantOptions { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:10px; max-height:460px; overflow:auto; padding:4px; align-items:stretch; }
         .restaurant-option { width:100%; min-height:112px; text-align:left; padding:14px !important; border:1px solid #ead9c3 !important; border-radius:16px !important; background:#fffdf9 !important; }
         .restaurant-option:hover { border-color:#b8874a !important; background:#fff7eb !important; }
         .restaurant-option strong { display:block; color:#30251f; font-size:15px; }
         .restaurant-option small { display:block; margin-top:5px; color:#78695d; line-height:1.35; }
         .restaurant-option small:last-child { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
         /* Override the shared .button flex layout for readable result cards. */
-        .restaurant-option { display:block !important; padding:18px !important; min-height:142px; }
-        .restaurant-option strong { display:block; min-height:44px; padding-right:96px; position:relative; line-height:1.3; }
+        .button.restaurant-option { display:block !important; height:auto; min-height:142px !important; overflow:hidden; padding:18px !important; }
+        .restaurant-option strong { display:block; min-height:0; margin-bottom:8px; padding-right:96px; position:relative; line-height:1.3; }
         .restaurant-option strong span { position:absolute; right:0; top:0; padding:5px 9px; border:1px solid #d8b58f; border-radius:999px; background:white; }
         #selectedRestaurants li { display:flex; flex-direction:column; gap:7px; padding:16px !important; }
         #selectedRestaurants .remove-stop { align-self:flex-start; margin-top:6px; border:1px solid #c85b4a; border-radius:999px; background:#fff; color:#b54434; padding:7px 12px; font-weight:700; }
